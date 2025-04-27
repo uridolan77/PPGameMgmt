@@ -13,6 +13,8 @@ using PPGameMgmt.Infrastructure.Data.Repositories;
 using PPGameMgmt.Infrastructure.ML.Features;
 using PPGameMgmt.Infrastructure.ML.Models;
 using PPGameMgmt.API.Middleware;
+using PPGameMgmt.API.Hubs;
+using PPGameMgmt.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,15 +29,62 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API for managing personalized player game recommendations and bonuses"
     });
+    
+    // Add security definition for API Management subscription key
+    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Name = "Ocp-Apim-Subscription-Key",
+        Description = "API Management subscription key"
+    });
+    
+    // Make sure all endpoints use the API key
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            new string[] {}
+        }
+    });
 });
 
-// Database context - Using MySQL with EF Core 7.0
+// Add API Management configuration
+builder.Services.AddApiManagementConfiguration(builder.Configuration);
+
+// Database context - Using Azure SQL with EF Core 9.0
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<CasinoDbContext>(options =>
-    options.UseMySql(
+    options.UseSqlServer(
         connectionString,
-        new MySqlServerVersion(new Version(8, 0, 29)), // Specify your MySQL server version
-        mySqlOptions => mySqlOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
+        sqlServerOptions => sqlServerOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
+
+// Add Redis distributed cache
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "PPGameMgmt:";
+});
+
+// Register Redis cache service
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+// Add SignalR with Redis backplane
+builder.Services.AddSignalR()
+    .AddStackExchangeRedis(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379", options =>
+    {
+        options.Configuration.ChannelPrefix = "PPGameMgmt:SignalR";
+    });
+
+// Register NotificationService
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Register repositories
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
@@ -59,13 +108,22 @@ builder.Services.AddScoped<IFeatureEngineeringService, FeatureEngineeringService
 builder.Services.AddScoped<GameRecommendationModel>();
 builder.Services.AddScoped<BonusOptimizationModel>();
 builder.Services.AddScoped<IMLModelService, MLModelService>();
-builder.Services.AddSingleton<IMLOpsService, MLOpsService>(); // Add MLOps service
+builder.Services.AddSingleton<IMLOpsService, MLOpsService>(); 
 
-// Add Redis distributed cache
-builder.Services.AddStackExchangeRedisCache(options =>
+// Add API response caching using Redis
+builder.Services.AddResponseCaching();
+builder.Services.AddControllers(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
-    options.InstanceName = "PPGameMgmt:";
+    options.CacheProfiles.Add("Default30",
+        new Microsoft.AspNetCore.Mvc.CacheProfile()
+        {
+            Duration = 30
+        });
+    options.CacheProfiles.Add("Default60",
+        new Microsoft.AspNetCore.Mvc.CacheProfile()
+        {
+            Duration = 60
+        });
 });
 
 // CORS policy
@@ -73,10 +131,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5000") // Updated to Vite's default port
+        policy.WithOrigins("http://localhost:5000")
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowCredentials(); // Required for SignalR
     });
 });
 
@@ -87,22 +145,25 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    // Remove the developer exception page as we're using our global exception handler
-    // app.UseDeveloperExceptionPage();
 }
 else
 {
-    // Remove this line as we're using our global exception handler instead
-    // app.UseExceptionHandler("/error");
     app.UseHsts();
 }
 
 // Add our global exception handling middleware - this should be one of the first middleware
 app.UseGlobalExceptionHandling();
 
+// Add API Management middleware - place after exception handling but before other middleware
+app.UseApiManagement();
+
 app.UseHttpsRedirection();
+app.UseResponseCaching(); // Enable response caching
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
+
+// Map SignalR hub
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapControllers();
 
 // Create the database if it doesn't exist
