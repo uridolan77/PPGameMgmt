@@ -2,15 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.Extensions.Configuration;
-using System.Text.Json;
 using System.Data.SqlClient;
 using System.Data;
-using Azure;
-using Microsoft.Extensions.Options;
+using Azure.Identity;
+using Azure.Core;
+using System.Net.Http.Json;
 
 namespace PPGameMgmt.Infrastructure.ML.Models
 {
@@ -749,55 +753,361 @@ namespace PPGameMgmt.Infrastructure.ML.Models
 
         #region Private methods for Azure ML Registry storage
 
-        // Load models from Azure ML Registry (stub for now)
+        /// <summary>
+        /// Gets authentication token for Azure ML API calls
+        /// </summary>
+        private async Task<string> GetAzureMLTokenAsync()
+        {
+            try
+            {
+                var credential = new DefaultAzureCredential();
+                var tokenRequestContext = new TokenRequestContext(new[] { "https://management.azure.com/.default" });
+                var token = await credential.GetTokenAsync(tokenRequestContext);
+                return token.Token;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get Azure ML authentication token");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets Azure ML API client with proper authorization
+        /// </summary>
+        private async Task<HttpClient> GetAzureMLClientAsync()
+        {
+            var client = new HttpClient();
+            string token = await GetAzureMLTokenAsync();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            return client;
+        }
+
+        /// <summary>
+        /// Load models from Azure ML Registry
+        /// </summary>
         private async Task<IEnumerable<ModelMetadata>> GetModelVersionsFromAzureMLAsync(string modelName)
         {
-            _logger.LogWarning("Azure ML Registry integration not implemented - falling back to file system");
-            return _activeModels.Values.Where(m => m.Name == modelName);
+            try
+            {
+                var client = await GetAzureMLClientAsync();
+                
+                // API URL for listing models
+                string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models?api-version=2022-10-01";
+                
+                var response = await client.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Failed to get models from Azure ML: {StatusCode} - {Content}", 
+                        response.StatusCode, await response.Content.ReadAsStringAsync());
+                    return Enumerable.Empty<ModelMetadata>();
+                }
+                
+                var content = await response.Content.ReadFromJsonAsync<AzureMLModelListResponse>();
+                var models = new List<ModelMetadata>();
+                
+                // Filter models by name
+                foreach (var azureModel in content.Value)
+                {
+                    if (azureModel.Name.StartsWith(modelName))
+                    {
+                        // Get model details
+                        var detailsUrl = $"https://management.azure.com{azureModel.Id}?api-version=2022-10-01";
+                        var detailsResponse = await client.GetAsync(detailsUrl);
+                        
+                        if (detailsResponse.IsSuccessStatusCode)
+                        {
+                            var modelDetails = await detailsResponse.Content.ReadFromJsonAsync<AzureMLModelDetails>();
+                            
+                            // Map Azure ML model to our metadata format
+                            var metadata = new ModelMetadata
+                            {
+                                Name = modelName,
+                                Version = azureModel.Version,
+                                StoragePath = await DownloadAndCacheModelIfNeeded(modelName, azureModel.Version, modelDetails),
+                                RegisteredTimestamp = DateTimeOffset.Parse(azureModel.CreatedTime).DateTime,
+                                IsActive = azureModel.Properties.ContainsKey("IsActive") && 
+                                           bool.Parse(azureModel.Properties["IsActive"]),
+                                LastMetricsUpdate = azureModel.Properties.ContainsKey("LastMetricsUpdate") ? 
+                                    DateTimeOffset.Parse(azureModel.Properties["LastMetricsUpdate"]).DateTime : null,
+                                Metrics = azureModel.Properties.ContainsKey("Metrics") ? 
+                                    JsonSerializer.Deserialize<Dictionary<string, double>>(azureModel.Properties["Metrics"]) : 
+                                    new Dictionary<string, double>()
+                            };
+                            
+                            models.Add(metadata);
+                        }
+                    }
+                }
+                
+                return models;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting model versions from Azure ML");
+                return Enumerable.Empty<ModelMetadata>();
+            }
         }
         
-        // Get active model from Azure ML Registry (stub for now)
+        /// <summary>
+        /// Get active model from Azure ML Registry
+        /// </summary>
         private async Task<ModelMetadata> GetActiveModelFromAzureMLAsync(string modelName)
         {
-            _logger.LogWarning("Azure ML Registry integration not implemented - falling back to file system");
-            return _activeModels.Values.FirstOrDefault(m => m.Name == modelName && m.IsActive);
+            try
+            {
+                var models = await GetModelVersionsFromAzureMLAsync(modelName);
+                return models.FirstOrDefault(m => m.IsActive);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active model from Azure ML");
+                return null;
+            }
         }
         
-        // Register model in Azure ML (stub for now)
+        /// <summary>
+        /// Register model in Azure ML
+        /// </summary>
         private async Task RegisterModelInAzureMLAsync(string modelName, string modelPath, ModelMetadata metadata)
         {
-            _logger.LogWarning("Azure ML Registry integration not implemented - falling back to file system");
-            await RegisterModelInFileSystemAsync(modelName, modelPath, metadata);
+            try
+            {
+                var client = await GetAzureMLClientAsync();
+                
+                // Step 1: Create a storage location in Azure ML workspace
+                string uploadUrl = await CreateAzureMLModelUploadUrlAsync(client, modelName, metadata.Version);
+                
+                // Step 2: Upload the model file
+                await UploadModelFileAsync(uploadUrl, modelPath);
+                
+                // Step 3: Register the model in Azure ML
+                await CompleteModelRegistrationAsync(client, modelName, metadata);
+                
+                // Step 4: Copy the model locally for fast inference
+                File.Copy(modelPath, metadata.StoragePath, overwrite: true);
+                
+                // Step 5: Validate the model by trying to create a session
+                using var session = new InferenceSession(metadata.StoragePath);
+                metadata.InputFeatures = session.InputMetadata.Keys.ToList();
+                metadata.OutputFeatures = session.OutputMetadata.Keys.ToList();
+                
+                // Add to local cache
+                _activeModels[$"{modelName}_{metadata.Version}"] = metadata;
+                
+                _logger.LogInformation("Successfully registered model in Azure ML: {ModelName} - {Version}", 
+                    modelName, metadata.Version);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error registering model in Azure ML");
+                throw;
+            }
         }
         
-        // Activate model in Azure ML (stub for now)
+        /// <summary>
+        /// Activate a model version in Azure ML
+        /// </summary>
         private async Task ActivateModelVersionInAzureMLAsync(string modelName, string version)
         {
-            _logger.LogWarning("Azure ML Registry integration not implemented - falling back to file system");
-            
-            // Deactivate all versions in memory
-            var models = _activeModels.Values.Where(m => m.Name == modelName).ToList();
-            foreach (var m in models)
+            try
             {
-                m.IsActive = false;
+                var client = await GetAzureMLClientAsync();
+                
+                // Get all models with this name
+                var models = await GetModelVersionsFromAzureMLAsync(modelName);
+                
+                foreach (var model in models)
+                {
+                    // Construct API URL for updating model properties
+                    string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{modelName}/{model.Version}?api-version=2022-10-01";
+                    
+                    // Update the IsActive property
+                    var properties = new Dictionary<string, string>
+                    {
+                        ["IsActive"] = (model.Version == version).ToString()
+                    };
+                    
+                    var payload = new
+                    {
+                        properties = properties
+                    };
+                    
+                    var response = await client.PatchAsync(url, 
+                        new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+                    
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogError("Failed to update model in Azure ML: {StatusCode} - {Content}", 
+                            response.StatusCode, await response.Content.ReadAsStringAsync());
+                    }
+                    
+                    // Update in-memory cache as well
+                    if (_activeModels.ContainsKey($"{modelName}_{model.Version}"))
+                    {
+                        _activeModels[$"{modelName}_{model.Version}"].IsActive = (model.Version == version);
+                    }
+                }
+                
+                _logger.LogInformation("Activated model {ModelName} version {Version} in Azure ML", modelName, version);
             }
-            
-            // Activate requested version in memory
-            var model = models.FirstOrDefault(m => m.Version == version);
-            if (model != null)
+            catch (Exception ex)
             {
-                model.IsActive = true;
+                _logger.LogError(ex, "Error activating model in Azure ML");
+                throw;
             }
-            
-            // Save to file
-            await SaveRegistryAsync();
         }
         
-        // Save metrics to Azure ML (stub for now)
+        /// <summary>
+        /// Save metrics to Azure ML model
+        /// </summary>
         private async Task SaveMetricsToAzureML(ModelMetadata model)
         {
-            _logger.LogWarning("Azure ML Registry integration not implemented - falling back to file system");
-            await SaveRegistryAsync();
+            try
+            {
+                var client = await GetAzureMLClientAsync();
+                
+                // Construct API URL for updating model properties
+                string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{model.Name}/{model.Version}?api-version=2022-10-01";
+                
+                // Update properties with metrics
+                var properties = new Dictionary<string, string>
+                {
+                    ["Metrics"] = JsonSerializer.Serialize(model.Metrics),
+                    ["LastMetricsUpdate"] = DateTime.UtcNow.ToString("o")
+                };
+                
+                var payload = new
+                {
+                    properties = properties
+                };
+                
+                var response = await client.PatchAsync(url, 
+                    new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Failed to update model metrics in Azure ML: {StatusCode} - {Content}", 
+                        response.StatusCode, await response.Content.ReadAsStringAsync());
+                    throw new InvalidOperationException("Failed to update model metrics in Azure ML");
+                }
+                
+                _logger.LogInformation("Updated metrics for model {ModelName} version {Version} in Azure ML", 
+                    model.Name, model.Version);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving metrics to Azure ML");
+                throw;
+            }
+        }
+        
+        /// <summary>
+        /// Helper method to create upload URL in Azure ML
+        /// </summary>
+        private async Task<string> CreateAzureMLModelUploadUrlAsync(HttpClient client, string modelName, string version)
+        {
+            string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{modelName}/versions/{version}/uploadUrl?api-version=2022-10-01";
+            
+            var response = await client.PostAsync(url, null);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to create upload URL in Azure ML: {StatusCode} - {Content}", 
+                    response.StatusCode, await response.Content.ReadAsStringAsync());
+                throw new InvalidOperationException("Failed to create upload URL in Azure ML");
+            }
+            
+            var content = await response.Content.ReadFromJsonAsync<AzureMLUploadUrlResponse>();
+            return content.UploadUrl;
+        }
+        
+        /// <summary>
+        /// Upload model file to Azure ML storage
+        /// </summary>
+        private async Task UploadModelFileAsync(string uploadUrl, string modelPath)
+        {
+            using var client = new HttpClient();
+            using var fileStream = new FileStream(modelPath, FileMode.Open, FileAccess.Read);
+            
+            var request = new HttpRequestMessage(HttpMethod.Put, uploadUrl);
+            request.Content = new StreamContent(fileStream);
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            
+            var response = await client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to upload model file: {StatusCode} - {Content}", 
+                    response.StatusCode, await response.Content.ReadAsStringAsync());
+                throw new InvalidOperationException("Failed to upload model file");
+            }
+        }
+        
+        /// <summary>
+        /// Complete model registration in Azure ML after upload
+        /// </summary>
+        private async Task CompleteModelRegistrationAsync(HttpClient client, string modelName, ModelMetadata metadata)
+        {
+            string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{modelName}/versions/{metadata.Version}?api-version=2022-10-01";
+            
+            var properties = new Dictionary<string, string>
+            {
+                ["IsActive"] = metadata.IsActive.ToString(),
+                ["RegisteredTimestamp"] = metadata.RegisteredTimestamp.ToString("o")
+            };
+            
+            var payload = new
+            {
+                properties = properties,
+                modelType = "ONNX"
+            };
+            
+            var response = await client.PutAsync(url, 
+                new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"));
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to complete model registration in Azure ML: {StatusCode} - {Content}", 
+                    response.StatusCode, await response.Content.ReadAsStringAsync());
+                throw new InvalidOperationException("Failed to complete model registration in Azure ML");
+            }
+        }
+        
+        /// <summary>
+        /// Download model from Azure ML and cache locally for fast inference
+        /// </summary>
+        private async Task<string> DownloadAndCacheModelIfNeeded(string modelName, string version, AzureMLModelDetails details)
+        {
+            string localPath = Path.Combine(_modelStoragePath, $"{modelName}-{version}.onnx");
+            
+            // If file already exists, don't download again
+            if (File.Exists(localPath))
+            {
+                return localPath;
+            }
+            
+            // Get download URL from Azure ML
+            using var client = await GetAzureMLClientAsync();
+            string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{modelName}/versions/{version}/downloadUrl?api-version=2022-10-01";
+            
+            var response = await client.PostAsync(url, null);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to get download URL from Azure ML: {StatusCode} - {Content}", 
+                    response.StatusCode, await response.Content.ReadAsStringAsync());
+                throw new InvalidOperationException("Failed to get download URL from Azure ML");
+            }
+            
+            var content = await response.Content.ReadFromJsonAsync<AzureMLDownloadUrlResponse>();
+            string downloadUrl = content.DownloadUrl;
+            
+            // Download the file
+            using var downloadClient = new HttpClient();
+            using var downloadStream = await downloadClient.GetStreamAsync(downloadUrl);
+            using var fileStream = File.Create(localPath);
+            await downloadStream.CopyToAsync(fileStream);
+            
+            return localPath;
         }
 
         #endregion
@@ -846,4 +1156,43 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         AzureML,
         // Could add other types like AzureBlobStorage, AWS S3, etc.
     }
+}
+
+/// <summary>
+/// Helper classes for Azure ML API responses
+/// </summary>
+public class AzureMLModelListResponse
+{
+    public List<AzureMLModelItem> Value { get; set; } = new();
+}
+
+public class AzureMLModelItem
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Version { get; set; }
+    public string CreatedTime { get; set; }
+    public Dictionary<string, string> Properties { get; set; } = new();
+}
+
+public class AzureMLModelDetails
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Version { get; set; }
+    public string Description { get; set; }
+    public Dictionary<string, string> Properties { get; set; } = new();
+    public string ModelUri { get; set; }
+}
+
+public class AzureMLUploadUrlResponse
+{
+    public string UploadUrl { get; set; }
+    public string ExpiryTime { get; set; }
+}
+
+public class AzureMLDownloadUrlResponse
+{
+    public string DownloadUrl { get; set; }
+    public string ExpiryTime { get; set; }
 }
