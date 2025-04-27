@@ -12,6 +12,7 @@ using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.Infrastructure.Data.Repositories;
 using PPGameMgmt.Infrastructure.ML.Features;
 using PPGameMgmt.Infrastructure.ML.Models;
+using PPGameMgmt.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,18 +52,28 @@ builder.Services.AddScoped<IBonusService, BonusService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<IBonusOptimizationService, BonusOptimizationService>();
 
-// Register ML components - Using scoped lifetime to match repository lifetimes
+// Register ML components
+builder.Services.AddSingleton<BackgroundFeatureProcessor>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BackgroundFeatureProcessor>());
 builder.Services.AddScoped<IFeatureEngineeringService, FeatureEngineeringService>();
 builder.Services.AddScoped<GameRecommendationModel>();
 builder.Services.AddScoped<BonusOptimizationModel>();
 builder.Services.AddScoped<IMLModelService, MLModelService>();
+builder.Services.AddSingleton<IMLOpsService, MLOpsService>(); // Add MLOps service
+
+// Add Redis distributed cache
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "PPGameMgmt:";
+});
 
 // CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000") // React app URL
+        policy.WithOrigins("http://localhost:5000") // Updated to Vite's default port
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -76,13 +87,18 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseDeveloperExceptionPage();
+    // Remove the developer exception page as we're using our global exception handler
+    // app.UseDeveloperExceptionPage();
 }
 else
 {
-    app.UseExceptionHandler("/error");
+    // Remove this line as we're using our global exception handler instead
+    // app.UseExceptionHandler("/error");
     app.UseHsts();
 }
+
+// Add our global exception handling middleware - this should be one of the first middleware
+app.UseGlobalExceptionHandling();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
