@@ -15,20 +15,22 @@ namespace PPGameMgmt.Infrastructure.ML.Models
     {
         private readonly ILogger<GameRecommendationModel> _logger;
         private readonly IGameRepository _gameRepository;
+        private readonly IMLOpsService _mlOpsService;
         private InferenceSession _session;
-        private readonly string _modelPath;
+        private string _modelPath;
         private bool _isModelLoaded = false;
         private Dictionary<string, int> _gameIndexMap; // Maps game IDs to model output indices
         private List<string> _allGameIds; // All game IDs in order of model output
+        private const string MODEL_NAME = "game_recommendation";
 
         public GameRecommendationModel(
             ILogger<GameRecommendationModel> logger,
             IGameRepository gameRepository,
-            string modelPath = "ML/Models/game_recommendation_model.onnx")
+            IMLOpsService mlOpsService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
-            _modelPath = modelPath ?? throw new ArgumentNullException(nameof(modelPath));
+            _mlOpsService = mlOpsService ?? throw new ArgumentNullException(nameof(mlOpsService));
         }
 
         public async Task InitializeAsync()
@@ -36,6 +38,17 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             try
             {
                 _logger.LogInformation("Initializing Game Recommendation Model");
+                
+                // Get model path from MLOpsService
+                try {
+                    _modelPath = _mlOpsService.GetActiveModelPath(MODEL_NAME);
+                    _logger.LogInformation($"Using model path from MLOps registry: {_modelPath}");
+                }
+                catch (KeyNotFoundException) {
+                    _logger.LogWarning("No active model found in registry. Using fallback recommendation logic.");
+                    _isModelLoaded = false;
+                    return;
+                }
                 
                 // Load the ONNX model
                 if (File.Exists(_modelPath))

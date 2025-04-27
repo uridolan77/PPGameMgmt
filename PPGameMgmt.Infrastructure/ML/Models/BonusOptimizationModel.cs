@@ -15,18 +15,20 @@ namespace PPGameMgmt.Infrastructure.ML.Models
     {
         private readonly ILogger<BonusOptimizationModel> _logger;
         private readonly IBonusRepository _bonusRepository;
+        private readonly IMLOpsService _mlOpsService;
         private InferenceSession _session;
-        private readonly string _modelPath;
+        private string _modelPath;
         private bool _isModelLoaded = false;
+        private const string MODEL_NAME = "bonus_optimization";
 
         public BonusOptimizationModel(
             ILogger<BonusOptimizationModel> logger,
             IBonusRepository bonusRepository,
-            string modelPath = "ML/Models/bonus_optimization_model.onnx")
+            IMLOpsService mlOpsService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _bonusRepository = bonusRepository ?? throw new ArgumentNullException(nameof(bonusRepository));
-            _modelPath = modelPath ?? throw new ArgumentNullException(nameof(modelPath));
+            _mlOpsService = mlOpsService ?? throw new ArgumentNullException(nameof(mlOpsService));
         }
 
         public async Task InitializeAsync()
@@ -34,6 +36,17 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             try
             {
                 _logger.LogInformation("Initializing Bonus Optimization Model");
+                
+                // Get model path from MLOpsService
+                try {
+                    _modelPath = _mlOpsService.GetActiveModelPath(MODEL_NAME);
+                    _logger.LogInformation($"Using model path from MLOps registry: {_modelPath}");
+                }
+                catch (KeyNotFoundException) {
+                    _logger.LogWarning("No active model found in registry. Using fallback bonus optimization logic.");
+                    _isModelLoaded = false;
+                    return;
+                }
                 
                 // Load the ONNX model
                 if (File.Exists(_modelPath))
