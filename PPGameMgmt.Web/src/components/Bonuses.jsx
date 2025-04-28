@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { bonusService } from '../services';
+import { formatDate, isExpired, isActive, getBonusStatus, getBonusStatusClass } from '../utils/bonusUtils';
 
 const Bonuses = () => {
   const [bonuses, setBonuses] = useState([]);
@@ -139,36 +140,5 @@ const Bonuses = () => {
     </div>
   );
 };
-
-// Helper functions
-function formatDate(dateString) {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString();
-}
-
-function isExpired(bonus) {
-  if (!bonus.endDate) return false;
-  return new Date(bonus.endDate) < new Date();
-}
-
-function isActive(bonus) {
-  const now = new Date();
-  const startDate = bonus.startDate ? new Date(bonus.startDate) : null;
-  const endDate = bonus.endDate ? new Date(bonus.endDate) : null;
-  
-  return (!startDate || startDate <= now) && (!endDate || endDate >= now);
-}
-
-function getBonusStatus(bonus) {
-  if (isExpired(bonus)) return 'Expired';
-  if (isActive(bonus)) return 'Active';
-  return 'Scheduled';
-}
-
-function getBonusStatusClass(bonus) {
-  if (isExpired(bonus)) return 'expired';
-  if (isActive(bonus)) return 'active';
-  return 'scheduled';
-}
 
 export default Bonuses;

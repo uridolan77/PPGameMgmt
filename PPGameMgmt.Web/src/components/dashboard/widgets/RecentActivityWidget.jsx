@@ -27,8 +27,8 @@ import {
   Payment as DepositIcon,
   MoneyOff as WithdrawalIcon
 } from '@mui/icons-material';
-import { format, subHours, subDays } from 'date-fns';
 import useUiStore from '../../../stores/uiStore';
+import activityMockService from '../../../services/mockData/activityMockService';
 
 const ACTIVITY_TYPES = {
   'login': { label: 'Login', icon: <LoginIcon color="primary" />, color: 'default' },
@@ -41,53 +41,6 @@ const ACTIVITY_TYPES = {
 const RecentActivityWidget = ({ settings, onSettingsChange }) => {
   const { limit = 10, types = ['login', 'game-play', 'bonus-claim'] } = settings || {};
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Here we would normally fetch activity data with a React Query hook
-  // For this example, we'll generate mock data
-  const generateMockActivities = () => {
-    const now = new Date();
-    const activities = [];
-    const activityTypes = Object.keys(ACTIVITY_TYPES);
-    
-    // Generate random activities
-    for (let i = 0; i < 20; i++) {
-      const type = activityTypes[Math.floor(Math.random() * activityTypes.length)];
-      const timeOffset = Math.floor(Math.random() * 72); // Up to 72 hours ago
-      const randomHours = Math.floor(Math.random() * 24);
-      const timestamp = subHours(now, timeOffset);
-      
-      activities.push({
-        id: `activity-${i}`,
-        type,
-        playerId: `player-${Math.floor(Math.random() * 100)}`,
-        playerName: `Player ${Math.floor(Math.random() * 100)}`,
-        details: getActivityDetails(type),
-        timestamp
-      });
-    }
-    
-    // Sort by timestamp (most recent first)
-    return activities.sort((a, b) => b.timestamp - a.timestamp);
-  };
-  
-  const getActivityDetails = (type) => {
-    switch (type) {
-      case 'login':
-        return 'Logged in from web client';
-      case 'game-play':
-        const games = ['Mega Fortune', 'Starburst', 'Gonzo\'s Quest', 'Book of Dead', 'Dead or Alive'];
-        return `Played ${games[Math.floor(Math.random() * games.length)]}`;
-      case 'bonus-claim':
-        const bonuses = ['Welcome Bonus', 'Free Spins', 'Reload Bonus', 'Cashback', 'VIP Bonus'];
-        return `Claimed ${bonuses[Math.floor(Math.random() * bonuses.length)]}`;
-      case 'deposit':
-        return `Deposited $${Math.floor(Math.random() * 500)}`;
-      case 'withdrawal':
-        return `Withdrew $${Math.floor(Math.random() * 1000)}`;
-      default:
-        return '';
-    }
-  };
   
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -117,24 +70,14 @@ const RecentActivityWidget = ({ settings, onSettingsChange }) => {
   // Simulate loading with React Query
   const isLoading = false;
   const error = null;
-  const activities = generateMockActivities();
+  
+  // Use the mock service instead of inline mock data generation
+  const activities = activityMockService.generateMockActivities(20);
   
   // Filter activities based on selected types and limit
   const filteredActivities = activities
     .filter(activity => types.includes(activity.type))
     .slice(0, limit);
-  
-  const formatTimestamp = (timestamp) => {
-    const now = new Date();
-    const diffHours = Math.round((now - timestamp) / (1000 * 60 * 60));
-    
-    if (diffHours < 24) {
-      return `${diffHours} ${diffHours === 1 ? 'hr' : 'hrs'} ago`;
-    } else {
-      const diffDays = Math.floor(diffHours / 24);
-      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
-    }
-  };
   
   if (isLoading) {
     return (
@@ -215,7 +158,7 @@ const RecentActivityWidget = ({ settings, onSettingsChange }) => {
                         {activity.playerName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {formatTimestamp(activity.timestamp)}
+                        {activityMockService.formatTimestamp(activity.timestamp)}
                       </Typography>
                     </Box>
                   }
