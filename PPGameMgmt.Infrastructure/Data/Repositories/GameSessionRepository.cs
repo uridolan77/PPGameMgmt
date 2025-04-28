@@ -95,5 +95,15 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 .OrderByDescending(gs => gs.StartTime)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<GameSession>> GetRecentSessionsByPlayerIdAsync(string playerId, int days)
+        {
+            var cutoffDate = DateTime.UtcNow.AddDays(-days);
+            return await _context.GameSessions
+                .Where(gs => gs.PlayerId == playerId && gs.StartTime >= cutoffDate)
+                .Include(gs => gs.Game)
+                .OrderByDescending(gs => gs.StartTime)
+                .ToListAsync();
+        }
     }
 }

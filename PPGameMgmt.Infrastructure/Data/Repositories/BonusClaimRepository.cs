@@ -99,5 +99,15 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<BonusClaim>> GetRecentClaimsByPlayerIdAsync(string playerId, int days)
+        {
+            var cutoffDate = DateTime.UtcNow.AddDays(-days);
+            return await _context.BonusClaims
+                .Where(bc => bc.PlayerId == playerId && bc.ClaimedDate >= cutoffDate)
+                .Include(bc => bc.Bonus)
+                .OrderByDescending(bc => bc.ClaimedDate)
+                .ToListAsync();
+        }
     }
 }

@@ -19,7 +19,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         private InferenceSession _session;
         private string _modelPath;
         private bool _isModelLoaded = false;
-        private const string MODEL_NAME = "bonus_optimization";
+        internal const string MODEL_NAME = "bonus_optimization";
 
         public BonusOptimizationModel(
             ILogger<BonusOptimizationModel> logger,

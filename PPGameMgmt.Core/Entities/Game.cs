@@ -10,6 +10,7 @@ namespace PPGameMgmt.Core.Entities
         public string Provider { get; set; }
         public GameType Type { get; set; }
         public GameCategory Category { get; set; }
+        public string Genre { get; set; } // Added Genre property
         public string Description { get; set; }
         public bool IsFeatured { get; set; }
         public decimal RTP { get; set; } // Return to Player percentage

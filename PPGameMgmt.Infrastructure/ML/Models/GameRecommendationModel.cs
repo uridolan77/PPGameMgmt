@@ -21,7 +21,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         private bool _isModelLoaded = false;
         private Dictionary<string, int> _gameIndexMap; // Maps game IDs to model output indices
         private List<string> _allGameIds; // All game IDs in order of model output
-        private const string MODEL_NAME = "game_recommendation";
+        internal const string MODEL_NAME = "game_recommendation";
 
         public GameRecommendationModel(
             ILogger<GameRecommendationModel> logger,

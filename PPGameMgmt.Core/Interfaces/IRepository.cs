@@ -47,6 +47,7 @@ namespace PPGameMgmt.Core.Interfaces
         Task<IEnumerable<GameSession>> GetSessionsByGameAsync(string gameId, int limit = 100);
         Task<IEnumerable<GameSession>> GetSessionsByDateRangeAsync(DateTime start, DateTime end);
         Task<IEnumerable<GameSession>> GetSessionsByPlayerIdAsync(string playerId);
+        Task<IEnumerable<GameSession>> GetRecentSessionsByPlayerIdAsync(string playerId, int days);
     }
 
     public interface IBonusClaimRepository : IRepository<BonusClaim>
@@ -56,6 +57,7 @@ namespace PPGameMgmt.Core.Interfaces
         Task<IEnumerable<BonusClaim>> GetClaimsByBonusAsync(string bonusId);
         Task<IEnumerable<BonusClaim>> GetRecentClaimsAsync(int days);
         Task<IEnumerable<BonusClaim>> GetByPlayerIdAsync(string playerId);
+        Task<IEnumerable<BonusClaim>> GetRecentClaimsByPlayerIdAsync(string playerId, int days);
     }
 
     public interface IPlayerFeaturesRepository : IRepository<PlayerFeatures>

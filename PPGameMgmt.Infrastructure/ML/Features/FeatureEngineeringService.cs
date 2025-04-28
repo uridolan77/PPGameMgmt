@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -96,16 +98,18 @@ namespace PPGameMgmt.Infrastructure.ML.Features
             var features = new PlayerFeatures
             {
                 PlayerId = playerId,
-                AverageSessionDuration = recentSessions.Count > 0 
-                    ? recentSessions.Average(s => (s.EndTime - s.StartTime).TotalMinutes) 
-                    : 0,
+                AverageSessionDuration = recentSessions.Any() 
+                    ? TimeSpan.FromMinutes(recentSessions.Average(s => s.EndTime.HasValue
+                        ? (s.EndTime.Value - s.StartTime).TotalMinutes 
+                        : 0))
+                    : TimeSpan.Zero,
                 PreferredGameGenre = CalculatePreferredGenre(recentSessions),
                 SessionFrequency = CalculateSessionFrequency(recentSessions),
                 TypicalDepositAmount = player.AverageDepositAmount,
-                TotalBonusesClaimed = recentClaims.Count,
+                TotalBonusesClaimed = recentClaims.Count(),
                 PreferredPlayingTimeOfDay = CalculatePreferredPlayingTime(recentSessions),
-                LastActive = recentSessions.Count > 0 
-                    ? recentSessions.Max(s => s.EndTime) 
+                LastActive = recentSessions.Any() 
+                    ? recentSessions.Max(s => s.EndTime ?? s.StartTime) 
                     : player.LastLoginDate,
                 TimestampUtc = DateTime.UtcNow
             };
@@ -187,8 +191,14 @@ namespace PPGameMgmt.Infrastructure.ML.Features
             if (!sessions.Any()) return 0;
             
             var firstSession = sessions.Min(s => s.StartTime);
-            var lastSession = sessions.Max(s => s.EndTime);
-            var totalWeeks = (lastSession - firstSession).TotalDays / 7;
+            var lastSession = sessions.Max(s => s.EndTime ?? s.StartTime);
+            
+            // Check if all sessions have the same timestamp or if we can't determine a proper range
+            if (lastSession <= firstSession)
+                return sessions.Count(); // All sessions in same time or invalid data
+                
+            var timeSpan = lastSession - firstSession;
+            var totalWeeks = timeSpan.TotalDays / 7;
             
             return totalWeeks > 0 ? sessions.Count() / totalWeeks : sessions.Count();
         }

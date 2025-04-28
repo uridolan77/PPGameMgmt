@@ -14,6 +14,7 @@ namespace PPGameMgmt.Core.Entities
         public DateTime LastLoginDate { get; set; }
         public decimal TotalDeposits { get; set; }
         public decimal TotalWithdrawals { get; set; }
+        public decimal AverageDepositAmount { get; set; } // Added missing property
         public int LoginCount { get; set; }
         public PlayerSegment Segment { get; set; }
         public int Age { get; set; }

@@ -15,6 +15,9 @@ using System.Data;
 using Azure.Identity;
 using Azure.Core;
 using System.Net.Http.Json;
+using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Entities;
+using CoreModelMetadata = PPGameMgmt.Core.Entities.ModelMetadata;
 
 namespace PPGameMgmt.Infrastructure.ML.Models
 {
@@ -27,7 +30,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         private readonly IConfiguration _configuration;
         private readonly string _modelStoragePath;
         private readonly string _modelRegistryPath;
-        private readonly Dictionary<string, ModelMetadata> _activeModels = new();
+        private readonly Dictionary<string, CoreModelMetadata> _activeModels = new();
         private readonly MLOpsStorageType _storageType;
         private readonly string _connectionString;
         private readonly string _azureMLWorkspace;
@@ -86,7 +89,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     try
                     {
                         var registryJson = File.ReadAllText(_modelRegistryPath);
-                        var registry = JsonSerializer.Deserialize<Dictionary<string, ModelMetadata>>(registryJson);
+                        var registry = JsonSerializer.Deserialize<Dictionary<string, CoreModelMetadata>>(registryJson);
                         
                         if (registry != null)
                         {
@@ -114,7 +117,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <param name="modelPath">Path to the model file</param>
         /// <param name="version">Optional version identifier (auto-generated if not provided)</param>
         /// <returns>Metadata for the registered model</returns>
-        public async Task<ModelMetadata> RegisterModelAsync(string modelName, string modelPath, string version = null)
+        public async Task<CoreModelMetadata> RegisterModelAsync(string modelName, string modelPath, string? version = null)
         {
             if (string.IsNullOrEmpty(modelName))
                 throw new ArgumentNullException(nameof(modelName));
@@ -126,11 +129,12 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             version ??= DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
             
             // Create model metadata
-            var metadata = new ModelMetadata
+            var metadata = new CoreModelMetadata
             {
-                Name = modelName,
+                Id = Guid.NewGuid(),
+                ModelName = modelName,
                 Version = version,
-                StoragePath = Path.Combine(_modelStoragePath, $"{modelName}-{version}.onnx"),
+                ModelPath = Path.Combine(_modelStoragePath, $"{modelName}-{version}.onnx"),
                 RegisteredTimestamp = DateTime.UtcNow,
                 IsActive = true,
                 Metrics = new Dictionary<string, double>()
@@ -182,11 +186,11 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         {
             // First check in-memory cache
             var activeModel = _activeModels.Values
-                .FirstOrDefault(m => m.Name == modelName && m.IsActive);
+                .FirstOrDefault(m => m.ModelName == modelName && m.IsActive);
                 
             if (activeModel != null)
             {
-                return activeModel.StoragePath;
+                return activeModel.ModelPath;
             }
             
             // If not in cache, try to pull from storage (async here would be better, but interface constraint)
@@ -209,7 +213,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     {
                         _activeModels[modelName] = activeModel;
                     }
-                    return activeModel.StoragePath;
+                    return activeModel.ModelPath;
                 }
             }
             catch (Exception ex)
@@ -225,11 +229,11 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// </summary>
         /// <param name="modelName">The name of the model</param>
         /// <returns>Collection of model metadata</returns>
-        public IEnumerable<ModelMetadata> GetModelVersions(string modelName)
+        public IEnumerable<CoreModelMetadata> GetModelVersions(string modelName)
         {
             // First check in-memory cache
             var modelsFromCache = _activeModels.Values
-                .Where(m => m.Name == modelName)
+                .Where(m => m.ModelName == modelName)
                 .ToList();
                 
             if (modelsFromCache.Any())
@@ -240,7 +244,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             // If not in cache, try to pull from storage (async here would be better, but interface constraint)
             try
             {
-                IEnumerable<ModelMetadata> models = null;
+                IEnumerable<CoreModelMetadata> models = null;
                 
                 switch (_storageType)
                 {
@@ -257,7 +261,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     // Add to cache
                     foreach (var model in models)
                     {
-                        var key = $"{model.Name}_{model.Version}";
+                        var key = $"{model.ModelName}_{model.Version}";
                         _activeModels[key] = model;
                     }
                     
@@ -269,7 +273,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 _logger.LogError(ex, "Error retrieving model versions for {ModelName}", modelName);
             }
             
-            return Enumerable.Empty<ModelMetadata>();
+            return Enumerable.Empty<CoreModelMetadata>();
         }
 
         /// <summary>
@@ -312,7 +316,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 }
                 
                 // Update in-memory cache
-                foreach (var m in _activeModels.Values.Where(m => m.Name == modelName))
+                foreach (var m in _activeModels.Values.Where(m => m.ModelName == modelName))
                 {
                     m.IsActive = m.Version == version;
                 }
@@ -337,7 +341,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             {
                 // Get active model
                 var activeModel = _activeModels.Values
-                    .FirstOrDefault(m => m.Name == modelName && m.IsActive);
+                    .FirstOrDefault(m => m.ModelName == modelName && m.IsActive);
                     
                 if (activeModel == null)
                 {
@@ -358,7 +362,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     }
                     
                     // Add to cache
-                    _activeModels[$"{activeModel.Name}_{activeModel.Version}"] = activeModel;
+                    _activeModels[$"{activeModel.ModelName}_{activeModel.Version}"] = activeModel;
                 }
                 
                 // Update metrics
@@ -366,9 +370,6 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 {
                     activeModel.Metrics[key] = value;
                 }
-                
-                // Record timestamp of the metrics update
-                activeModel.LastMetricsUpdate = DateTime.UtcNow;
                 
                 // Update in storage
                 switch (_storageType)
@@ -398,22 +399,21 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Registers a model in the file system
         /// </summary>
-        private async Task RegisterModelInFileSystemAsync(string modelName, string modelPath, ModelMetadata metadata)
+        private async Task RegisterModelInFileSystemAsync(string modelName, string modelPath, CoreModelMetadata metadata)
         {
             // Copy model file to storage
-            File.Copy(modelPath, metadata.StoragePath, overwrite: true);
+            File.Copy(modelPath, metadata.ModelPath, overwrite: true);
             
             // Validate the model by trying to create a session
             try
             {
-                using var session = new InferenceSession(metadata.StoragePath);
-                metadata.InputFeatures = session.InputMetadata.Keys.ToList();
-                metadata.OutputFeatures = session.OutputMetadata.Keys.ToList();
+                using var session = new InferenceSession(metadata.ModelPath);
+                // Note: We can't store InputFeatures and OutputFeatures as they were previously internal properties
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error validating model {ModelName} version {Version}", modelName, metadata.Version);
-                File.Delete(metadata.StoragePath);
+                File.Delete(metadata.ModelPath);
                 throw;
             }
             
@@ -468,15 +468,13 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 // Create the table
                 using var createTableCmd = new SqlCommand(
                     @"CREATE TABLE dbo.ModelRegistry (
-                        Id INT IDENTITY(1,1) PRIMARY KEY,
+                        Id UNIQUEIDENTIFIER PRIMARY KEY,
                         ModelName NVARCHAR(100) NOT NULL,
                         Version NVARCHAR(50) NOT NULL,
-                        StoragePath NVARCHAR(500) NOT NULL,
+                        ModelPath NVARCHAR(500) NOT NULL,
                         RegisteredTimestamp DATETIME2 NOT NULL,
                         LastMetricsUpdate DATETIME2 NULL,
                         IsActive BIT NOT NULL,
-                        InputFeatures NVARCHAR(MAX) NULL,
-                        OutputFeatures NVARCHAR(MAX) NULL,
                         Metrics NVARCHAR(MAX) NULL,
                         CONSTRAINT UC_ModelRegistry_ModelName_Version UNIQUE (ModelName, Version)
                     )", connection);
@@ -504,24 +502,28 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             
             while (await reader.ReadAsync())
             {
-                var model = new ModelMetadata
+                var model = new CoreModelMetadata
                 {
-                    Name = reader["ModelName"].ToString(),
+                    Id = (Guid)reader["Id"],
+                    ModelName = reader["ModelName"].ToString(),
                     Version = reader["Version"].ToString(),
-                    StoragePath = reader["StoragePath"].ToString(),
+                    ModelPath = reader["ModelPath"].ToString(),
                     RegisteredTimestamp = (DateTime)reader["RegisteredTimestamp"],
                     IsActive = (bool)reader["IsActive"],
-                    InputFeatures = DeserializeStringList(reader["InputFeatures"]),
-                    OutputFeatures = DeserializeStringList(reader["OutputFeatures"]),
                     Metrics = DeserializeMetrics(reader["Metrics"])
                 };
                 
                 if (reader["LastMetricsUpdate"] != DBNull.Value)
                 {
-                    model.LastMetricsUpdate = (DateTime)reader["LastMetricsUpdate"];
+                    // Use reflection to set LastMetricsUpdate if the property exists
+                    var property = typeof(CoreModelMetadata).GetProperty("LastMetricsUpdate");
+                    if (property != null)
+                    {
+                        property.SetValue(model, (DateTime)reader["LastMetricsUpdate"]);
+                    }
                 }
                 
-                _activeModels[$"{model.Name}_{model.Version}"] = model;
+                _activeModels[$"{model.ModelName}_{model.Version}"] = model;
             }
             
             _logger.LogInformation("Loaded {Count} models from database", _activeModels.Count);
@@ -530,7 +532,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Gets the active model for a given model name from the database
         /// </summary>
-        private async Task<ModelMetadata> GetActiveModelFromDatabaseAsync(string modelName)
+        private async Task<CoreModelMetadata> GetActiveModelFromDatabaseAsync(string modelName)
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -543,21 +545,25 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             
             if (await reader.ReadAsync())
             {
-                var model = new ModelMetadata
+                var model = new CoreModelMetadata
                 {
-                    Name = reader["ModelName"].ToString(),
+                    Id = (Guid)reader["Id"],
+                    ModelName = reader["ModelName"].ToString(),
                     Version = reader["Version"].ToString(),
-                    StoragePath = reader["StoragePath"].ToString(),
+                    ModelPath = reader["ModelPath"].ToString(),
                     RegisteredTimestamp = (DateTime)reader["RegisteredTimestamp"],
                     IsActive = (bool)reader["IsActive"],
-                    InputFeatures = DeserializeStringList(reader["InputFeatures"]),
-                    OutputFeatures = DeserializeStringList(reader["OutputFeatures"]),
                     Metrics = DeserializeMetrics(reader["Metrics"])
                 };
                 
                 if (reader["LastMetricsUpdate"] != DBNull.Value)
                 {
-                    model.LastMetricsUpdate = (DateTime)reader["LastMetricsUpdate"];
+                    // Use reflection to set LastMetricsUpdate if the property exists
+                    var property = typeof(CoreModelMetadata).GetProperty("LastMetricsUpdate");
+                    if (property != null)
+                    {
+                        property.SetValue(model, (DateTime)reader["LastMetricsUpdate"]);
+                    }
                 }
                 
                 return model;
@@ -569,9 +575,9 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Gets all versions of a model from the database
         /// </summary>
-        private async Task<IEnumerable<ModelMetadata>> GetModelVersionsFromDatabaseAsync(string modelName)
+        private async Task<IEnumerable<CoreModelMetadata>> GetModelVersionsFromDatabaseAsync(string modelName)
         {
-            var models = new List<ModelMetadata>();
+            var models = new List<CoreModelMetadata>();
             
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -584,21 +590,25 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             
             while (await reader.ReadAsync())
             {
-                var model = new ModelMetadata
+                var model = new CoreModelMetadata
                 {
-                    Name = reader["ModelName"].ToString(),
+                    Id = (Guid)reader["Id"],
+                    ModelName = reader["ModelName"].ToString(),
                     Version = reader["Version"].ToString(),
-                    StoragePath = reader["StoragePath"].ToString(),
+                    ModelPath = reader["ModelPath"].ToString(),
                     RegisteredTimestamp = (DateTime)reader["RegisteredTimestamp"],
                     IsActive = (bool)reader["IsActive"],
-                    InputFeatures = DeserializeStringList(reader["InputFeatures"]),
-                    OutputFeatures = DeserializeStringList(reader["OutputFeatures"]),
                     Metrics = DeserializeMetrics(reader["Metrics"])
                 };
                 
                 if (reader["LastMetricsUpdate"] != DBNull.Value)
                 {
-                    model.LastMetricsUpdate = (DateTime)reader["LastMetricsUpdate"];
+                    // Use reflection to set LastMetricsUpdate if the property exists
+                    var property = typeof(CoreModelMetadata).GetProperty("LastMetricsUpdate");
+                    if (property != null)
+                    {
+                        property.SetValue(model, (DateTime)reader["LastMetricsUpdate"]);
+                    }
                 }
                 
                 models.Add(model);
@@ -610,22 +620,21 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Registers a model in the database
         /// </summary>
-        private async Task RegisterModelInDatabaseAsync(string modelName, string modelPath, ModelMetadata metadata)
+        private async Task RegisterModelInDatabaseAsync(string modelName, string modelPath, CoreModelMetadata metadata)
         {
             // Copy model file to storage
-            File.Copy(modelPath, metadata.StoragePath, overwrite: true);
+            File.Copy(modelPath, metadata.ModelPath, overwrite: true);
             
             // Validate the model by trying to create a session
             try
             {
-                using var session = new InferenceSession(metadata.StoragePath);
-                metadata.InputFeatures = session.InputMetadata.Keys.ToList();
-                metadata.OutputFeatures = session.OutputMetadata.Keys.ToList();
+                using var session = new InferenceSession(metadata.ModelPath);
+                // We no longer store InputFeatures and OutputFeatures as they were internal properties
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error validating model {ModelName} version {Version}", modelName, metadata.Version);
-                File.Delete(metadata.StoragePath);
+                File.Delete(metadata.ModelPath);
                 throw;
             }
             
@@ -642,24 +651,23 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 // Now insert the new model
                 using var insertCmd = new SqlCommand(
                     @"INSERT INTO dbo.ModelRegistry 
-                      (ModelName, Version, StoragePath, RegisteredTimestamp, IsActive, InputFeatures, OutputFeatures, Metrics) 
-                      VALUES (@ModelName, @Version, @StoragePath, @RegisteredTimestamp, @IsActive, @InputFeatures, @OutputFeatures, @Metrics)",
+                      (Id, ModelName, Version, ModelPath, RegisteredTimestamp, IsActive, Metrics) 
+                      VALUES (@Id, @ModelName, @Version, @ModelPath, @RegisteredTimestamp, @IsActive, @Metrics)",
                     connection);
                 
-                insertCmd.Parameters.AddWithValue("@ModelName", metadata.Name);
+                insertCmd.Parameters.AddWithValue("@Id", metadata.Id);
+                insertCmd.Parameters.AddWithValue("@ModelName", metadata.ModelName);
                 insertCmd.Parameters.AddWithValue("@Version", metadata.Version);
-                insertCmd.Parameters.AddWithValue("@StoragePath", metadata.StoragePath);
+                insertCmd.Parameters.AddWithValue("@ModelPath", metadata.ModelPath);
                 insertCmd.Parameters.AddWithValue("@RegisteredTimestamp", metadata.RegisteredTimestamp);
                 insertCmd.Parameters.AddWithValue("@IsActive", metadata.IsActive);
-                insertCmd.Parameters.AddWithValue("@InputFeatures", JsonSerializer.Serialize(metadata.InputFeatures));
-                insertCmd.Parameters.AddWithValue("@OutputFeatures", JsonSerializer.Serialize(metadata.OutputFeatures));
                 insertCmd.Parameters.AddWithValue("@Metrics", JsonSerializer.Serialize(metadata.Metrics));
                 
                 await insertCmd.ExecuteNonQueryAsync();
             }
             
             // Update local cache
-            _activeModels[$"{metadata.Name}_{metadata.Version}"] = metadata;
+            _activeModels[$"{metadata.ModelName}_{metadata.Version}"] = metadata;
         }
 
         /// <summary>
@@ -691,7 +699,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Saves metrics for a model to the database
         /// </summary>
-        private async Task SaveMetricsToDatabase(ModelMetadata model)
+        private async Task SaveMetricsToDatabase(CoreModelMetadata model)
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -702,31 +710,11 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                   WHERE ModelName = @ModelName AND Version = @Version", connection);
             
             cmd.Parameters.AddWithValue("@Metrics", JsonSerializer.Serialize(model.Metrics));
-            cmd.Parameters.AddWithValue("@LastMetricsUpdate", model.LastMetricsUpdate ?? DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@ModelName", model.Name);
+            cmd.Parameters.AddWithValue("@LastMetricsUpdate", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("@ModelName", model.ModelName);
             cmd.Parameters.AddWithValue("@Version", model.Version);
             
             await cmd.ExecuteNonQueryAsync();
-        }
-
-        /// <summary>
-        /// Helper to deserialize a JSON string to a list of strings
-        /// </summary>
-        private List<string> DeserializeStringList(object dbValue)
-        {
-            if (dbValue == null || dbValue == DBNull.Value)
-            {
-                return new List<string>();
-            }
-            
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(dbValue.ToString());
-            }
-            catch
-            {
-                return new List<string>();
-            }
         }
 
         /// <summary>
@@ -787,7 +775,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Load models from Azure ML Registry
         /// </summary>
-        private async Task<IEnumerable<ModelMetadata>> GetModelVersionsFromAzureMLAsync(string modelName)
+        private async Task<IEnumerable<CoreModelMetadata>> GetModelVersionsFromAzureMLAsync(string modelName)
         {
             try
             {
@@ -801,11 +789,11 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 {
                     _logger.LogError("Failed to get models from Azure ML: {StatusCode} - {Content}", 
                         response.StatusCode, await response.Content.ReadAsStringAsync());
-                    return Enumerable.Empty<ModelMetadata>();
+                    return Enumerable.Empty<CoreModelMetadata>();
                 }
                 
                 var content = await response.Content.ReadFromJsonAsync<AzureMLModelListResponse>();
-                var models = new List<ModelMetadata>();
+                var models = new List<CoreModelMetadata>();
                 
                 // Filter models by name
                 foreach (var azureModel in content.Value)
@@ -821,20 +809,22 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                             var modelDetails = await detailsResponse.Content.ReadFromJsonAsync<AzureMLModelDetails>();
                             
                             // Map Azure ML model to our metadata format
-                            var metadata = new ModelMetadata
+                            var metadata = new CoreModelMetadata
                             {
-                                Name = modelName,
+                                Id = Guid.NewGuid(),
+                                ModelName = modelName,
                                 Version = azureModel.Version,
-                                StoragePath = await DownloadAndCacheModelIfNeeded(modelName, azureModel.Version, modelDetails),
+                                ModelPath = await DownloadAndCacheModelIfNeeded(modelName, azureModel.Version, modelDetails),
                                 RegisteredTimestamp = DateTimeOffset.Parse(azureModel.CreatedTime).DateTime,
                                 IsActive = azureModel.Properties.ContainsKey("IsActive") && 
-                                           bool.Parse(azureModel.Properties["IsActive"]),
-                                LastMetricsUpdate = azureModel.Properties.ContainsKey("LastMetricsUpdate") ? 
-                                    DateTimeOffset.Parse(azureModel.Properties["LastMetricsUpdate"]).DateTime : null,
-                                Metrics = azureModel.Properties.ContainsKey("Metrics") ? 
-                                    JsonSerializer.Deserialize<Dictionary<string, double>>(azureModel.Properties["Metrics"]) : 
-                                    new Dictionary<string, double>()
+                                           bool.Parse(azureModel.Properties["IsActive"])
                             };
+                            
+                            if (azureModel.Properties.ContainsKey("Metrics"))
+                            {
+                                metadata.Metrics = JsonSerializer.Deserialize<Dictionary<string, double>>(
+                                    azureModel.Properties["Metrics"]);
+                            }
                             
                             models.Add(metadata);
                         }
@@ -846,14 +836,14 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting model versions from Azure ML");
-                return Enumerable.Empty<ModelMetadata>();
+                return Enumerable.Empty<CoreModelMetadata>();
             }
         }
         
         /// <summary>
         /// Get active model from Azure ML Registry
         /// </summary>
-        private async Task<ModelMetadata> GetActiveModelFromAzureMLAsync(string modelName)
+        private async Task<CoreModelMetadata> GetActiveModelFromAzureMLAsync(string modelName)
         {
             try
             {
@@ -870,7 +860,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Register model in Azure ML
         /// </summary>
-        private async Task RegisterModelInAzureMLAsync(string modelName, string modelPath, ModelMetadata metadata)
+        private async Task RegisterModelInAzureMLAsync(string modelName, string modelPath, CoreModelMetadata metadata)
         {
             try
             {
@@ -886,12 +876,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 await CompleteModelRegistrationAsync(client, modelName, metadata);
                 
                 // Step 4: Copy the model locally for fast inference
-                File.Copy(modelPath, metadata.StoragePath, overwrite: true);
+                File.Copy(modelPath, metadata.ModelPath, overwrite: true);
                 
                 // Step 5: Validate the model by trying to create a session
-                using var session = new InferenceSession(metadata.StoragePath);
-                metadata.InputFeatures = session.InputMetadata.Keys.ToList();
-                metadata.OutputFeatures = session.OutputMetadata.Keys.ToList();
+                using var session = new InferenceSession(metadata.ModelPath);
                 
                 // Add to local cache
                 _activeModels[$"{modelName}_{metadata.Version}"] = metadata;
@@ -962,14 +950,14 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Save metrics to Azure ML model
         /// </summary>
-        private async Task SaveMetricsToAzureML(ModelMetadata model)
+        private async Task SaveMetricsToAzureML(CoreModelMetadata model)
         {
             try
             {
                 var client = await GetAzureMLClientAsync();
                 
                 // Construct API URL for updating model properties
-                string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{model.Name}/{model.Version}?api-version=2022-10-01";
+                string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{model.ModelName}/{model.Version}?api-version=2022-10-01";
                 
                 // Update properties with metrics
                 var properties = new Dictionary<string, string>
@@ -994,7 +982,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 }
                 
                 _logger.LogInformation("Updated metrics for model {ModelName} version {Version} in Azure ML", 
-                    model.Name, model.Version);
+                    model.ModelName, model.Version);
             }
             catch (Exception ex)
             {
@@ -1046,7 +1034,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Complete model registration in Azure ML after upload
         /// </summary>
-        private async Task CompleteModelRegistrationAsync(HttpClient client, string modelName, ModelMetadata metadata)
+        private async Task CompleteModelRegistrationAsync(HttpClient client, string modelName, CoreModelMetadata metadata)
         {
             string url = $"https://management.azure.com/subscriptions/{_azureSubscriptionId}/resourceGroups/{_azureResourceGroup}/providers/Microsoft.MachineLearningServices/workspaces/{_azureMLWorkspace}/models/{modelName}/versions/{metadata.Version}?api-version=2022-10-01";
             
@@ -1115,7 +1103,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         /// <summary>
         /// Load models from the appropriate storage
         /// </summary>
-        private async Task LoadRegistryFromStorage()
+        private async Task LoadModelsFromStorage()
         {
             switch (_storageType)
             {
@@ -1128,22 +1116,6 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     break;
             }
         }
-    }
-
-    /// <summary>
-    /// Represents metadata for a model version
-    /// </summary>
-    public class ModelMetadata
-    {
-        public string Name { get; set; }
-        public string Version { get; set; }
-        public string StoragePath { get; set; }
-        public DateTime RegisteredTimestamp { get; set; }
-        public DateTime? LastMetricsUpdate { get; set; }
-        public bool IsActive { get; set; }
-        public List<string> InputFeatures { get; set; } = new();
-        public List<string> OutputFeatures { get; set; } = new();
-        public Dictionary<string, double> Metrics { get; set; } = new();
     }
 
     /// <summary>

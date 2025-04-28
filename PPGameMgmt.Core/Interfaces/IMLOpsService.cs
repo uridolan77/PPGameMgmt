@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using PPGameMgmt.Infrastructure.ML.Models;
+using PPGameMgmt.Core.Entities;
 
 namespace PPGameMgmt.Core.Interfaces
 {
@@ -16,7 +16,7 @@ namespace PPGameMgmt.Core.Interfaces
         /// <param name="modelPath">Path to the model file</param>
         /// <param name="version">Optional version identifier (auto-generated if not provided)</param>
         /// <returns>Metadata for the registered model</returns>
-        Task<ModelMetadata> RegisterModelAsync(string modelName, string modelPath, string version = null);
+        Task<ModelMetadata> RegisterModelAsync(string modelName, string modelPath, string? version = null);
         
         /// <summary>
         /// Gets the path to the active version of a model
