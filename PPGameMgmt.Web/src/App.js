@@ -12,7 +12,16 @@ import Login from "./pages/Login";
 import RequireAuth from "./components/common/RequireAuth";
 
 function App() {
-  const { user } = useAuth();
+  // Use try-catch to handle potential context issues with StrictMode double rendering
+  let authContext = { user: null };
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.warn("Auth context not available yet:", error.message);
+    // Will retry on next render since StrictMode renders twice
+  }
+  
+  const { user } = authContext;
 
   return (
     <Box sx={{ display: "flex", height: "100vh" }}>

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PPGameMgmt.Core.Entities;
 
 namespace PPGameMgmt.Infrastructure.Data.Contexts
@@ -34,6 +35,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(e => e.Language).HasMaxLength(10);
                 entity.Property(e => e.TotalDeposits).HasPrecision(18, 2);
                 entity.Property(e => e.TotalWithdrawals).HasPrecision(18, 2);
+                entity.Property(e => e.AverageDepositAmount).HasPrecision(18, 2);
                 
                 // Relationships
                 entity.HasMany(p => p.GameSessions)
@@ -77,15 +79,27 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(e => e.PercentageMatch).HasPrecision(5, 2);
                 entity.Property(e => e.MinimumDeposit).HasPrecision(18, 2);
                 
-                // Store arrays as JSON
+                // Store arrays as JSON with value comparers
                 entity.Property(e => e.ApplicableGameIds).HasConversion(
                     v => JsonSerializer.Serialize(v, _jsonOptions),
                     v => JsonSerializer.Deserialize<string[]>(v, _jsonOptions)
+                ).Metadata.SetValueComparer(
+                    new ValueComparer<string[]>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToArray()
+                    )
                 );
                 
                 entity.Property(e => e.TargetSegments).HasConversion(
                     v => JsonSerializer.Serialize(v, _jsonOptions),
                     v => JsonSerializer.Deserialize<PlayerSegment[]>(v, _jsonOptions)
+                ).Metadata.SetValueComparer(
+                    new ValueComparer<PlayerSegment[]>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToArray()
+                    )
                 );
                 
                 // Relationships
@@ -103,6 +117,8 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(e => e.TotalWins).HasPrecision(18, 2);
                 entity.Property(e => e.DeviceType).HasMaxLength(20);
                 entity.Property(e => e.BrowserInfo).HasMaxLength(200);
+                entity.Property(e => e.DepositAmount).HasPrecision(18, 2);
+                entity.Property(e => e.WithdrawalAmount).HasPrecision(18, 2);
                 
                 // Relationships already defined in Player and Game entities
             });
@@ -111,6 +127,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
             modelBuilder.Entity<BonusClaim>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.BonusValue).HasPrecision(18, 2);
                 entity.Property(e => e.DepositAmount).HasPrecision(18, 2);
                 entity.Property(e => e.WageringProgress).HasPrecision(5, 2);
                 entity.Property(e => e.ConversionTrigger).HasMaxLength(50);
@@ -130,16 +147,31 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(e => e.TotalWithdrawalsLast30Days).HasPrecision(18, 2);
                 entity.Property(e => e.AverageDepositAmount).HasPrecision(18, 2);
                 entity.Property(e => e.PlayerLifetimeValue).HasPrecision(18, 2);
+                entity.Property(e => e.LifetimeValue).HasPrecision(18, 2);
+                entity.Property(e => e.MonthlyAverageDeposit).HasPrecision(18, 2);
+                entity.Property(e => e.TypicalDepositAmount).HasPrecision(18, 2);
                 
-                // Store arrays as JSON
+                // Store arrays as JSON with value comparers
                 entity.Property(e => e.TopPlayedGameIds).HasConversion(
                     v => JsonSerializer.Serialize(v, _jsonOptions),
                     v => JsonSerializer.Deserialize<string[]>(v, _jsonOptions)
+                ).Metadata.SetValueComparer(
+                    new ValueComparer<string[]>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToArray()
+                    )
                 );
                 
                 entity.Property(e => e.PreferredTimeSlots).HasConversion(
                     v => JsonSerializer.Serialize(v, _jsonOptions),
                     v => JsonSerializer.Deserialize<string[]>(v, _jsonOptions)
+                ).Metadata.SetValueComparer(
+                    new ValueComparer<string[]>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToArray()
+                    )
                 );
             });
 
@@ -149,10 +181,16 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.PlayerId).IsRequired();
                 
-                // Store complex objects as JSON
+                // Store complex objects as JSON with value comparer
                 entity.Property(e => e.RecommendedGames).HasConversion(
                     v => JsonSerializer.Serialize(v, _jsonOptions),
                     v => JsonSerializer.Deserialize<List<GameRecommendation>>(v, _jsonOptions)
+                ).Metadata.SetValueComparer(
+                    new ValueComparer<List<GameRecommendation>>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()
+                    )
                 );
                 
                 entity.Property(e => e.RecommendedBonus).HasConversion(

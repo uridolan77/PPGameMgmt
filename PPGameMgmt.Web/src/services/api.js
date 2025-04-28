@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://localhost:7001/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7001/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -53,5 +53,46 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Define API service for Players
+export const playerApi = {
+  getAll: () => api.get('/players'),
+  getById: (id) => api.get(`/players/${id}`),
+  create: (data) => api.post('/players', data),
+  update: (id, data) => api.put(`/players/${id}`, data),
+  delete: (id) => api.delete(`/players/${id}`),
+  getFeatures: (id) => api.get(`/players/${id}/features`),
+  getGameSessions: (id) => api.get(`/players/${id}/gamesessions`),
+  getBonusClaims: (id) => api.get(`/players/${id}/bonusclaims`)
+};
+
+// Define API service for Games
+export const gameApi = {
+  getAll: () => api.get('/games'),
+  getById: (id) => api.get(`/games/${id}`),
+  create: (data) => api.post('/games', data),
+  update: (id, data) => api.put(`/games/${id}`, data),
+  delete: (id) => api.delete(`/games/${id}`),
+  getTopGames: () => api.get('/games/top'),
+  getByCategory: (category) => api.get(`/games/category/${category}`)
+};
+
+// Define API service for Bonuses
+export const bonusApi = {
+  getAll: () => api.get('/bonuses'),
+  getById: (id) => api.get(`/bonuses/${id}`),
+  create: (data) => api.post('/bonuses', data),
+  update: (id, data) => api.put(`/bonuses/${id}`, data),
+  delete: (id) => api.delete(`/bonuses/${id}`),
+  getActive: () => api.get('/bonuses/active'),
+  claim: (playerId, bonusId) => api.post(`/bonuses/${bonusId}/claim`, { playerId })
+};
+
+// Define API service for Recommendations
+export const recommendationApi = {
+  getForPlayer: (playerId) => api.get(`/recommendations/player/${playerId}`),
+  getGameRecommendations: (playerId) => api.get(`/recommendations/player/${playerId}/games`),
+  getBonusRecommendations: (playerId) => api.get(`/recommendations/player/${playerId}/bonuses`)
+};
 
 export default api;
