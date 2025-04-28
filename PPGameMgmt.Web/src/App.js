@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { Box } from "@mui/material";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboard/Dashboard";
 import GameLibrary from "./pages/GameLibrary";
 import PlayerProfile from "./pages/PlayerProfile";
 import BonusOffers from "./pages/BonusOffers";

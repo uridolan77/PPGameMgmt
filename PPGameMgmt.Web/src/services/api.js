@@ -9,6 +9,50 @@ const api = axios.create({
   timeout: 10000, // 10 seconds
 });
 
+// Flag to prevent multiple refresh token requests
+let isRefreshing = false;
+// Queue of pending requests
+let refreshSubscribers = [];
+
+// Helper function to add callbacks to the queue
+const subscribeTokenRefresh = (callback) => {
+  refreshSubscribers.push(callback);
+};
+
+// Helper function to execute all callbacks in the queue with the new token
+const onRefreshed = (token) => {
+  refreshSubscribers.map(callback => callback(token));
+  refreshSubscribers = [];
+};
+
+// Function to refresh the access token
+const refreshAccessToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) throw new Error('No refresh token available');
+    
+    const response = await axios.post(`${api.defaults.baseURL}/auth/refresh-token`, {
+      refreshToken
+    });
+    
+    const { accessToken, refreshToken: newRefreshToken } = response.data;
+    
+    localStorage.setItem('authToken', accessToken);
+    localStorage.setItem('refreshToken', newRefreshToken);
+    
+    return accessToken;
+  } catch (error) {
+    // If refresh token is invalid, force logout
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    
+    // Redirect to login
+    window.location.href = '/login';
+    return null;
+  }
+};
+
 // Request interceptor for adding the auth token
 api.interceptors.request.use(
   (config) => {
@@ -23,21 +67,52 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for handling common errors
+// Response interceptor for handling token refresh
 api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    // Handle 401 Unauthorized errors
-    if (error.response && error.response.status === 401) {
-      // Clear local storage and force re-login
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 and not a retry and not a token refresh request
+    if (error.response?.status === 401 && 
+        !originalRequest._retry &&
+        !originalRequest.url?.includes('auth/refresh-token')) {
       
-      // Redirect to login if not already there
-      if (!window.location.pathname.includes('/login')) {
+      if (isRefreshing) {
+        // Wait for token to be refreshed
+        return new Promise(resolve => {
+          subscribeTokenRefresh(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(axios(originalRequest));
+          });
+        });
+      }
+      
+      originalRequest._retry = true;
+      isRefreshing = true;
+      
+      try {
+        // Attempt to refresh the token
+        const newToken = await refreshAccessToken();
+        
+        if (newToken) {
+          // Notify all subscribers that token has been refreshed
+          onRefreshed(newToken);
+          
+          // Try original request again with new token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return axios(originalRequest);
+        } else {
+          return Promise.reject(error);
+        }
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
         window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     
