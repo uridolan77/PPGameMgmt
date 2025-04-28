@@ -59,17 +59,21 @@ builder.Services.AddSwaggerGen(c =>
 // Add API Management configuration
 builder.Services.AddApiManagementConfiguration(builder.Configuration);
 
-// Database context - Using Azure SQL with EF Core 9.0
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Database context - Using MySQL with EF Core
+var connectionString = builder.Configuration.GetConnectionString("MySqlConnection");
+Console.WriteLine($"Using MySQL Connection: {connectionString}");
 builder.Services.AddDbContext<CasinoDbContext>(options =>
-    options.UseSqlServer(
-        connectionString,
-        sqlServerOptions => sqlServerOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
+    options.UseMySql(
+        connectionString, 
+        ServerVersion.AutoDetect(connectionString),
+        mySqlOptions => mySqlOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
 
-// Add Redis distributed cache
+// Add Redis distributed cache with abortConnect=false already set in config
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+Console.WriteLine($"Using Redis Connection: {redisConnectionString}");
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.Configuration = redisConnectionString;
     options.InstanceName = "PPGameMgmt:";
 });
 
@@ -78,7 +82,7 @@ builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
 // Add SignalR with Redis backplane
 builder.Services.AddSignalR()
-    .AddStackExchangeRedis(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379", options =>
+    .AddStackExchangeRedis(redisConnectionString, options =>
     {
         options.Configuration.ChannelPrefix = "PPGameMgmt:SignalR";
     });
@@ -171,23 +175,47 @@ app.UseAuthorization();
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapControllers();
 
-// Create the database if it doesn't exist
+// Test database connection at startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<CasinoDbContext>();
-        context.Database.EnsureCreated();
         
-        // Initialize ML models
-        var mlService = services.GetRequiredService<IMLModelService>();
-        mlService.InitializeModelsAsync().Wait();
+        Console.WriteLine("Testing database connection...");
+        if (context.Database.CanConnect())
+        {
+            Console.WriteLine("Successfully connected to MySQL database!");
+        }
+        else
+        {
+            Console.WriteLine("Failed to connect to the database.");
+        }
+        
+        // Initialize ML models - wrap in try-catch to prevent startup failure
+        try
+        {
+            var mlService = services.GetRequiredService<IMLModelService>();
+            mlService.InitializeModelsAsync().Wait();
+            Console.WriteLine("ML models initialized successfully.");
+        }
+        catch (Exception mlEx)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(mlEx, "ML model initialization failed but API will continue to start");
+            Console.WriteLine($"ML model initialization warning: {mlEx.Message}");
+        }
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while creating the database or initializing ML models.");
+        logger.LogError(ex, "An error occurred while connecting to the database or initializing ML models.");
+        Console.WriteLine($"Error: {ex.Message}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+        }
     }
 }
 
