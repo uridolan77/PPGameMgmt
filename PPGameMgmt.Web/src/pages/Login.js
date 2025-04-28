@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
+import playwiseLogo from "../assets/playwiselogo.png"; // Import the logo
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
@@ -61,8 +62,30 @@ const Login = () => {
           width: "100%",
           maxWidth: 400,
           borderRadius: 2,
+          display: "block", // Changed from "flex" to "block"
+          textAlign: "center", // Center text content
         }}
       >
+        {/* Logo Image */}
+        <Box 
+          sx={{ 
+            display: "block", 
+            textAlign: "center",
+            width: "100%",
+            mb: 3 // Margin bottom for spacing
+          }}
+        >
+          <img 
+            src={playwiseLogo} 
+            alt="PlayWise Logo" 
+            style={{ 
+              maxWidth: "150px", 
+              height: "auto",
+              margin: "0 auto" // Center the image
+            }} 
+          />
+        </Box>
+
         <Typography variant="h4" align="center" gutterBottom>
           PP Game Management
         </Typography>

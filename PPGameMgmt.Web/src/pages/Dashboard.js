@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Grid, Card, CardContent, Typography, Box, Paper, CircularProgress } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box, Paper, CircularProgress, Alert } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { Bar, Pie } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
@@ -14,6 +14,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 const Dashboard = () => {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [playerStats, setPlayerStats] = useState({
     totalActive: 0,
     bySegment: {},
@@ -33,29 +34,36 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        // In a real application, you would fetch this data from your API
-        // For demo purposes, we're simulating API responses
-        
-        // Simulate player statistics
-        setPlayerStats({
-          totalActive: 1250,
-          bySegment: {
-            VIP: 120,
-            Regular: 450,
-            Casual: 520,
-            New: 160,
-            Dormant: 80
-          },
-          newSignups: 45
-        });
-        
-        // Fetch top games from API (or use mock data)
+        // Fetch player statistics
         try {
-          const gamesResponse = await gameApi.getPopular(5);
+          const playerStatsResponse = await playerApi.getStatistics();
+          setPlayerStats(playerStatsResponse.data);
+        } catch (error) {
+          console.error("Error fetching player statistics:", error);
+          // Fallback to mock data
+          setPlayerStats({
+            totalActive: 1250,
+            bySegment: {
+              VIP: 120,
+              Regular: 450,
+              Casual: 520,
+              New: 160,
+              Dormant: 80
+            },
+            newSignups: 45
+          });
+        }
+        
+        // Fetch top games from API
+        try {
+          const gamesResponse = await gameApi.getTopGames();
+          const categoryResponse = await gameApi.getStatsByCategory();
+          
           setGameStats({
             topPlayed: gamesResponse.data || [],
-            byCategory: {
+            byCategory: categoryResponse.data || {
               Slots: 65,
               Table: 20,
               Live: 10,
@@ -82,22 +90,30 @@ const Dashboard = () => {
           });
         }
         
-        // Simulate bonus statistics
-        setBonusStats({
-          active: 12,
-          claimed: 845,
-          completed: 580,
-          conversionRate: 68,
-          byType: {
-            "Deposit Match": 40,
-            "Free Spins": 30,
-            "Cashback": 15,
-            "No Deposit": 10,
-            "Other": 5
-          }
-        });
+        // Fetch bonus statistics
+        try {
+          const bonusStatsResponse = await bonusApi.getStatistics();
+          setBonusStats(bonusStatsResponse.data);
+        } catch (error) {
+          console.error("Error fetching bonus statistics:", error);
+          // Fallback to mock data
+          setBonusStats({
+            active: 12,
+            claimed: 845,
+            completed: 580,
+            conversionRate: 68,
+            byType: {
+              "Deposit Match": 40,
+              "Free Spins": 30,
+              "Cashback": 15,
+              "No Deposit": 10,
+              "Other": 5
+            }
+          });
+        }
       } catch (error) {
         console.error("Dashboard data fetching error:", error);
+        setError("Failed to load dashboard data. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -114,6 +130,14 @@ const Dashboard = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Box my={3}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+  
   return (
     <Box>
       <Typography variant="h4" component="h1" gutterBottom>

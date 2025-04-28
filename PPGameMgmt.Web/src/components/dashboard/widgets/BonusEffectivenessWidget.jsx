@@ -17,7 +17,6 @@ import {
   Chip,
   LinearProgress
 } from '@mui/material';
-import { HorizontalBar } from 'react-chartjs-2';
 
 // Import our React Query hooks
 import { useBonuses } from '../../../hooks/useBonuses';

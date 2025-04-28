@@ -29,204 +29,46 @@ const GameLibrary = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const gamesPerPage = 12;
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        // In a real app, we would fetch filtered games from the API
-        // const response = await gameApi.getAll({
-        //   type: gameType,
-        //   category: gameCategory,
-        //   search: searchTerm,
-        //   page,
-        //   pageSize: gamesPerPage
-        // });
+        let response;
         
-        // For demo purposes, we'll use mock data
-        // Simulate API response time
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Mock game data
-        const mockGames = [
-          {
-            id: "1",
-            name: "Buffalo Blitz",
-            provider: "Playtech",
-            type: "Slot",
-            category: "Popular",
-            description: "Roam the plains with the mighty buffalo in this exciting slot game with 6 reels and 4,096 ways to win.",
-            releasedAt: "2020-05-15",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Buffalo+Blitz",
-            popularityRank: 1,
-            rtp: 95.96
-          },
-          {
-            id: "2",
-            name: "Blackjack Pro",
-            provider: "Evolution Gaming",
-            type: "Table",
-            category: "Card",
-            description: "Experience the classic casino card game with professional dealers and multiple side bets.",
-            releasedAt: "2019-08-22",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Blackjack+Pro",
-            popularityRank: 3,
-            rtp: 99.54
-          },
-          {
-            id: "3",
-            name: "Mega Fortune",
-            provider: "NetEnt",
-            type: "Slot",
-            category: "Progressive",
-            description: "Live the lifestyle of the rich and famous with this luxury-themed progressive slot.",
-            releasedAt: "2021-02-10",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Mega+Fortune",
-            popularityRank: 5,
-            rtp: 96.6
-          },
-          {
-            id: "4",
-            name: "Roulette Live",
-            provider: "Evolution Gaming",
-            type: "LiveDealer",
-            category: "Live",
-            description: "Authentic live roulette experience with real dealers and multiple camera angles.",
-            releasedAt: "2020-11-05",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Roulette+Live",
-            popularityRank: 2,
-            rtp: 97.3
-          },
-          {
-            id: "5",
-            name: "Book of Ra",
-            provider: "Novomatic",
-            type: "Slot",
-            category: "Adventure",
-            description: "Join the explorer on his quest to find the mystical Book of Ra in ancient Egypt.",
-            releasedAt: "2019-04-18",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Book+of+Ra",
-            popularityRank: 4,
-            rtp: 95.1
-          },
-          {
-            id: "6",
-            name: "Poker Texas Hold'em",
-            provider: "Playtech",
-            type: "Table",
-            category: "Card",
-            description: "The most popular poker variant with simple rules and exciting gameplay.",
-            releasedAt: "2020-07-22",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Poker+Texas",
-            popularityRank: 6,
-            rtp: 97.8
-          },
-          {
-            id: "7",
-            name: "Gonzo's Quest",
-            provider: "NetEnt",
-            type: "Slot",
-            category: "Adventure",
-            description: "Join Gonzo on his quest for El Dorado with avalanche reels and increasing multipliers.",
-            releasedAt: "2018-09-12",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Gonzos+Quest",
-            popularityRank: 7,
-            rtp: 96.0
-          },
-          {
-            id: "8",
-            name: "Baccarat Pro",
-            provider: "Evolution Gaming",
-            type: "Table",
-            category: "Card",
-            description: "Elegant and simple card game with three possible outcomes: player win, banker win, or tie.",
-            releasedAt: "2019-12-01",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Baccarat+Pro",
-            popularityRank: 9,
-            rtp: 98.94
-          },
-          {
-            id: "9",
-            name: "Starburst",
-            provider: "NetEnt",
-            type: "Slot",
-            category: "Space",
-            description: "A dazzling slot game with expanding wilds and respins set in a colorful cosmic environment.",
-            releasedAt: "2018-05-30",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Starburst",
-            popularityRank: 8,
-            rtp: 96.1
-          },
-          {
-            id: "10",
-            name: "Craps Live",
-            provider: "Evolution Gaming",
-            type: "LiveDealer",
-            category: "Dice",
-            description: "Live dealer craps game with multiple betting options and authentic casino atmosphere.",
-            releasedAt: "2021-03-15",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Craps+Live",
-            popularityRank: 12,
-            rtp: 98.64
-          },
-          {
-            id: "11",
-            name: "Wolf Gold",
-            provider: "Pragmatic Play",
-            type: "Slot",
-            category: "Wildlife",
-            description: "Roam the American wilderness with wolves, bison, and eagles in this 5-reel slot.",
-            releasedAt: "2020-02-10",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Wolf+Gold",
-            popularityRank: 10,
-            rtp: 96.01
-          },
-          {
-            id: "12",
-            name: "Caribbean Stud Poker",
-            provider: "Playtech",
-            type: "Table",
-            category: "Card",
-            description: "Five-card poker variant where player competes against the dealer with a progressive jackpot.",
-            releasedAt: "2019-10-08",
-            thumbnailUrl: "https://via.placeholder.com/300x200?text=Caribbean+Poker",
-            popularityRank: 15,
-            rtp: 94.78
-          }
-        ];
-        
-        // Apply filters for demo (normally done on the server)
-        let filteredGames = [...mockGames];
-        
+        // Call appropriate API endpoint based on filters
         if (searchTerm) {
-          const searchLower = searchTerm.toLowerCase();
-          filteredGames = filteredGames.filter(game => 
-            game.name.toLowerCase().includes(searchLower) || 
-            game.provider.toLowerCase().includes(searchLower) ||
-            game.description.toLowerCase().includes(searchLower)
-          );
+          response = await gameApi.getAll({ search: searchTerm });
+        } else if (gameCategory) {
+          response = await gameApi.getByCategory(gameCategory);
+        } else {
+          response = await gameApi.getAll();
         }
         
-        if (gameType) {
-          filteredGames = filteredGames.filter(game => game.type === gameType);
-        }
+        // Get the games from the response
+        let fetchedGames = response.data;
         
-        if (gameCategory) {
-          filteredGames = filteredGames.filter(game => game.category === gameCategory);
+        // Apply additional client-side filtering for type if needed
+        // (ideally this would be handled by the backend)
+        if (gameType && fetchedGames.length > 0) {
+          fetchedGames = fetchedGames.filter(game => game.type === gameType);
         }
         
         // Calculate total pages
-        setTotalPages(Math.ceil(filteredGames.length / gamesPerPage));
+        setTotalPages(Math.ceil(fetchedGames.length / gamesPerPage));
         
         // Get current page of games
         const startIndex = (page - 1) * gamesPerPage;
         const endIndex = startIndex + gamesPerPage;
-        const paginatedGames = filteredGames.slice(startIndex, endIndex);
+        const paginatedGames = fetchedGames.slice(startIndex, endIndex);
         
         setGames(paginatedGames);
       } catch (error) {
         console.error("Error fetching games:", error);
+        setError(error.friendlyMessage || "Failed to load games. Please try again.");
       } finally {
         setLoading(false);
       }

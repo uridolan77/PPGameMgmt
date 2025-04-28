@@ -24,10 +24,83 @@ const BonusOffers = () => {
       try {
         setLoading(true);
         const response = await bonusApi.getAll();
-        setBonuses(response.data);
+        setBonuses(Array.isArray(response) ? response : response.data);
       } catch (err) {
         console.error("Error fetching bonuses:", err);
         setError("Failed to load bonuses. Please try again later.");
+        
+        // Mock data as fallback
+        const mockBonuses = [
+          {
+            id: "1",
+            name: "Welcome Bonus",
+            type: "MatchDeposit",
+            value: "100%",
+            valueType: "match",
+            description: "Get 100% match on your first deposit up to $200",
+            isActive: true,
+            expiryDate: "2025-06-30T23:59:59",
+            playerSegments: ["New"],
+            minDeposit: 20,
+            maxBonus: 200,
+            wageringRequirement: 25
+          },
+          {
+            id: "2",
+            name: "Free Spins Friday",
+            type: "FreeSpins",
+            value: "50",
+            valueType: "free spins",
+            description: "50 free spins on selected slot games every Friday",
+            isActive: true,
+            expiryDate: "2025-12-31T23:59:59",
+            playerSegments: ["Regular", "VIP"],
+            minDeposit: 0,
+            wageringRequirement: 15
+          },
+          {
+            id: "3",
+            name: "Loyalty Cashback",
+            type: "Cashback",
+            value: "10%",
+            valueType: "cashback",
+            description: "Get 10% cashback on all losses for a week",
+            isActive: true,
+            expiryDate: "2025-05-15T23:59:59",
+            playerSegments: ["VIP"],
+            minLoss: 100,
+            maxCashback: 500,
+            wageringRequirement: 5
+          },
+          {
+            id: "4",
+            name: "No Deposit Bonus",
+            type: "NoDeposit",
+            value: "$10",
+            valueType: "bonus cash",
+            description: "Get $10 free bonus without deposit",
+            isActive: false,
+            expiryDate: "2024-12-31T23:59:59",
+            playerSegments: ["New"],
+            wageringRequirement: 35
+          },
+          {
+            id: "5",
+            name: "Weekend Reload",
+            type: "MatchDeposit",
+            value: "50%",
+            valueType: "match",
+            description: "Get 50% bonus on deposits made during weekends",
+            isActive: true,
+            expiryDate: "2025-09-30T23:59:59",
+            playerSegments: ["Regular", "Casual", "VIP"],
+            minDeposit: 30,
+            maxBonus: 300,
+            wageringRequirement: 20
+          }
+        ];
+        
+        setBonuses(mockBonuses);
       } finally {
         setLoading(false);
       }

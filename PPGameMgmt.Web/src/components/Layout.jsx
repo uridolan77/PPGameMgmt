@@ -16,85 +16,76 @@ const Layout = () => {
   };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <div className="logo">
-          <Link to="/">
-            <h1>Players & Prizes</h1>
-          </Link>
+    <div className="layout">
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <h2>PP Game Management</h2>
         </div>
-
-        <div className="mobile-toggle" onClick={toggleMobileMenu}>
-          <span className="menu-icon">☰</span>
-        </div>
-
-        <nav className={`main-nav ${showMobileMenu ? 'mobile-visible' : ''}`}>
-          <ul className="nav-list">
-            <li className="nav-item">
+        
+        <nav className="sidebar-nav">
+          <ul>
+            <li>
               <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
                 Dashboard
               </NavLink>
             </li>
-            <li className="nav-item">
+            <li>
               <NavLink to="/games" className={({ isActive }) => isActive ? 'active' : ''}>
                 Games
               </NavLink>
             </li>
-            <li className="nav-item">
+            <li>
               <NavLink to="/players" className={({ isActive }) => isActive ? 'active' : ''}>
                 Players
               </NavLink>
             </li>
-            <li className="nav-item">
+            <li>
               <NavLink to="/bonuses" className={({ isActive }) => isActive ? 'active' : ''}>
                 Bonuses
               </NavLink>
             </li>
-            <li className="nav-item">
+            <li>
               <NavLink to="/recommendations" className={({ isActive }) => isActive ? 'active' : ''}>
                 Recommendations
               </NavLink>
             </li>
           </ul>
         </nav>
+        
+        <div className="sidebar-footer">
+          &copy; 2025 PP Game Management
+        </div>
+      </div>
 
-        <div className="user-controls">
-          {currentUser && (
-            <>
-              <span className="user-greeting">
-                Hello, {currentUser.name || currentUser.username}
-              </span>
-              <div className="user-menu">
-                <button className="user-menu-toggle">
-                  {currentUser.initials || 'U'}
+      <div className="main-content">
+        <div className="top-header">
+          <div className="search-bar">
+            <input type="text" placeholder="Search..." />
+          </div>
+          
+          <div className="user-menu">
+            {currentUser && (
+              <>
+                <span className="user-name">
+                  {currentUser.name || currentUser.username}
+                </span>
+                <button className="logout-button" onClick={handleLogout}>
+                  Logout
                 </button>
-                <ul className="user-menu-dropdown">
-                  <li>
-                    <button onClick={() => navigate('/profile')}>
-                      My Profile
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={handleLogout}>
-                      Logout
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            </>
-          )}
+              </>
+            )}
+            {!currentUser && (
+              <button className="login-button" onClick={() => navigate('/login')}>
+                Login
+              </button>
+            )}
+          </div>
         </div>
-      </header>
-
-      <main className="app-content">
-        <Outlet />
-      </main>
-
-      <footer className="app-footer">
-        <div className="footer-content">
-          <p>&copy; 2025 Players & Prizes Game Management System</p>
+        
+        <div className="content">
+          <Outlet />
         </div>
-      </footer>
+      </div>
     </div>
   );
 };

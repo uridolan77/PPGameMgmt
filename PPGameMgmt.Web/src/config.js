@@ -1,7 +1,7 @@
 const config = {
   apiUrl: process.env.NODE_ENV === 'production' 
     ? '/api' 
-    : 'http://localhost:5000/api'
+    : 'https://localhost:7210/api'
 };
 
 export default config;

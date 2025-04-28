@@ -1,7 +1,6 @@
 import React from 'react';
 import { useGames, useDeleteGame } from '../../hooks/useGames';
 import { 
-  Container, 
   Typography, 
   Button,
   Paper, 
@@ -33,20 +32,22 @@ const GamesList = () => {
   if (error) return <Typography color="error">Error loading games: {error.message}</Typography>;
 
   return (
-    <Container>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Games
-      </Typography>
-      
-      <Button 
-        variant="contained" 
-        color="primary" 
-        component={Link} 
-        to="/games/new"
-        sx={{ mb: 3 }}
-      >
-        Add New Game
-      </Button>
+    <div className="games-list-container">
+      <div className="page-header">
+        <Typography variant="h4" component="h1" gutterBottom>
+          Games Management
+        </Typography>
+        
+        <Button 
+          variant="contained" 
+          color="primary" 
+          component={Link} 
+          to="/games/new"
+          sx={{ mb: 3 }}
+        >
+          Add New Game
+        </Button>
+      </div>
       
       <TableContainer component={Paper}>
         <Table>
@@ -87,7 +88,7 @@ const GamesList = () => {
           </TableBody>
         </Table>
       </TableContainer>
-    </Container>
+    </div>
   );
 };
 

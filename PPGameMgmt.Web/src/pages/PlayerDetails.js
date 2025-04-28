@@ -14,7 +14,7 @@ import {
   CardContent
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
-import { api } from '../services/api';
+import { playerApi } from '../services/api';
 import PlayerFeatures from '../components/players/PlayerFeatures';
 
 function TabPanel(props) {
@@ -43,6 +43,10 @@ const PlayerDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+  const [gameHistory, setGameHistory] = useState([]);
+  const [bonuses, setBonuses] = useState([]);
+  const [gameHistoryLoading, setGameHistoryLoading] = useState(false);
+  const [bonusesLoading, setBonusesLoading] = useState(false);
 
   useEffect(() => {
     const fetchPlayerData = async () => {
@@ -50,7 +54,7 @@ const PlayerDetails = () => {
       setError(null);
       
       try {
-        const response = await api.get(`/api/players/${playerId}`);
+        const response = await playerApi.getById(playerId);
         setPlayer(response.data);
       } catch (err) {
         console.error("Error fetching player data:", err);
@@ -64,6 +68,44 @@ const PlayerDetails = () => {
       fetchPlayerData();
     }
   }, [playerId]);
+
+  // Fetch game history when switching to that tab
+  useEffect(() => {
+    const fetchGameHistory = async () => {
+      if (tabValue === 1 && playerId && gameHistory.length === 0) {
+        setGameHistoryLoading(true);
+        try {
+          const response = await playerApi.getGameSessions(playerId);
+          setGameHistory(response.data);
+        } catch (err) {
+          console.error("Error fetching game history:", err);
+        } finally {
+          setGameHistoryLoading(false);
+        }
+      }
+    };
+    
+    fetchGameHistory();
+  }, [tabValue, playerId, gameHistory.length]);
+
+  // Fetch bonuses when switching to that tab
+  useEffect(() => {
+    const fetchBonuses = async () => {
+      if (tabValue === 3 && playerId && bonuses.length === 0) {
+        setBonusesLoading(true);
+        try {
+          const response = await playerApi.getBonusClaims(playerId);
+          setBonuses(response.data);
+        } catch (err) {
+          console.error("Error fetching bonuses:", err);
+        } finally {
+          setBonusesLoading(false);
+        }
+      }
+    };
+    
+    fetchBonuses();
+  }, [tabValue, playerId, bonuses.length]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -187,7 +229,11 @@ const PlayerDetails = () => {
         
         <TabPanel value={tabValue} index={1}>
           <Typography variant="h6" gutterBottom>Game History</Typography>
-          <Typography variant="body1">Game history will be displayed here.</Typography>
+          {gameHistoryLoading ? (
+            <CircularProgress />
+          ) : (
+            <Typography variant="body1">Game history will be displayed here.</Typography>
+          )}
         </TabPanel>
         
         <TabPanel value={tabValue} index={2}>
@@ -197,7 +243,11 @@ const PlayerDetails = () => {
         
         <TabPanel value={tabValue} index={3}>
           <Typography variant="h6" gutterBottom>Bonuses</Typography>
-          <Typography variant="body1">Bonus information will be displayed here.</Typography>
+          {bonusesLoading ? (
+            <CircularProgress />
+          ) : (
+            <Typography variant="body1">Bonus information will be displayed here.</Typography>
+          )}
         </TabPanel>
         
         <TabPanel value={tabValue} index={4}>

@@ -22,7 +22,7 @@ import {
   CardGiftcard as BonusIcon,
   Refresh as RefreshIcon,
   Login as LoginIcon,
-  VideoGameAsset as GamePlayIcon,
+  SportsEsports as GamePlayIcon,
   StarRate as BonusClaimIcon,
   Payment as DepositIcon,
   MoneyOff as WithdrawalIcon

@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from 'tailwindcss';
+import tailwindcssPostcss from '@tailwindcss/postcss';
 import autoprefixer from 'autoprefixer';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,10 +16,17 @@ export default defineConfig({
     css: {
         postcss: {
             plugins: [
-                tailwindcss(),
+                tailwindcssPostcss(),
                 autoprefixer(),
             ],
         },
+    },
+    resolve: {
+        // Add explicit alias for problematic packages
+        alias: {
+            'recharts': resolve(__dirname, 'node_modules/recharts'),
+            'date-fns': resolve(__dirname, 'node_modules/date-fns')
+        }
     },
     esbuild: {
         loader: 'jsx',
@@ -30,6 +38,7 @@ export default defineConfig({
             loader: {
                 '.js': 'jsx'
             }
-        }
+        },
+        include: ['recharts', 'date-fns'] // Explicitly include these dependencies
     }
 })
