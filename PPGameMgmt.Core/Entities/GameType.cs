@@ -1,0 +1,4 @@
+namespace PPGameMgmt.Core.Entities
+{
+
+}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -29,28 +30,33 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ResponseCache(Duration = 60)] // Cache for 1 minute
         public async Task<ActionResult<IEnumerable<Bonus>>> GetAllBonuses(
             [FromQuery] BonusType? type = null,
             [FromQuery] PlayerSegment? segment = null,
-            [FromQuery] string gameId = null)
+            [FromQuery] string? gameId = null)
         {
             try
             {
+                _logger.LogInformation("Retrieving bonuses with filters - Type: {Type}, Segment: {Segment}, GameId: {GameId}",
+                    type, segment, gameId ?? "null");
+
                 IEnumerable<Bonus> bonuses;
-                
+
                 if (type.HasValue)
                 {
-                    _logger.LogInformation($"Getting bonuses by type: {type}");
+                    _logger.LogInformation("Getting bonuses by type: {Type}", type);
                     bonuses = await _bonusService.GetBonusesByTypeAsync(type.Value);
                 }
                 else if (segment.HasValue)
                 {
-                    _logger.LogInformation($"Getting bonuses for segment: {segment}");
+                    _logger.LogInformation("Getting bonuses for segment: {Segment}", segment);
                     bonuses = await _bonusService.GetBonusesForPlayerSegmentAsync(segment.Value);
                 }
                 else if (!string.IsNullOrEmpty(gameId))
                 {
-                    _logger.LogInformation($"Getting bonuses for game: {gameId}");
+                    _logger.LogInformation("Getting bonuses for game: {GameId}", gameId);
                     bonuses = await _bonusService.GetBonusesForGameAsync(gameId);
                 }
                 else
@@ -58,13 +64,21 @@ namespace PPGameMgmt.API.Controllers
                     _logger.LogInformation("Getting all active bonuses");
                     bonuses = await _bonusService.GetAllActiveBonusesAsync();
                 }
-                
+
+                _logger.LogInformation("Successfully retrieved {Count} bonuses", bonuses?.Count() ?? 0);
                 return Ok(bonuses);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Database operation error while retrieving bonuses");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Database operation error", details = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving bonuses");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving bonuses");
+                _logger.LogError(ex, "Unexpected error retrieving bonuses");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error retrieving bonuses", details = ex.Message });
             }
         }
 
@@ -76,18 +90,19 @@ namespace PPGameMgmt.API.Controllers
             try
             {
                 var bonus = await _bonusService.GetBonusAsync(id);
-                
+
                 if (bonus == null)
                 {
                     return NotFound();
                 }
-                
+
                 return Ok(bonus);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving bonus {id}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving bonus");
+                _logger.LogError(ex, "Error retrieving bonus {BonusId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error retrieving bonus", details = ex.Message });
             }
         }
 
@@ -102,8 +117,9 @@ namespace PPGameMgmt.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving bonus claims for player {playerId}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving player bonus claims");
+                _logger.LogError(ex, "Error retrieving bonus claims for player {PlayerId}", playerId);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error retrieving player bonus claims", details = ex.Message });
             }
         }
 
@@ -117,22 +133,23 @@ namespace PPGameMgmt.API.Controllers
             {
                 return BadRequest("Invalid request. Player ID and Bonus ID are required.");
             }
-            
+
             try
             {
                 var bonusClaim = await _bonusService.ClaimBonusAsync(request.PlayerId, request.BonusId);
-                
+
                 if (bonusClaim == null)
                 {
                     return NotFound("Player or bonus not found, or bonus already claimed by player");
                 }
-                
+
                 return Ok(bonusClaim);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error claiming bonus {request.BonusId} for player {request.PlayerId}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error claiming bonus");
+                _logger.LogError(ex, "Error claiming bonus {BonusId} for player {PlayerId}", request.BonusId, request.PlayerId);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error claiming bonus", details = ex.Message });
             }
         }
 
@@ -144,18 +161,19 @@ namespace PPGameMgmt.API.Controllers
             try
             {
                 var optimalBonus = await _bonusOptimizationService.GetOptimalBonusAsync(playerId);
-                
+
                 if (optimalBonus == null)
                 {
                     return NotFound("No suitable bonus found for this player");
                 }
-                
+
                 return Ok(optimalBonus);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting optimal bonus for player {playerId}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error getting optimal bonus");
+                _logger.LogError(ex, "Error getting optimal bonus for player {PlayerId}", playerId);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error getting optimal bonus", details = ex.Message });
             }
         }
 
@@ -170,8 +188,9 @@ namespace PPGameMgmt.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error ranking bonuses for player {playerId}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error ranking bonuses");
+                _logger.LogError(ex, "Error ranking bonuses for player {PlayerId}", playerId);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error ranking bonuses", details = ex.Message });
             }
         }
 
@@ -186,15 +205,16 @@ namespace PPGameMgmt.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error checking bonus appropriateness for player {playerId}, bonus {bonusId}");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error checking bonus appropriateness");
+                _logger.LogError(ex, "Error checking bonus appropriateness for player {PlayerId}, bonus {BonusId}", playerId, bonusId);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error checking bonus appropriateness", details = ex.Message });
             }
         }
     }
 
     public class BonusClaimRequest
     {
-        public string PlayerId { get; set; }
-        public string BonusId { get; set; }
+        public required string PlayerId { get; set; }
+        public required string BonusId { get; set; }
     }
 }

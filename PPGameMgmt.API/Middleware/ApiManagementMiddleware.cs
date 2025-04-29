@@ -15,7 +15,7 @@ namespace PPGameMgmt.API.Middleware
         private readonly ILogger<ApiManagementMiddleware> _logger;
 
         public ApiManagementMiddleware(
-            RequestDelegate next, 
+            RequestDelegate next,
             IOptions<ApiManagementConfig> apiManagementOptions,
             ILogger<ApiManagementMiddleware> logger)
         {
@@ -26,9 +26,15 @@ namespace PPGameMgmt.API.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Skip subscription key validation for development environment or if not required
-            if (!_apiManagementConfig.RequireSubscriptionKey || context.Request.Path.StartsWithSegments("/swagger") || 
-                context.Request.Path.StartsWithSegments("/hubs"))
+            // Skip subscription key validation for:
+            // 1. If globally disabled
+            // 2. Swagger documentation
+            // 3. SignalR hubs
+            // 4. Paths explicitly exempted in configuration
+            if (!_apiManagementConfig.RequireSubscriptionKey ||
+                context.Request.Path.StartsWithSegments("/swagger") ||
+                context.Request.Path.StartsWithSegments("/hubs") ||
+                IsExemptPath(context.Request.Path))
             {
                 await _next(context);
                 return;
@@ -38,16 +44,16 @@ namespace PPGameMgmt.API.Middleware
 
             if (!hasValidSubscriptionKey)
             {
-                _logger.LogWarning("API request rejected due to missing or invalid subscription key");
+                _logger.LogWarning("API request rejected due to missing or invalid subscription key: {Path}", context.Request.Path);
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 context.Response.ContentType = "application/json";
-                
-                var errorResponse = new 
+
+                var errorResponse = new
                 {
                     statusCode = (int)HttpStatusCode.Unauthorized,
                     message = "Missing or invalid subscription key."
                 };
-                
+
                 await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse));
                 return;
             }
@@ -92,6 +98,26 @@ namespace PPGameMgmt.API.Middleware
                 _logger.LogInformation("API Management trace enabled for request {CorrelationId}", correlationId);
             }
         }
+
+        private bool IsExemptPath(PathString path)
+        {
+            if (_apiManagementConfig.ExemptPaths == null || _apiManagementConfig.ExemptPaths.Count == 0)
+            {
+                return false;
+            }
+
+            // Check if the current path matches any of the exempt paths
+            foreach (var exemptPath in _apiManagementConfig.ExemptPaths)
+            {
+                if (path.StartsWithSegments(exemptPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Path {Path} is exempt from subscription key requirement", path);
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     // Extension method for registering the middleware
@@ -102,7 +128,7 @@ namespace PPGameMgmt.API.Middleware
             return builder.UseMiddleware<ApiManagementMiddleware>();
         }
 
-        public static IServiceCollection AddApiManagementConfiguration(this IServiceCollection services, 
+        public static IServiceCollection AddApiManagementConfiguration(this IServiceCollection services,
             IConfiguration configuration)
         {
             services.Configure<ApiManagementConfig>(configuration.GetSection("ApiManagement"));
