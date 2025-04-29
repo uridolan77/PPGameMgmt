@@ -50,10 +50,10 @@ namespace PPGameMgmt.Core.Entities
         public PlayerSegment TargetSegment { get; set; } // Primary target segment for this bonus
 
         [Column("applicable_game_ids")]
-        public string[] ApplicableGameIds { get; set; } // Games this bonus can be used on
+        public string[]? ApplicableGameIds { get; set; } // Games this bonus can be used on
 
         [Column("target_segments")]
-        public PlayerSegment[] TargetSegments { get; set; } // Player segments this bonus targets
+        public PlayerSegment[]? TargetSegments { get; set; } // Player segments this bonus targets
 
         // Navigation properties
         [NotMapped]

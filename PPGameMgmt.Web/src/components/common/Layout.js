@@ -97,7 +97,7 @@ const Layout = () => {
       <List>
         {menuItems.map((item) => (
           <ListItem
-            button
+            button={true}
             key={item.text}
             component={RouterLink}
             to={item.path}
@@ -132,9 +132,9 @@ const Layout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find((item) => 
-              window.location.pathname === item.path || 
-              window.location.pathname.startsWith(`${item.path}/`))?.text || 
+            {menuItems.find((item) =>
+              window.location.pathname === item.path ||
+              window.location.pathname.startsWith(`${item.path}/`))?.text ||
               "Dashboard"}
           </Typography>
           <IconButton color="inherit" onClick={handleProfileMenuOpen}>

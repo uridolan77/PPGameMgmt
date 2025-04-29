@@ -44,7 +44,7 @@ export function useBonusRecommendations(playerId) {
 export function useRecordRecommendationClick() {
   return useMutation({
     mutationFn: (recommendationId) => 
-      fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7001/api'}/recommendations/${recommendationId}/click`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7210/api'}/recommendations/${recommendationId}/click`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -58,7 +58,7 @@ export function useRecordRecommendationClick() {
 export function useRecordRecommendationAcceptance() {
   return useMutation({
     mutationFn: (recommendationId) => 
-      fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7001/api'}/recommendations/${recommendationId}/accept`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7210/api'}/recommendations/${recommendationId}/accept`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -74,7 +74,7 @@ export function useRefreshRecommendations() {
   
   return useMutation({
     mutationFn: (playerId) => 
-      fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7001/api'}/recommendations/player/${playerId}/refresh`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'https://localhost:7210/api'}/recommendations/player/${playerId}/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,

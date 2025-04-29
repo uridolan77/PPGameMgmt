@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, IconButton, Menu, MenuItem, Divider, Tooltip } from '@mui/material';
+import { Box, Typography, Button, IconButton, Menu, MenuItem } from '@mui/material';
 import {
   Add as AddIcon,
-  Settings as SettingsIcon,
   MoreVert as MoreVertIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { Responsive as ResponsiveGridLayout } from 'react-grid-layout';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
 
 // Import our dashboard store and widgets
 import useDashboardStore from '../../stores/dashboardStore';
-import useScraperStore from '../../stores/scraperStore';
 
 // Import widget components
 import PlayerStatsWidget from '../../components/dashboard/widgets/PlayerStatsWidget';
@@ -39,8 +34,8 @@ const WIDGET_COMPONENTS = {
 };
 
 const Dashboard = () => {
-  // Grid configuration
-  const cols = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
+  // No need for grid configuration or fixed layouts anymore
+  // We're using a simple MUI Grid system instead
 
   // State for widget menu
   const [addMenuAnchor, setAddMenuAnchor] = useState(null);
@@ -51,11 +46,9 @@ const Dashboard = () => {
   const {
     availableWidgets,
     activeWidgets,
-    layout,
     widgetSettings,
     addWidget,
     removeWidget,
-    updateLayout,
     updateWidgetSettings,
     resetDashboard
   } = useDashboardStore();
@@ -72,6 +65,10 @@ const Dashboard = () => {
   const handleAddWidget = (widgetId) => {
     addWidget(widgetId);
     handleAddMenuClose();
+
+    // After adding a widget, we need to refresh the page to update the layout
+    // This is a simple solution to ensure the new widget appears in the correct position
+    window.location.reload();
   };
 
   const handleWidgetMenuOpen = (event, widgetId) => {
@@ -90,11 +87,12 @@ const Dashboard = () => {
       removeWidget(selectedWidgetId);
     }
     handleWidgetMenuClose();
+
+    // Reload the page to update the layout after removing a widget
+    window.location.reload();
   };
 
-  const handleLayoutChange = (newLayout) => {
-    updateLayout(newLayout);
-  };
+  // This function is now used directly in the onLayoutChange prop of ResponsiveGridLayout
 
   // Get available widgets that aren't already on the dashboard
   const availableToAdd = Object.keys(availableWidgets)
@@ -124,85 +122,91 @@ const Dashboard = () => {
 
           <Button
             variant="outlined"
-            onClick={resetDashboard}
+            onClick={() => {
+              resetDashboard();
+              // Reload the page to apply the reset layout
+              window.location.reload();
+            }}
           >
             Reset Dashboard
           </Button>
         </Box>
       </Box>
 
-      {/* The actual grid layout with widgets */}
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={{ lg: layout }}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={cols}
-        rowHeight={100}
-        margin={[16, 16]}
-        onLayoutChange={handleLayoutChange}
-        isDraggable
-        isResizable
-      >
-        {activeWidgets.map(widgetId => {
-          const WidgetComponent = WIDGET_COMPONENTS[widgetId] || (() => <div>Widget not found</div>);
-          const widgetConfig = availableWidgets[widgetId];
+      {/* Simple grid layout using MUI Grid instead of ResponsiveGridLayout */}
+      <Box sx={{ width: '100%' }}>
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: '1fr', md: '1fr 1fr', lg: '1fr 1fr' },
+          gap: 3,
+          '& > *:nth-of-type(odd)': { gridColumn: { xs: '1', md: '1' } },
+          '& > *:nth-of-type(even)': { gridColumn: { xs: '1', md: '2' } }
+        }}>
+          {activeWidgets.map(widgetId => {
+            const WidgetComponent = WIDGET_COMPONENTS[widgetId] || (() => <div>Widget not found</div>);
+            const widgetConfig = availableWidgets[widgetId];
 
-          return (
-            <Box
-              key={widgetId}
-              sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
-                borderRadius: 1,
-                overflow: 'hidden',
-                position: 'relative',
-                height: '100%'
-              }}
-            >
-              {/* Widget Header */}
+            return (
               <Box
+                key={widgetId}
                 sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.03)',
-                  cursor: 'move'
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  height: widgetId === 'topGames' || widgetId === 'recentActivity' || widgetId === 'playerSegments' ? '400px' : '300px',
+                  marginBottom: 3,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                 }}
-                className="drag-handle"
               >
-                <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                  {widgetConfig.title}
-                </Typography>
+                {/* Widget Header */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.03)'
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                    {widgetConfig.title}
+                  </Typography>
 
-                <Box>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleWidgetMenuOpen(e, widgetId)}
-                    aria-label="widget options"
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
+                  <Box>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleWidgetMenuOpen(e, widgetId)}
+                      aria-label="widget options"
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {/* Widget Content */}
+                <Box
+                  sx={{
+                    height: 'calc(100% - 41px)', // Subtract header height
+                    overflow: 'auto',
+                    padding: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                    alignItems: 'stretch'
+                  }}
+                >
+                  <WidgetComponent
+                    settings={widgetSettings[widgetId]}
+                    onSettingsChange={(newSettings) => updateWidgetSettings(widgetId, newSettings)}
+                  />
                 </Box>
               </Box>
-
-              {/* Widget Content */}
-              <Box
-                sx={{
-                  height: 'calc(100% - 41px)', // Subtract header height
-                  overflow: 'auto',
-                  padding: 2
-                }}
-              >
-                <WidgetComponent
-                  settings={widgetSettings[widgetId]}
-                  onSettingsChange={(newSettings) => updateWidgetSettings(widgetId, newSettings)}
-                />
-              </Box>
-            </Box>
-          );
-        })}
-      </ResponsiveGridLayout>
+            );
+          })}
+        </Box>
+      </Box>
 
       {/* Add Widget Menu */}
       <Menu

@@ -56,7 +56,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             return await _context.BonusClaims
                 .Where(bc => bc.PlayerId == playerId)
-                .Include(bc => bc.Bonus)
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }
@@ -66,7 +65,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             var now = DateTime.UtcNow;
             return await _context.BonusClaims
                 .Where(bc => bc.PlayerId == playerId && bc.ExpiryDate >= now)
-                .Include(bc => bc.Bonus)
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }
@@ -75,7 +73,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             return await _context.BonusClaims
                 .Where(bc => bc.BonusId == bonusId)
-                .Include(bc => bc.Player)
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }
@@ -85,8 +82,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             var cutoffDate = DateTime.UtcNow.AddDays(-days);
             return await _context.BonusClaims
                 .Where(bc => bc.ClaimedDate >= cutoffDate)
-                .Include(bc => bc.Bonus)
-                .Include(bc => bc.Player)
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }
@@ -95,7 +90,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             return await _context.BonusClaims
                 .Where(bc => bc.PlayerId == playerId)
-                .Include(bc => bc.Bonus)
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }
@@ -105,7 +99,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             var cutoffDate = DateTime.UtcNow.AddDays(-days);
             return await _context.BonusClaims
                 .Where(bc => bc.PlayerId == playerId && bc.ClaimedDate >= cutoffDate)
-                .Include(bc => bc.Bonus)
                 .OrderByDescending(bc => bc.ClaimedDate)
                 .ToListAsync();
         }

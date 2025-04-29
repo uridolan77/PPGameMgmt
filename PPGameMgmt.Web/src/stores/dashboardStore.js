@@ -92,7 +92,7 @@ const useDashboardStore = create(
     (set, get) => ({
       // All available widgets metadata
       availableWidgets: AVAILABLE_WIDGETS,
-      
+
       // Active widgets in dashboard (their IDs)
       activeWidgets: [
         'playerStats',
@@ -102,10 +102,10 @@ const useDashboardStore = create(
         'recentActivity',
         'playerSegments'
       ],
-      
+
       // Current layout of widgets
       layout: DEFAULT_LAYOUT,
-      
+
       // Widget-specific settings
       widgetSettings: {
         playerStats: {
@@ -147,43 +147,59 @@ const useDashboardStore = create(
           cohortSize: 'week'
         }
       },
-      
+
       // Add a widget to the dashboard
       addWidget: (widgetId) => {
         if (!AVAILABLE_WIDGETS[widgetId]) return;
-        
+
         const widget = AVAILABLE_WIDGETS[widgetId];
-        
+
         set((state) => {
           // If widget is already active, don't add it again
           if (state.activeWidgets.includes(widgetId)) return state;
-          
-          // Add widget to layout with default size and position
+
+          // Find the best position for the new widget
+          // Calculate the maximum y-coordinate plus height in the current layout
+          let maxY = 0;
+          state.layout.forEach(item => {
+            const itemBottom = item.y + item.h;
+            if (itemBottom > maxY) {
+              maxY = itemBottom;
+            }
+          });
+
+          // Position the new widget at the bottom of the layout
+          // Try to place it in the first column if possible
+          const newWidgetPosition = {
+            i: widgetId,
+            x: 0,
+            y: maxY + 1, // Add some spacing
+            w: widget.defaultSize.w,
+            h: widget.defaultSize.h
+          };
+
+          // Add widget to layout with calculated position
           const newLayout = [
             ...state.layout,
-            {
-              i: widgetId,
-              ...widget.defaultPosition,
-              ...widget.defaultSize
-            }
+            newWidgetPosition
           ];
-          
+
           return {
             activeWidgets: [...state.activeWidgets, widgetId],
             layout: newLayout
           };
         });
       },
-      
+
       // Remove a widget from the dashboard
       removeWidget: (widgetId) => set((state) => ({
         activeWidgets: state.activeWidgets.filter(id => id !== widgetId),
         layout: state.layout.filter(item => item.i !== widgetId)
       })),
-      
+
       // Update layout after user drag/resize
       updateLayout: (newLayout) => set({ layout: newLayout }),
-      
+
       // Update settings for a specific widget
       updateWidgetSettings: (widgetId, settings) => set((state) => ({
         widgetSettings: {
@@ -194,7 +210,7 @@ const useDashboardStore = create(
           }
         }
       })),
-      
+
       // Reset dashboard to default configuration
       resetDashboard: () => set({
         activeWidgets: [
