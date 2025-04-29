@@ -10,6 +10,7 @@ using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.API.Services;
 using Serilog;
 using System;
+using Microsoft.Extensions.Configuration;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -49,6 +50,9 @@ try
         // Add API Management and Rate Limiting
         .AddApiManagementConfiguration(builder.Configuration)
         .AddRateLimitingConfiguration(builder.Configuration)
+        
+        // Add Architecture Patterns Implementation
+        .AddArchitecturalPatterns(builder.Configuration)
         
         // Authentication and Authorization
         .AddAuthorization(options =>
@@ -109,6 +113,30 @@ try
             if (context.Database.CanConnect())
             {
                 Console.WriteLine("Successfully connected to MySQL database!");
+                
+                // Run pending migrations if any
+                try
+                {
+                    var migrationRunner = services.GetRequiredService<PPGameMgmt.Infrastructure.Data.Migrations.MigrationRunner>();
+                    var pendingMigrations = await migrationRunner.GetPendingMigrationsAsync();
+                    
+                    if (pendingMigrations.Any())
+                    {
+                        Console.WriteLine($"Applying {pendingMigrations.Count} database migrations...");
+                        await migrationRunner.ApplyPendingMigrationsAsync();
+                        Console.WriteLine("Database migrations applied successfully.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("No pending database migrations.");
+                    }
+                }
+                catch (Exception migEx)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(migEx, "An error occurred while running database migrations.");
+                    Console.WriteLine($"Migration error: {migEx.Message}");
+                }
             }
             else
             {
