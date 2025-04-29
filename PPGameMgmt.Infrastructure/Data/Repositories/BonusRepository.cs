@@ -11,386 +11,93 @@ using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
 {
-    public class BonusRepository : IBonusRepository
+    public class BonusRepository : Repository<Bonus>, IBonusRepository
     {
-        private readonly CasinoDbContext _context;
-        private static ILogger<BonusRepository> _logger;
+        private readonly ILogger<BonusRepository> _logger;
 
         public BonusRepository(CasinoDbContext context, ILogger<BonusRepository> logger = null)
+            : base(context, logger)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger;
         }
 
-        public async Task<Bonus> GetByIdAsync(string id)
+        public override async Task<Bonus> GetByIdAsync(string id)
         {
             try
             {
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Getting bonus with ID: {id}");
-                }
+                _logger?.LogInformation($"Getting bonus with ID: {id}");
 
-                // Use raw SQL to avoid enum conversion issues
-                Bonus bonus = null;
+                // Use EF Core to get the bonus by ID
+                var bonus = await _context.Bonuses.FindAsync(id);
 
-                // Get raw data from database
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = @"
-                        SELECT
-                            id,
-                            name,
-                            description,
-                            type,
-                            amount,
-                            percentage_match,
-                            minimum_deposit,
-                            wagering_requirement,
-                            start_date,
-                            end_date,
-                            is_active,
-                            is_global,
-                            game_id,
-                            target_segment,
-                            applicable_game_ids,
-                            target_segments
-                        FROM bonuses
-                        WHERE id = @id";
-
-                    // Add parameter
-                    var parameter = command.CreateParameter();
-                    parameter.ParameterName = "@id";
-                    parameter.Value = id;
-                    command.Parameters.Add(parameter);
-
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await command.Connection.OpenAsync();
-                    }
-
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        if (await reader.ReadAsync())
-                        {
-                            bonus = new Bonus
-                            {
-                                Id = reader["id"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Description = reader["description"] != DBNull.Value ? reader["description"].ToString() : null,
-                                Type = ParseEnum<BonusType>(reader["type"].ToString()),
-                                Amount = Convert.ToDecimal(reader["amount"]),
-                                PercentageMatch = reader["percentage_match"] != DBNull.Value ? Convert.ToDecimal(reader["percentage_match"]) : null,
-                                MinimumDeposit = reader["minimum_deposit"] != DBNull.Value ? Convert.ToDecimal(reader["minimum_deposit"]) : null,
-                                WageringRequirement = reader["wagering_requirement"] != DBNull.Value ? Convert.ToInt32(reader["wagering_requirement"]) : null,
-                                StartDate = Convert.ToDateTime(reader["start_date"]),
-                                EndDate = Convert.ToDateTime(reader["end_date"]),
-                                IsActive = Convert.ToBoolean(reader["is_active"]),
-                                IsGlobal = Convert.ToBoolean(reader["is_global"]),
-                                GameId = reader["game_id"] != DBNull.Value ? reader["game_id"].ToString() : null,
-                                TargetSegment = ParseEnum<PlayerSegment>(reader["target_segment"].ToString()),
-                                // Handle JSON arrays
-                                ApplicableGameIds = reader["applicable_game_ids"] != DBNull.Value ?
-                                    DeserializeJsonArray<string>(reader["applicable_game_ids"].ToString()) : null,
-                                TargetSegments = reader["target_segments"] != DBNull.Value ?
-                                    DeserializePlayerSegmentArray(reader["target_segments"].ToString()) : null
-                            };
-                        }
-                    }
-                }
-
-                if (_logger != null)
-                {
-                    _logger.LogInformation(bonus != null
-                        ? $"Retrieved bonus with ID: {id}"
-                        : $"No bonus found with ID: {id}");
-                }
+                _logger?.LogInformation(bonus != null
+                    ? $"Retrieved bonus with ID: {id}"
+                    : $"No bonus found with ID: {id}");
 
                 return bonus;
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, $"Error retrieving bonus with ID: {id}");
-                }
+                _logger?.LogError(ex, $"Error retrieving bonus with ID: {id}");
                 throw;
             }
         }
 
-        public async Task<IEnumerable<Bonus>> GetAllAsync()
+        public override async Task<IEnumerable<Bonus>> GetAllAsync()
         {
             try
             {
-                if (_logger != null)
-                {
-                    _logger.LogInformation("Getting all bonuses");
-                }
+                _logger?.LogInformation("Getting all bonuses");
 
-                // Use raw SQL to avoid enum conversion issues
-                var bonuses = new List<Bonus>();
+                // Use EF Core to get all bonuses
+                var bonuses = await _context.Bonuses.ToListAsync();
 
-                // Get raw data from database
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = @"
-                        SELECT
-                            id,
-                            name,
-                            description,
-                            type,
-                            amount,
-                            percentage_match,
-                            minimum_deposit,
-                            wagering_requirement,
-                            start_date,
-                            end_date,
-                            is_active,
-                            is_global,
-                            game_id,
-                            target_segment,
-                            applicable_game_ids,
-                            target_segments
-                        FROM bonuses";
-
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await command.Connection.OpenAsync();
-                    }
-
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            var bonus = new Bonus
-                            {
-                                Id = reader["id"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Description = reader["description"] != DBNull.Value ? reader["description"].ToString() : null,
-                                Type = ParseEnum<BonusType>(reader["type"].ToString()),
-                                Amount = Convert.ToDecimal(reader["amount"]),
-                                PercentageMatch = reader["percentage_match"] != DBNull.Value ? Convert.ToDecimal(reader["percentage_match"]) : null,
-                                MinimumDeposit = reader["minimum_deposit"] != DBNull.Value ? Convert.ToDecimal(reader["minimum_deposit"]) : null,
-                                WageringRequirement = reader["wagering_requirement"] != DBNull.Value ? Convert.ToInt32(reader["wagering_requirement"]) : null,
-                                StartDate = Convert.ToDateTime(reader["start_date"]),
-                                EndDate = Convert.ToDateTime(reader["end_date"]),
-                                IsActive = Convert.ToBoolean(reader["is_active"]),
-                                IsGlobal = Convert.ToBoolean(reader["is_global"]),
-                                GameId = reader["game_id"] != DBNull.Value ? reader["game_id"].ToString() : null,
-                                TargetSegment = ParseEnum<PlayerSegment>(reader["target_segment"].ToString()),
-                                // Handle JSON arrays
-                                ApplicableGameIds = reader["applicable_game_ids"] != DBNull.Value ?
-                                    System.Text.Json.JsonSerializer.Deserialize<string[]>(reader["applicable_game_ids"].ToString()) : null,
-                                TargetSegments = reader["target_segments"] != DBNull.Value ?
-                                    System.Text.Json.JsonSerializer.Deserialize<PlayerSegment[]>(reader["target_segments"].ToString()) : null
-                            };
-
-                            bonuses.Add(bonus);
-                        }
-                    }
-                }
-
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Retrieved {bonuses.Count} bonuses");
-                }
+                _logger?.LogInformation($"Retrieved {bonuses.Count} bonuses");
 
                 return bonuses;
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, "Error retrieving all bonuses");
-                }
+                _logger?.LogError(ex, "Error retrieving all bonuses");
                 throw;
             }
         }
 
-        // Helper method to parse enum values
-        private static T ParseEnum<T>(string value) where T : struct
-        {
-            if (Enum.TryParse<T>(value, true, out var result))
-            {
-                return result;
-            }
-
-            throw new ArgumentException($"Cannot convert '{value}' to enum type {typeof(T).Name}");
-        }
-
-        // Helper method to deserialize JSON arrays
-        private static T[] DeserializeJsonArray<T>(string json)
+        public override async Task<IEnumerable<Bonus>> FindAsync(Expression<Func<Bonus, bool>> predicate)
         {
             try
             {
-                // Handle empty arrays
-                if (string.IsNullOrWhiteSpace(json) || json == "[]" || json == "null")
-                {
-                    return Array.Empty<T>();
-                }
-
-                // Use System.Text.Json to deserialize
-                return System.Text.Json.JsonSerializer.Deserialize<T[]>(json);
+                return await _context.Bonuses.Where(predicate).ToListAsync();
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, $"Error deserializing JSON array: {json}");
-                }
-                return Array.Empty<T>();
+                _logger?.LogError(ex, "Error finding bonuses with predicate");
+                throw;
             }
         }
 
-        // Special helper method for PlayerSegment arrays
-        private static PlayerSegment[] DeserializePlayerSegmentArray(string json)
-        {
-            try
-            {
-                // Handle empty arrays
-                if (string.IsNullOrWhiteSpace(json) || json == "[]" || json == "null")
-                {
-                    return Array.Empty<PlayerSegment>();
-                }
-
-                // Try to deserialize as string array first (MySQL might store enum values as strings)
-                var stringValues = System.Text.Json.JsonSerializer.Deserialize<string[]>(json);
-                if (stringValues != null)
-                {
-                    // Convert string values to enum values
-                    return stringValues.Select(s => ParseEnum<PlayerSegment>(s)).ToArray();
-                }
-
-                return Array.Empty<PlayerSegment>();
-            }
-            catch (Exception ex)
-            {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, $"Error deserializing PlayerSegment array: {json}");
-                }
-                return Array.Empty<PlayerSegment>();
-            }
-        }
-
-        public async Task<IEnumerable<Bonus>> FindAsync(Expression<Func<Bonus, bool>> predicate)
-        {
-            return await _context.Bonuses.Where(predicate).ToListAsync();
-        }
-
-        public async Task AddAsync(Bonus entity)
-        {
-            await _context.Bonuses.AddAsync(entity);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task UpdateAsync(Bonus entity)
-        {
-            _context.Bonuses.Update(entity);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteAsync(Bonus entity)
-        {
-            _context.Bonuses.Remove(entity);
-            await _context.SaveChangesAsync();
-        }
+        // Note: AddAsync, UpdateAsync, and DeleteAsync are inherited from the base Repository class
+        // and don't need to be overridden unless custom behavior is needed
 
         public async Task<IEnumerable<Bonus>> GetActiveGlobalBonusesAsync()
         {
             try
             {
                 var now = DateTime.UtcNow;
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Getting active global bonuses at {now}");
-                }
+                _logger?.LogInformation($"Getting active global bonuses at {now}");
 
-                // Use raw SQL to avoid enum conversion issues
-                var bonuses = new List<Bonus>();
+                // Use EF Core to get active global bonuses
+                var bonuses = await _context.Bonuses
+                    .Where(b => b.IsGlobal && b.StartDate <= now && b.EndDate >= now)
+                    .ToListAsync();
 
-                // Get raw data from database
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = @"
-                        SELECT
-                            id,
-                            name,
-                            description,
-                            type,
-                            amount,
-                            percentage_match,
-                            minimum_deposit,
-                            wagering_requirement,
-                            start_date,
-                            end_date,
-                            is_active,
-                            is_global,
-                            game_id,
-                            target_segment,
-                            applicable_game_ids,
-                            target_segments
-                        FROM bonuses
-                        WHERE is_global = 1
-                          AND start_date <= @now
-                          AND end_date >= @now";
-
-                    // Add parameter
-                    var parameter = command.CreateParameter();
-                    parameter.ParameterName = "@now";
-                    parameter.Value = now;
-                    command.Parameters.Add(parameter);
-
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await command.Connection.OpenAsync();
-                    }
-
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            var bonus = new Bonus
-                            {
-                                Id = reader["id"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Description = reader["description"] != DBNull.Value ? reader["description"].ToString() : null,
-                                Type = ParseEnum<BonusType>(reader["type"].ToString()),
-                                Amount = Convert.ToDecimal(reader["amount"]),
-                                PercentageMatch = reader["percentage_match"] != DBNull.Value ? Convert.ToDecimal(reader["percentage_match"]) : null,
-                                MinimumDeposit = reader["minimum_deposit"] != DBNull.Value ? Convert.ToDecimal(reader["minimum_deposit"]) : null,
-                                WageringRequirement = reader["wagering_requirement"] != DBNull.Value ? Convert.ToInt32(reader["wagering_requirement"]) : null,
-                                StartDate = Convert.ToDateTime(reader["start_date"]),
-                                EndDate = Convert.ToDateTime(reader["end_date"]),
-                                IsActive = Convert.ToBoolean(reader["is_active"]),
-                                IsGlobal = Convert.ToBoolean(reader["is_global"]),
-                                GameId = reader["game_id"] != DBNull.Value ? reader["game_id"].ToString() : null,
-                                TargetSegment = ParseEnum<PlayerSegment>(reader["target_segment"].ToString()),
-                                // Handle JSON arrays
-                                ApplicableGameIds = reader["applicable_game_ids"] != DBNull.Value ?
-                                    DeserializeJsonArray<string>(reader["applicable_game_ids"].ToString()) : null,
-                                TargetSegments = reader["target_segments"] != DBNull.Value ?
-                                    DeserializePlayerSegmentArray(reader["target_segments"].ToString()) : null
-                            };
-
-                            bonuses.Add(bonus);
-                        }
-                    }
-                }
-
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Retrieved {bonuses.Count} active global bonuses");
-                }
+                _logger?.LogInformation($"Retrieved {bonuses.Count} active global bonuses");
 
                 return bonuses;
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, "Error retrieving active global bonuses");
-                }
+                _logger?.LogError(ex, "Error retrieving active global bonuses");
                 throw;
             }
         }
@@ -399,94 +106,20 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             try
             {
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Getting bonuses by type: {type}");
-                }
+                _logger?.LogInformation($"Getting bonuses by type: {type}");
 
-                // Use raw SQL to avoid enum conversion issues
-                var bonuses = new List<Bonus>();
+                // Use EF Core to get bonuses by type
+                var bonuses = await _context.Bonuses
+                    .Where(b => b.Type == type)
+                    .ToListAsync();
 
-                // Get raw data from database
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = @"
-                        SELECT
-                            id,
-                            name,
-                            description,
-                            type,
-                            amount,
-                            percentage_match,
-                            minimum_deposit,
-                            wagering_requirement,
-                            start_date,
-                            end_date,
-                            is_active,
-                            is_global,
-                            game_id,
-                            target_segment,
-                            applicable_game_ids,
-                            target_segments
-                        FROM bonuses
-                        WHERE type = @type";
-
-                    // Add parameter
-                    var parameter = command.CreateParameter();
-                    parameter.ParameterName = "@type";
-                    parameter.Value = type.ToString();
-                    command.Parameters.Add(parameter);
-
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await command.Connection.OpenAsync();
-                    }
-
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            var bonus = new Bonus
-                            {
-                                Id = reader["id"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Description = reader["description"] != DBNull.Value ? reader["description"].ToString() : null,
-                                Type = ParseEnum<BonusType>(reader["type"].ToString()),
-                                Amount = Convert.ToDecimal(reader["amount"]),
-                                PercentageMatch = reader["percentage_match"] != DBNull.Value ? Convert.ToDecimal(reader["percentage_match"]) : null,
-                                MinimumDeposit = reader["minimum_deposit"] != DBNull.Value ? Convert.ToDecimal(reader["minimum_deposit"]) : null,
-                                WageringRequirement = reader["wagering_requirement"] != DBNull.Value ? Convert.ToInt32(reader["wagering_requirement"]) : null,
-                                StartDate = Convert.ToDateTime(reader["start_date"]),
-                                EndDate = Convert.ToDateTime(reader["end_date"]),
-                                IsActive = Convert.ToBoolean(reader["is_active"]),
-                                IsGlobal = Convert.ToBoolean(reader["is_global"]),
-                                GameId = reader["game_id"] != DBNull.Value ? reader["game_id"].ToString() : null,
-                                TargetSegment = ParseEnum<PlayerSegment>(reader["target_segment"].ToString()),
-                                // Handle JSON arrays
-                                ApplicableGameIds = reader["applicable_game_ids"] != DBNull.Value ?
-                                    DeserializeJsonArray<string>(reader["applicable_game_ids"].ToString()) : null,
-                                TargetSegments = reader["target_segments"] != DBNull.Value ?
-                                    DeserializePlayerSegmentArray(reader["target_segments"].ToString()) : null
-                            };
-
-                            bonuses.Add(bonus);
-                        }
-                    }
-                }
-
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Retrieved {bonuses.Count} bonuses of type {type}");
-                }
+                _logger?.LogInformation($"Retrieved {bonuses.Count} bonuses of type {type}");
 
                 return bonuses;
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, $"Error retrieving bonuses by type: {type}");
-                }
+                _logger?.LogError(ex, $"Error retrieving bonuses by type: {type}");
                 throw;
             }
         }
@@ -496,101 +129,33 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             try
             {
                 var now = DateTime.UtcNow;
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Getting bonuses for player segment: {segment} at {now}");
-                }
+                _logger?.LogInformation($"Getting bonuses for player segment: {segment} at {now}");
 
-                // Use raw SQL to avoid enum conversion issues
-                var bonuses = new List<Bonus>();
+                // Use EF Core to get bonuses for player segment
+                var bonuses = await _context.Bonuses
+                    .Where(b => b.TargetSegment == segment && b.StartDate <= now && b.EndDate >= now)
+                    .ToListAsync();
 
-                // Get raw data from database
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = @"
-                        SELECT
-                            id,
-                            name,
-                            description,
-                            type,
-                            amount,
-                            percentage_match,
-                            minimum_deposit,
-                            wagering_requirement,
-                            start_date,
-                            end_date,
-                            is_active,
-                            is_global,
-                            game_id,
-                            target_segment,
-                            applicable_game_ids,
-                            target_segments
-                        FROM bonuses
-                        WHERE target_segment = @segment
-                          AND start_date <= @now
-                          AND end_date >= @now";
+                // Also check for bonuses that target multiple segments via the TargetSegments array
+                var bonusesWithTargetSegments = await _context.Bonuses
+                    .Where(b => b.StartDate <= now && b.EndDate >= now && b.TargetSegments != null)
+                    .ToListAsync();
 
-                    // Add parameters
-                    var segmentParam = command.CreateParameter();
-                    segmentParam.ParameterName = "@segment";
-                    segmentParam.Value = segment.ToString();
-                    command.Parameters.Add(segmentParam);
+                // Filter bonuses that include the segment in their TargetSegments array
+                var additionalBonuses = bonusesWithTargetSegments
+                    .Where(b => b.TargetSegments != null && b.TargetSegments.Contains(segment))
+                    .ToList();
 
-                    var nowParam = command.CreateParameter();
-                    nowParam.ParameterName = "@now";
-                    nowParam.Value = now;
-                    command.Parameters.Add(nowParam);
+                // Combine the results, avoiding duplicates
+                var result = bonuses.Union(additionalBonuses).ToList();
 
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await command.Connection.OpenAsync();
-                    }
+                _logger?.LogInformation($"Retrieved {result.Count} bonuses for player segment {segment}");
 
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            var bonus = new Bonus
-                            {
-                                Id = reader["id"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Description = reader["description"] != DBNull.Value ? reader["description"].ToString() : null,
-                                Type = ParseEnum<BonusType>(reader["type"].ToString()),
-                                Amount = Convert.ToDecimal(reader["amount"]),
-                                PercentageMatch = reader["percentage_match"] != DBNull.Value ? Convert.ToDecimal(reader["percentage_match"]) : null,
-                                MinimumDeposit = reader["minimum_deposit"] != DBNull.Value ? Convert.ToDecimal(reader["minimum_deposit"]) : null,
-                                WageringRequirement = reader["wagering_requirement"] != DBNull.Value ? Convert.ToInt32(reader["wagering_requirement"]) : null,
-                                StartDate = Convert.ToDateTime(reader["start_date"]),
-                                EndDate = Convert.ToDateTime(reader["end_date"]),
-                                IsActive = Convert.ToBoolean(reader["is_active"]),
-                                IsGlobal = Convert.ToBoolean(reader["is_global"]),
-                                GameId = reader["game_id"] != DBNull.Value ? reader["game_id"].ToString() : null,
-                                TargetSegment = ParseEnum<PlayerSegment>(reader["target_segment"].ToString()),
-                                // Handle JSON arrays
-                                ApplicableGameIds = reader["applicable_game_ids"] != DBNull.Value ?
-                                    DeserializeJsonArray<string>(reader["applicable_game_ids"].ToString()) : null,
-                                TargetSegments = reader["target_segments"] != DBNull.Value ?
-                                    DeserializePlayerSegmentArray(reader["target_segments"].ToString()) : null
-                            };
-
-                            bonuses.Add(bonus);
-                        }
-                    }
-                }
-
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Retrieved {bonuses.Count} bonuses for player segment {segment}");
-                }
-
-                return bonuses;
+                return result;
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, $"Error retrieving bonuses for player segment: {segment}");
-                }
+                _logger?.LogError(ex, $"Error retrieving bonuses for player segment: {segment}");
                 throw;
             }
         }
@@ -600,101 +165,33 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             try
             {
                 var now = DateTime.UtcNow;
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Getting bonuses for game: {gameId} at {now}");
-                }
+                _logger?.LogInformation($"Getting bonuses for game: {gameId} at {now}");
 
-                // Use raw SQL to avoid enum conversion issues
-                var bonuses = new List<Bonus>();
+                // Use EF Core to get bonuses for game
+                var bonuses = await _context.Bonuses
+                    .Where(b => b.GameId == gameId && b.StartDate <= now && b.EndDate >= now)
+                    .ToListAsync();
 
-                // Get raw data from database
-                using (var command = _context.Database.GetDbConnection().CreateCommand())
-                {
-                    command.CommandText = @"
-                        SELECT
-                            id,
-                            name,
-                            description,
-                            type,
-                            amount,
-                            percentage_match,
-                            minimum_deposit,
-                            wagering_requirement,
-                            start_date,
-                            end_date,
-                            is_active,
-                            is_global,
-                            game_id,
-                            target_segment,
-                            applicable_game_ids,
-                            target_segments
-                        FROM bonuses
-                        WHERE game_id = @gameId
-                          AND start_date <= @now
-                          AND end_date >= @now";
+                // Also check for bonuses that include this game in their ApplicableGameIds array
+                var bonusesWithApplicableGames = await _context.Bonuses
+                    .Where(b => b.StartDate <= now && b.EndDate >= now && b.ApplicableGameIds != null)
+                    .ToListAsync();
 
-                    // Add parameters
-                    var gameIdParam = command.CreateParameter();
-                    gameIdParam.ParameterName = "@gameId";
-                    gameIdParam.Value = gameId;
-                    command.Parameters.Add(gameIdParam);
+                // Filter bonuses that include the game in their ApplicableGameIds array
+                var additionalBonuses = bonusesWithApplicableGames
+                    .Where(b => b.ApplicableGameIds != null && b.ApplicableGameIds.Contains(gameId))
+                    .ToList();
 
-                    var nowParam = command.CreateParameter();
-                    nowParam.ParameterName = "@now";
-                    nowParam.Value = now;
-                    command.Parameters.Add(nowParam);
+                // Combine the results, avoiding duplicates
+                var result = bonuses.Union(additionalBonuses).ToList();
 
-                    if (command.Connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await command.Connection.OpenAsync();
-                    }
+                _logger?.LogInformation($"Retrieved {result.Count} bonuses for game {gameId}");
 
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            var bonus = new Bonus
-                            {
-                                Id = reader["id"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Description = reader["description"] != DBNull.Value ? reader["description"].ToString() : null,
-                                Type = ParseEnum<BonusType>(reader["type"].ToString()),
-                                Amount = Convert.ToDecimal(reader["amount"]),
-                                PercentageMatch = reader["percentage_match"] != DBNull.Value ? Convert.ToDecimal(reader["percentage_match"]) : null,
-                                MinimumDeposit = reader["minimum_deposit"] != DBNull.Value ? Convert.ToDecimal(reader["minimum_deposit"]) : null,
-                                WageringRequirement = reader["wagering_requirement"] != DBNull.Value ? Convert.ToInt32(reader["wagering_requirement"]) : null,
-                                StartDate = Convert.ToDateTime(reader["start_date"]),
-                                EndDate = Convert.ToDateTime(reader["end_date"]),
-                                IsActive = Convert.ToBoolean(reader["is_active"]),
-                                IsGlobal = Convert.ToBoolean(reader["is_global"]),
-                                GameId = reader["game_id"] != DBNull.Value ? reader["game_id"].ToString() : null,
-                                TargetSegment = ParseEnum<PlayerSegment>(reader["target_segment"].ToString()),
-                                // Handle JSON arrays
-                                ApplicableGameIds = reader["applicable_game_ids"] != DBNull.Value ?
-                                    DeserializeJsonArray<string>(reader["applicable_game_ids"].ToString()) : null,
-                                TargetSegments = reader["target_segments"] != DBNull.Value ?
-                                    DeserializePlayerSegmentArray(reader["target_segments"].ToString()) : null
-                            };
-
-                            bonuses.Add(bonus);
-                        }
-                    }
-                }
-
-                if (_logger != null)
-                {
-                    _logger.LogInformation($"Retrieved {bonuses.Count} bonuses for game {gameId}");
-                }
-
-                return bonuses;
+                return result;
             }
             catch (Exception ex)
             {
-                if (_logger != null)
-                {
-                    _logger.LogError(ex, $"Error retrieving bonuses for game: {gameId}");
-                }
+                _logger?.LogError(ex, $"Error retrieving bonuses for game: {gameId}");
                 throw;
             }
         }

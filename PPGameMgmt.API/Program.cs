@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Services;
+using PPGameMgmt.Infrastructure.Data;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.Infrastructure.Data.Repositories;
 using PPGameMgmt.Infrastructure.ML.Features;
@@ -23,13 +24,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "PPGameMgmt API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PPGameMgmt API",
         Version = "v1",
         Description = "API for managing personalized player game recommendations and bonuses"
     });
-    
+
     // Add security definition for API Management subscription key
     c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
     {
@@ -38,7 +39,7 @@ builder.Services.AddSwaggerGen(c =>
         Name = "Ocp-Apim-Subscription-Key",
         Description = "API Management subscription key"
     });
-    
+
     // Make sure all endpoints use the API key
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -64,7 +65,7 @@ var connectionString = builder.Configuration.GetConnectionString("MySqlConnectio
 Console.WriteLine($"Using MySQL Connection: {connectionString}");
 builder.Services.AddDbContext<CasinoDbContext>(options =>
     options.UseMySql(
-        connectionString, 
+        connectionString,
         ServerVersion.AutoDetect(connectionString),
         mySqlOptions => mySqlOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
 
@@ -97,6 +98,10 @@ builder.Services.AddScoped<IBonusRepository, BonusRepository>();
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
 builder.Services.AddScoped<IRecommendationRepository, RecommendationRepository>();
 builder.Services.AddScoped<IBonusClaimRepository, BonusClaimRepository>();
+builder.Services.AddScoped<IPlayerFeaturesRepository, PlayerFeaturesRepository>();
+
+// Register Unit of Work
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register services
 builder.Services.AddScoped<IPlayerService, PlayerService>();
@@ -112,7 +117,7 @@ builder.Services.AddScoped<IFeatureEngineeringService, FeatureEngineeringService
 builder.Services.AddScoped<GameRecommendationModel>();
 builder.Services.AddScoped<BonusOptimizationModel>();
 builder.Services.AddScoped<IMLModelService, MLModelService>();
-builder.Services.AddSingleton<IMLOpsService, MLOpsService>(); 
+builder.Services.AddSingleton<IMLOpsService, MLOpsService>();
 
 // Add API response caching using Redis
 builder.Services.AddResponseCaching();
@@ -136,7 +141,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:55824", 
+                "http://localhost:55824",
                 "https://localhost:55824",
                 "http://localhost:5824",
                 "https://localhost:7210"
@@ -182,7 +187,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<CasinoDbContext>();
-        
+
         Console.WriteLine("Testing database connection...");
         if (context.Database.CanConnect())
         {
@@ -192,7 +197,7 @@ using (var scope = app.Services.CreateScope())
         {
             Console.WriteLine("Failed to connect to the database.");
         }
-        
+
         // Initialize ML models - wrap in try-catch to prevent startup failure
         try
         {
