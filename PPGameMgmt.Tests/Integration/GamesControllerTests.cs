@@ -1,89 +1,120 @@
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
+using PPGameMgmt.API.Models;
 using PPGameMgmt.Core.Entities;
 using Xunit;
 
 namespace PPGameMgmt.Tests.Integration
 {
-    public class GamesControllerTests : IClassFixture<WebApplicationFactory<Program>>
+    public class GamesControllerTests : IClassFixture<TestWebApplicationFactory<Program>>
     {
         private readonly HttpClient _client;
-        private readonly WebApplicationFactory<Program> _factory;
-        
-        public GamesControllerTests(WebApplicationFactory<Program> factory)
+        private readonly TestWebApplicationFactory<Program> _factory;
+
+        public GamesControllerTests(TestWebApplicationFactory<Program> factory)
         {
             _factory = factory;
             _client = _factory.CreateClient();
         }
-        
+
         [Fact]
         public async Task GetGames_ReturnsSuccessStatusCode()
         {
             // Act
-            var response = await _client.GetAsync("/api/games");
-            
+            var response = await _client.GetAsync("/api/v1/games");
+
             // Assert
             response.EnsureSuccessStatusCode();
             Assert.Equal("application/json", response.Content.Headers.ContentType.MediaType);
+
+            // Verify the response format
+            var responseContent = await response.Content.ReadFromJsonAsync<ApiResponse<IEnumerable<Game>>>();
+            Assert.NotNull(responseContent);
+            Assert.True(responseContent.Success);
+            Assert.NotNull(responseContent.Data);
         }
-        
+
         [Fact]
         public async Task GetGame_WithValidId_ReturnsGame()
         {
             // Arrange
-            var gameId = "1"; // Assuming this ID exists
-            
+            var gameId = "test-game-1"; // From test data
+
             // Act
-            var response = await _client.GetAsync($"/api/games/{gameId}");
-            
+            var response = await _client.GetAsync($"/api/v1/games/{gameId}");
+
             // Assert
             response.EnsureSuccessStatusCode();
-            var game = await response.Content.ReadFromJsonAsync<Game>();
-            Assert.NotNull(game);
-            Assert.Equal(gameId, game.Id);
+            var responseContent = await response.Content.ReadFromJsonAsync<ApiResponse<Game>>();
+            Assert.NotNull(responseContent);
+            Assert.True(responseContent.Success);
+            Assert.NotNull(responseContent.Data);
+            Assert.Equal(gameId, responseContent.Data.Id);
         }
-        
+
         [Fact]
         public async Task GetGame_WithInvalidId_ReturnsNotFound()
         {
             // Arrange
-            var invalidId = "invalid-id"; // Assuming this ID doesn't exist
-            
+            var invalidId = "non-existent-game";
+
             // Act
-            var response = await _client.GetAsync($"/api/games/{invalidId}");
-            
+            var response = await _client.GetAsync($"/api/v1/games/{invalidId}");
+
             // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var responseContent = await response.Content.ReadFromJsonAsync<ApiResponse<Game>>();
+            Assert.NotNull(responseContent);
+            Assert.False(responseContent.Success);
         }
-        
+
         [Fact]
-        public async Task CreateGame_WithValidData_ReturnsCreated()
+        public async Task GetGamesByType_ReturnsFilteredGames()
         {
             // Arrange
-            var newGame = new Game
-            {
-                Name = "Integration Test Game",
-                Type = GameType.Slot,
-                Provider = "Test Provider",
-                RTP = 96.5,
-                Description = "A game created in integration tests"
-            };
-            
+            var gameType = GameType.Slot;
+
             // Act
-            var response = await _client.PostAsJsonAsync("/api/games", newGame);
-            
+            var response = await _client.GetAsync($"/api/v1/games/type/{gameType}");
+
             // Assert
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-            Assert.NotNull(response.Headers.Location);
-            
-            // Cleanup - delete the created game
-            var createdGame = await response.Content.ReadFromJsonAsync<Game>();
-            if (createdGame?.Id != null)
+            response.EnsureSuccessStatusCode();
+            var responseContent = await response.Content.ReadFromJsonAsync<ApiResponse<IEnumerable<Game>>>();
+            Assert.NotNull(responseContent);
+            Assert.True(responseContent.Success);
+            Assert.NotNull(responseContent.Data);
+
+            // Verify all returned games are of the specified type
+            foreach (var game in responseContent.Data)
             {
-                await _client.DeleteAsync($"/api/games/{createdGame.Id}");
+                Assert.Equal(gameType, game.Type);
+            }
+        }
+
+        [Fact]
+        public async Task GetGamesByCategory_ReturnsFilteredGames()
+        {
+            // Arrange
+            var gameCategory = GameCategory.Featured;
+
+            // Act
+            var response = await _client.GetAsync($"/api/v1/games/category/{gameCategory}");
+
+            // Assert
+            response.EnsureSuccessStatusCode();
+            var responseContent = await response.Content.ReadFromJsonAsync<ApiResponse<IEnumerable<Game>>>();
+            Assert.NotNull(responseContent);
+            Assert.True(responseContent.Success);
+            Assert.NotNull(responseContent.Data);
+
+            // Verify all returned games are of the specified category
+            foreach (var game in responseContent.Data)
+            {
+                Assert.Equal(gameCategory, game.Category);
             }
         }
     }

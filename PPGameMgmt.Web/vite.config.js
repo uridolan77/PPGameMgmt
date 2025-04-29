@@ -10,7 +10,7 @@ export default defineConfig({
     server: {
         port: 55824,
         hmr: {
-            overlay: false, // Disable HMR overlay temporarily while we fix the CSS issue
+            overlay: true, // Enable HMR overlay for better debugging
         }
     },
     css: {
@@ -22,8 +22,9 @@ export default defineConfig({
         },
     },
     resolve: {
-        // Add explicit alias for problematic packages
         alias: {
+            '@': resolve(__dirname, './src'),
+            // Add explicit alias for problematic packages
             'recharts': resolve(__dirname, 'node_modules/recharts'),
             'date-fns': resolve(__dirname, 'node_modules/date-fns')
         }

@@ -4,7 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { Box, CircularProgress } from "@mui/material";
 
 const RequireAuth = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth status
@@ -25,7 +25,7 @@ const RequireAuth = ({ children }) => {
 
   // If not authenticated, redirect to login page, but save the location they were
   // trying to go to so we can send them there after they login
-  if (!user) {
+  if (!currentUser) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -39,7 +39,7 @@ const Layout = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { user, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -138,7 +138,7 @@ const Layout = () => {
           </Typography>
           <IconButton color="inherit" onClick={handleProfileMenuOpen}>
             <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.secondary.main }}>
-              {user?.username?.charAt(0).toUpperCase() || "U"}
+              {currentUser?.username?.charAt(0).toUpperCase() || "U"}
             </Avatar>
           </IconButton>
           <Menu
@@ -149,7 +149,7 @@ const Layout = () => {
             anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           >
             <MenuItem dense disabled>
-              <Typography variant="body2">{user?.username}</Typography>
+              <Typography variant="body2">{currentUser?.username}</Typography>
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleProfileMenuClose}>

@@ -113,6 +113,18 @@ builder.Services.AddSwaggerGen(c =>
 
     // Configure the Swagger doc to work with API versioning
     c.OperationFilter<SwaggerDefaultValues>();
+
+    // Add documentation filters
+    c.OperationFilter<SwaggerDocumentationFilter>();
+    c.SchemaFilter<SwaggerExampleFilter>();
+
+    // Include XML comments if available
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 // Add API Management configuration
