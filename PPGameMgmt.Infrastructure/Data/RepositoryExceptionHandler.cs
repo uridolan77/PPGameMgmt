@@ -22,7 +22,7 @@ namespace PPGameMgmt.Infrastructure.Data
         /// <param name="errorMessage">A custom error message</param>
         /// <param name="logger">Optional logger for logging exceptions</param>
         /// <returns>The result of the repository operation</returns>
-        public static T Execute<T>(Func<T> operation, string entityName, string errorMessage, ILogger logger = null)
+        public static T Execute<T>(Func<T> operation, string entityName, string errorMessage, ILogger? logger = null)
         {
             try
             {
@@ -48,7 +48,7 @@ namespace PPGameMgmt.Infrastructure.Data
                     throw new BusinessRuleViolationException("ForeignKeyViolation", $"Cannot perform operation on {entityName} because it would violate a relationship constraint.", "The related data must exist first");
                 }
                 
-                throw new InfrastructureException("Database", errorMessage, ex.Message);
+                throw new InfrastructureException("Database", errorMessage, new Exception(ex.Message));
             }
             catch (SqlException ex)
             {
@@ -97,7 +97,7 @@ namespace PPGameMgmt.Infrastructure.Data
         /// <param name="errorMessage">A custom error message</param>
         /// <param name="logger">Optional logger for logging exceptions</param>
         /// <returns>The result of the repository operation</returns>
-        public static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, string entityName, string errorMessage, ILogger logger = null)
+        public static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, string entityName, string errorMessage, ILogger? logger = null)
         {
             try
             {
@@ -123,7 +123,7 @@ namespace PPGameMgmt.Infrastructure.Data
                     throw new BusinessRuleViolationException("ForeignKeyViolation", $"Cannot perform operation on {entityName} because it would violate a relationship constraint.", "The related data must exist first");
                 }
                 
-                throw new InfrastructureException("Database", errorMessage, ex.Message);
+                throw new InfrastructureException("Database", errorMessage, new Exception(ex.Message));
             }
             catch (SqlException ex)
             {
@@ -170,7 +170,7 @@ namespace PPGameMgmt.Infrastructure.Data
         /// <param name="entityName">The name of the entity being operated on</param>
         /// <param name="errorMessage">A custom error message</param>
         /// <param name="logger">Optional logger for logging exceptions</param>
-        public static void Execute(Action operation, string entityName, string errorMessage, ILogger logger = null)
+        public static void Execute(Action operation, string entityName, string errorMessage, ILogger? logger = null)
         {
             Execute(() => 
             {
@@ -186,7 +186,7 @@ namespace PPGameMgmt.Infrastructure.Data
         /// <param name="entityName">The name of the entity being operated on</param>
         /// <param name="errorMessage">A custom error message</param>
         /// <param name="logger">Optional logger for logging exceptions</param>
-        public static async Task ExecuteAsync(Func<Task> operation, string entityName, string errorMessage, ILogger logger = null)
+        public static async Task ExecuteAsync(Func<Task> operation, string entityName, string errorMessage, ILogger? logger = null)
         {
             await ExecuteAsync(async () => 
             {

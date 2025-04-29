@@ -13,10 +13,10 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
     public class OutboxRepository : IOutboxRepository
     {
         private readonly CasinoDbContext _context;
-        private readonly ILogger<OutboxRepository> _logger;
+        private readonly ILogger<OutboxRepository>? _logger;
         private const string _entityName = "OutboxMessage";
         
-        public OutboxRepository(CasinoDbContext context, ILogger<OutboxRepository> logger = null)
+        public OutboxRepository(CasinoDbContext context, ILogger<OutboxRepository>? logger = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger;

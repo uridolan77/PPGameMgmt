@@ -11,17 +11,17 @@ namespace PPGameMgmt.API.Models
         /// <summary>
         /// Indicates if the request was successful
         /// </summary>
-        public bool Success { get; set; }
+        public bool IsSuccess { get; set; }
         
         /// <summary>
         /// Optional message providing additional information about the response
         /// </summary>
-        public string Message { get; set; }
+        public string? Message { get; set; }
         
         /// <summary>
         /// The data payload of the response
         /// </summary>
-        public T Data { get; set; }
+        public T? Data { get; set; }
         
         /// <summary>
         /// List of errors that occurred during request processing
@@ -31,16 +31,16 @@ namespace PPGameMgmt.API.Models
         /// <summary>
         /// Pagination metadata if the response is paginated
         /// </summary>
-        public PaginationMetadata Pagination { get; set; }
+        public PaginationMetadata? Pagination { get; set; }
         
         /// <summary>
         /// Creates a successful response with data
         /// </summary>
-        public static ApiResponse<T> Success(T data, string message = null)
+        public static ApiResponse<T> Success(T data, string? message = null)
         {
             return new ApiResponse<T>
             {
-                Success = true,
+                IsSuccess = true,
                 Message = message,
                 Data = data
             };
@@ -49,11 +49,11 @@ namespace PPGameMgmt.API.Models
         /// <summary>
         /// Creates a successful paginated response with data
         /// </summary>
-        public static ApiResponse<T> Success(T data, PaginationMetadata pagination, string message = null)
+        public static ApiResponse<T> SuccessWithPagination(T data, PaginationMetadata pagination, string? message = null)
         {
             return new ApiResponse<T>
             {
-                Success = true,
+                IsSuccess = true,
                 Message = message,
                 Data = data,
                 Pagination = pagination
@@ -63,11 +63,11 @@ namespace PPGameMgmt.API.Models
         /// <summary>
         /// Creates a failed response with errors
         /// </summary>
-        public static ApiResponse<T> Failure(string message, List<string> errors = null)
+        public static ApiResponse<T> Failure(string message, List<string>? errors = null)
         {
             return new ApiResponse<T>
             {
-                Success = false,
+                IsSuccess = false,
                 Message = message,
                 Errors = errors ?? new List<string>()
             };
@@ -80,7 +80,7 @@ namespace PPGameMgmt.API.Models
         {
             return new ApiResponse<T>
             {
-                Success = false,
+                IsSuccess = false,
                 Message = message,
                 Errors = new List<string> { error }
             };

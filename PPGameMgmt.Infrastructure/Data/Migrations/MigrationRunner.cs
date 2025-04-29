@@ -16,9 +16,9 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
     {
         private readonly CasinoDbContext _dbContext;
         private readonly IEnumerable<IMigration> _migrations;
-        private readonly ILogger<MigrationRunner> _logger;
+        private readonly ILogger<MigrationRunner>? _logger;
 
-        public MigrationRunner(CasinoDbContext dbContext, IEnumerable<IMigration> migrations, ILogger<MigrationRunner> logger = null)
+        public MigrationRunner(CasinoDbContext dbContext, IEnumerable<IMigration> migrations, ILogger<MigrationRunner>? logger = null)
         {
             _dbContext = dbContext;
             _migrations = migrations;
@@ -36,7 +36,7 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
             await _dbContext.Database.EnsureCreatedAsync();
             
             // Create migration history table if it doesn't exist
-            if (!await _dbContext.Database.GetPendingMigrationsAsync().AnyAsync())
+            if (!(await _dbContext.Database.GetPendingMigrationsAsync()).Any())
             {
                 var sql = @"
                     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MigrationHistory' and xtype='U')

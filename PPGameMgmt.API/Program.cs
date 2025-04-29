@@ -11,6 +11,8 @@ using PPGameMgmt.API.Services;
 using Serilog;
 using System;
 using Microsoft.Extensions.Configuration;
+using FluentValidation.AspNetCore;
+using FluentValidation;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -36,20 +38,18 @@ try
         .AddHealthChecksConfiguration()
         .AddApiControllers()
         .AddCorsPolicy(builder.Configuration)
-        .AddFluentValidation(fv =>
-        {
-            fv.RegisterValidatorsFromAssemblyContaining<Program>();
-            fv.ImplicitlyValidateChildProperties = true;
-            fv.ImplicitlyValidateRootCollectionElements = true;
-        })
+        // Update FluentValidation registration to use current approach
+        .AddFluentValidationAutoValidation()
+        .AddFluentValidationClientsideAdapters()
+        .AddValidatorsFromAssemblyContaining<Program>()
         .AddEndpointsApiExplorer()
         
         // Add AutoMapper
         .AddAutoMapperServices()
         
-        // Add API Management and Rate Limiting
-        .AddApiManagementConfiguration(builder.Configuration)
-        .AddRateLimitingConfiguration(builder.Configuration)
+        // Add API Management and Rate Limiting - commenting out missing extensions
+        //.AddApiManagementConfiguration(builder.Configuration)
+        //.AddRateLimitingConfiguration(builder.Configuration)
         
         // Add Architecture Patterns Implementation
         .AddArchitecturalPatterns(builder.Configuration)
