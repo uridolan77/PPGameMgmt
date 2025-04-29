@@ -9,8 +9,10 @@ namespace PPGameMgmt.Core.Interfaces
     {
         Task<Player> GetPlayerAsync(string playerId);
         Task<IEnumerable<Player>> GetPlayersBySegmentAsync(PlayerSegment segment);
+        Task<PagedResult<Player>> GetPlayersBySegmentPagedAsync(PlayerSegment segment, PaginationParameters parameters);
         Task UpdatePlayerSegmentAsync(string playerId, PlayerSegment segment);
         Task<IEnumerable<Player>> GetActivePlayers(int daysActive);
+        Task<PagedResult<Player>> GetActivePlayersPagedAsync(int daysActive, PaginationParameters parameters);
         Task<bool> IsPlayerActive(string playerId, int days);
         Task<decimal> GetPlayerValueAsync(string playerId);
         Task<PlayerFeatures> GetPlayerFeaturesAsync(string playerId);
@@ -66,7 +68,7 @@ namespace PPGameMgmt.Core.Interfaces
         Task<DateTime> GetLastModelUpdateTimeAsync();
         Task RetrainModelsAsync(bool forceRetrain = false);
         Task EvaluateModelPerformanceAsync();
-        
+
         // Add missing methods required by service implementations
         Task<IEnumerable<GameRecommendation>> PredictTopGamesAsync(PlayerFeatures playerFeatures, int count);
         Task<BonusRecommendation> PredictBestBonusAsync(PlayerFeatures playerFeatures);

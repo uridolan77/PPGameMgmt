@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Models;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
@@ -49,6 +50,25 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             }
         }
 
+        public virtual async Task<PagedResult<T>> GetPagedAsync(PaginationParameters parameters)
+        {
+            try
+            {
+                var totalCount = await _dbSet.CountAsync();
+                var items = await _dbSet
+                    .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                    .Take(parameters.PageSize)
+                    .ToListAsync();
+
+                return new PagedResult<T>(items, totalCount, parameters.PageNumber, parameters.PageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error retrieving paged entities of type {typeof(T).Name}");
+                throw;
+            }
+        }
+
         public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
             try
@@ -58,6 +78,26 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             catch (Exception ex)
             {
                 _logger?.LogError(ex, $"Error finding entities of type {typeof(T).Name} with predicate");
+                throw;
+            }
+        }
+
+        public virtual async Task<PagedResult<T>> FindPagedAsync(Expression<Func<T, bool>> predicate, PaginationParameters parameters)
+        {
+            try
+            {
+                var query = _dbSet.Where(predicate);
+                var totalCount = await query.CountAsync();
+                var items = await query
+                    .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                    .Take(parameters.PageSize)
+                    .ToListAsync();
+
+                return new PagedResult<T>(items, totalCount, parameters.PageNumber, parameters.PageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error finding paged entities of type {typeof(T).Name} with predicate");
                 throw;
             }
         }
@@ -85,9 +125,9 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 {
                     _dbSet.Attach(entity);
                 }
-                
+
                 _context.Entry(entity).State = EntityState.Modified;
-                
+
                 // Note: SaveChangesAsync is not called here, it will be called by the UnitOfWork
                 await Task.CompletedTask; // Just to make the method async consistent
             }

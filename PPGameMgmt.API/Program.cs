@@ -19,15 +19,40 @@ using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.Infrastructure.Data.Repositories;
 using PPGameMgmt.Infrastructure.ML.Features;
 using PPGameMgmt.Infrastructure.ML.Models;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Serilog;
+using Serilog.Events;
+using PPGameMgmt.API.HealthChecks;
 using PPGameMgmt.API.Middleware;
 using PPGameMgmt.API.Hubs;
 using PPGameMgmt.API.Services;
 using PPGameMgmt.API.Swagger;
 
-var builder = WebApplication.CreateBuilder(args);
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
+        .Build())
+    .CreateLogger();
+
+try
+{
+    Log.Information("Starting PPGameMgmt API");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Use Serilog for logging
+    builder.Host.UseSerilog();
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddFluentValidation(fv =>
+    {
+        fv.RegisterValidatorsFromAssemblyContaining<Program>();
+        fv.ImplicitlyValidateChildProperties = true;
+        fv.ImplicitlyValidateRootCollectionElements = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 // Add API Versioning
@@ -92,6 +117,15 @@ builder.Services.AddSwaggerGen(c =>
 
 // Add API Management configuration
 builder.Services.AddApiManagementConfiguration(builder.Configuration);
+
+// Add Rate Limiting configuration
+builder.Services.AddRateLimitingConfiguration(builder.Configuration);
+
+// Add Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database_health_check", tags: new[] { "database" })
+    .AddCheck<RedisHealthCheck>("redis_health_check", tags: new[] { "redis" })
+    .AddCheck<MLModelHealthCheck>("ml_model_health_check", tags: new[] { "ml" });
 
 // Add Authorization with policies
 builder.Services.AddAuthorization(options =>
@@ -173,11 +207,36 @@ builder.Services.AddScoped<IPlayerFeaturesRepository, PlayerFeaturesRepository>(
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register services
-builder.Services.AddScoped<IPlayerService, PlayerService>();
-builder.Services.AddScoped<IGameService, GameService>();
-builder.Services.AddScoped<IBonusService, BonusService>();
-builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<PlayerService>();
+builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<BonusService>();
+builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<IBonusOptimizationService, BonusOptimizationService>();
+
+// Register cached service decorators
+builder.Services.AddScoped<IPlayerService>(provider =>
+    new CachedPlayerService(
+        provider.GetRequiredService<PlayerService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedPlayerService>>()));
+
+builder.Services.AddScoped<IGameService>(provider =>
+    new CachedGameService(
+        provider.GetRequiredService<GameService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedGameService>>()));
+
+builder.Services.AddScoped<IBonusService>(provider =>
+    new CachedBonusService(
+        provider.GetRequiredService<BonusService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedBonusService>>()));
+
+builder.Services.AddScoped<IRecommendationService>(provider =>
+    new CachedRecommendationService(
+        provider.GetRequiredService<RecommendationService>(),
+        provider.GetRequiredService<ICacheService>(),
+        provider.GetRequiredService<ILogger<CachedRecommendationService>>()));
 
 // Register ML components
 builder.Services.AddSingleton<BackgroundFeatureProcessor>();
@@ -241,8 +300,14 @@ else
 // Add our global exception handling middleware - this should be one of the first middleware
 app.UseGlobalExceptionHandling();
 
+// Add request logging middleware for enriched logs
+app.UseRequestLogging();
+
 // Add API Management middleware - place after exception handling but before other middleware
 app.UseApiManagement();
+
+// Add Rate Limiting middleware
+app.UseRateLimiting();
 
 app.UseHttpsRedirection();
 app.UseResponseCaching(); // Enable response caching
@@ -252,6 +317,34 @@ app.UseAuthorization();
 // Map SignalR hub
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapControllers();
+
+// Map health check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+    AllowCachingResponses = false
+});
+
+app.MapHealthChecks("/health/database", new HealthCheckOptions
+{
+    ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+    Predicate = healthCheck => healthCheck.Tags.Contains("database"),
+    AllowCachingResponses = false
+});
+
+app.MapHealthChecks("/health/redis", new HealthCheckOptions
+{
+    ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+    Predicate = healthCheck => healthCheck.Tags.Contains("redis"),
+    AllowCachingResponses = false
+});
+
+app.MapHealthChecks("/health/ml", new HealthCheckOptions
+{
+    ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+    Predicate = healthCheck => healthCheck.Tags.Contains("ml"),
+    AllowCachingResponses = false
+});
 
 // Test database connection at startup
 using (var scope = app.Services.CreateScope())
@@ -298,3 +391,12 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

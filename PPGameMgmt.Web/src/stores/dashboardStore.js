@@ -158,15 +158,28 @@ const useDashboardStore = create(
           // If widget is already active, don't add it again
           if (state.activeWidgets.includes(widgetId)) return state;
 
+          // Get the current layout
+          let currentLayout = state.layout;
+
+          // If layout is not an array (e.g., it's an object with breakpoints), use the lg layout
+          if (!Array.isArray(currentLayout) && currentLayout.lg) {
+            currentLayout = currentLayout.lg;
+          } else if (!Array.isArray(currentLayout)) {
+            // If layout is not an array and doesn't have lg property, create a new array
+            currentLayout = [];
+          }
+
           // Find the best position for the new widget
           // Calculate the maximum y-coordinate plus height in the current layout
           let maxY = 0;
-          state.layout.forEach(item => {
-            const itemBottom = item.y + item.h;
-            if (itemBottom > maxY) {
-              maxY = itemBottom;
-            }
-          });
+          if (currentLayout.length > 0) {
+            currentLayout.forEach(item => {
+              const itemBottom = item.y + item.h;
+              if (itemBottom > maxY) {
+                maxY = itemBottom;
+              }
+            });
+          }
 
           // Position the new widget at the bottom of the layout
           // Try to place it in the first column if possible
@@ -179,26 +192,55 @@ const useDashboardStore = create(
           };
 
           // Add widget to layout with calculated position
-          const newLayout = [
-            ...state.layout,
-            newWidgetPosition
-          ];
+          const newLayout = [...currentLayout, newWidgetPosition];
+
+          // If the original layout was an object with breakpoints, update it accordingly
+          let updatedLayout;
+          if (!Array.isArray(state.layout) && state.layout.lg) {
+            updatedLayout = {
+              ...state.layout,
+              lg: newLayout
+            };
+          } else {
+            updatedLayout = newLayout;
+          }
 
           return {
             activeWidgets: [...state.activeWidgets, widgetId],
-            layout: newLayout
+            layout: updatedLayout
           };
         });
       },
 
       // Remove a widget from the dashboard
-      removeWidget: (widgetId) => set((state) => ({
-        activeWidgets: state.activeWidgets.filter(id => id !== widgetId),
-        layout: state.layout.filter(item => item.i !== widgetId)
-      })),
+      removeWidget: (widgetId) => set((state) => {
+        // Get the current layout
+        let currentLayout = state.layout;
+        let updatedLayout;
+
+        // If layout is an object with breakpoints
+        if (!Array.isArray(currentLayout) && currentLayout.lg) {
+          // Update each breakpoint layout
+          updatedLayout = {};
+          Object.keys(currentLayout).forEach(breakpoint => {
+            updatedLayout[breakpoint] = currentLayout[breakpoint].filter(item => item.i !== widgetId);
+          });
+        } else {
+          // If layout is an array, filter directly
+          updatedLayout = currentLayout.filter(item => item.i !== widgetId);
+        }
+
+        return {
+          activeWidgets: state.activeWidgets.filter(id => id !== widgetId),
+          layout: updatedLayout
+        };
+      }),
 
       // Update layout after user drag/resize
-      updateLayout: (newLayouts) => set({ layout: newLayouts }),
+      updateLayout: (newLayouts) => {
+        // Ensure we're storing the layout in the correct format
+        set({ layout: newLayouts });
+      },
 
       // Set active widgets
       setActiveWidgets: (widgets) => set({ activeWidgets: widgets }),

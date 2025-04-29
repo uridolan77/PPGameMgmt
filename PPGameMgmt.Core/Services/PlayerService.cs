@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Models;
 
 namespace PPGameMgmt.Core.Services
 {
@@ -38,6 +39,16 @@ namespace PPGameMgmt.Core.Services
             return await _playerRepository.GetPlayersBySegmentAsync(segment);
         }
 
+        public async Task<PagedResult<Player>> GetPlayersBySegmentPagedAsync(PlayerSegment segment, PaginationParameters parameters)
+        {
+            if (parameters == null)
+            {
+                throw new ArgumentNullException(nameof(parameters));
+            }
+
+            return await _playerRepository.GetPlayersBySegmentPagedAsync(segment, parameters);
+        }
+
         public async Task UpdatePlayerSegmentAsync(string playerId, PlayerSegment segment)
         {
             if (string.IsNullOrEmpty(playerId))
@@ -57,6 +68,21 @@ namespace PPGameMgmt.Core.Services
             }
 
             return await _playerRepository.GetActivePlayers(daysActive);
+        }
+
+        public async Task<PagedResult<Player>> GetActivePlayersPagedAsync(int daysActive, PaginationParameters parameters)
+        {
+            if (daysActive <= 0)
+            {
+                throw new ArgumentException("Days active must be positive", nameof(daysActive));
+            }
+
+            if (parameters == null)
+            {
+                throw new ArgumentNullException(nameof(parameters));
+            }
+
+            return await _playerRepository.GetActivePlayersPagedAsync(daysActive, parameters);
         }
 
         public async Task<bool> IsPlayerActive(string playerId, int days)
@@ -119,17 +145,17 @@ namespace PPGameMgmt.Core.Services
             {
                 // First try to get cached features
                 var features = await _featureService.GetCachedFeaturesAsync(playerId);
-                
+
                 // If no cached features, extract them
                 if (features == null)
                 {
                     _logger.LogInformation($"No cached features found for player {playerId}, extracting new features");
                     features = await _featureService.ExtractFeaturesAsync(playerId);
-                    
+
                     // Update the cache with the new features
                     await _featureService.UpdateFeaturesCacheAsync(playerId);
                 }
-                
+
                 return features;
             }
             catch (Exception ex)

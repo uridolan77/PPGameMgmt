@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Menu, MenuItem, IconButton } from '@mui/material';
+import { Box, Typography, Button, Menu, MenuItem, IconButton, Grid, Paper } from '@mui/material';
 import { Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
-import { Responsive, WidthProvider } from 'react-grid-layout';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
 
 // Import our dashboard store
 import useDashboardStore from '../../stores/dashboardStore';
@@ -14,10 +11,8 @@ import '../../styles/dashboard.css';
 // Import modular components and configurations
 import WIDGET_COMPONENTS from './widgetRegistry';
 import Widget from './Widget';
-import { createLayouts, gridCols, breakpoints } from './layoutConfig';
-
-// Create a responsive grid layout
-const ResponsiveGridLayout = WidthProvider(Responsive);
+import SimpleGridLayout from './SimpleGridLayout';
+import { createLayouts } from './layoutConfig';
 
 const Dashboard = () => {
   // State for widget menu
@@ -51,6 +46,11 @@ const Dashboard = () => {
     const newLayouts = createLayouts(activeWidgets);
     console.log('New layouts:', newLayouts);
     setLayouts(newLayouts);
+
+    // Force a resize event to ensure the layout is properly rendered
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
   }, [activeWidgets]);
 
   // Handle layout change
@@ -73,13 +73,26 @@ const Dashboard = () => {
   };
 
   const handleAddWidget = (widgetId) => {
+    // Add the widget to the store
     addWidget(widgetId);
     handleAddMenuClose();
 
-    // Update layouts with the new widget
+    // Get the updated list of widgets (including the new one)
     const updatedWidgets = [...activeWidgets, widgetId];
+
+    // Create new layouts for all breakpoints
     const newLayouts = createLayouts(updatedWidgets);
+
+    // Update the layouts state
     setLayouts(newLayouts);
+
+    // Update the layout in the store
+    updateLayout(newLayouts);
+
+    // Force a resize event to ensure the layout is properly rendered
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
   };
 
   const handleWidgetMenuOpen = (event, widgetId) => {
@@ -95,12 +108,25 @@ const Dashboard = () => {
 
   const handleRemoveWidget = () => {
     if (selectedWidgetId) {
+      // Remove the widget from the store
       removeWidget(selectedWidgetId);
 
-      // Update layouts without the removed widget
+      // Get the updated list of widgets (without the removed one)
       const updatedWidgets = activeWidgets.filter(id => id !== selectedWidgetId);
+
+      // Create new layouts for all breakpoints
       const newLayouts = createLayouts(updatedWidgets);
+
+      // Update the layouts state
       setLayouts(newLayouts);
+
+      // Update the layout in the store
+      updateLayout(newLayouts);
+
+      // Force a resize event to ensure the layout is properly rendered
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
     }
     handleWidgetMenuClose();
   };
@@ -262,15 +288,23 @@ const Dashboard = () => {
             onClick={() => {
               resetDashboard();
               // Reset layouts to default
-              const newLayouts = createLayouts([
+              const defaultWidgets = [
                 'playerStats',
                 'gameStats',
                 'topGames',
                 'bonusStats',
                 'recentActivity',
-                'playerSegments'
-              ]);
+                'playerSegments',
+                'gameRecommendations',
+                'bonusEffectiveness'
+              ];
+              const newLayouts = createLayouts(defaultWidgets);
               setLayouts(newLayouts);
+
+              // Force a resize event to ensure the layout is properly rendered
+              setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+              }, 100);
             }}
             sx={{
               borderRadius: '8px',
@@ -288,50 +322,41 @@ const Dashboard = () => {
 
       {/* Grid Layout with Widgets */}
       <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto' }}>
-        <ResponsiveGridLayout
-          className={`dashboard-grid ${localStorage.getItem('preferred-theme') === 'dark' ? 'dark-mode' : ''}`}
+        <SimpleGridLayout
           layouts={layouts}
-          breakpoints={breakpoints}
-          cols={gridCols}
-          rowHeight={100}
-          margin={[24, 24]}
-          containerPadding={[0, 0]}
-          onLayoutChange={handleLayoutChange}
-          isDraggable={true}
-          isResizable={false}
-          draggableHandle=".widget-header"
-          useCSSTransforms={true}
-          compactType="vertical"
-          preventCollision={false}
+          onLayoutChange={(newLayout) => {
+            const allLayouts = { ...layouts, lg: newLayout };
+            setLayouts(allLayouts);
+            updateLayout(allLayouts);
+          }}
         >
           {activeWidgets.map((widgetId) => {
             const WidgetComponent = WIDGET_COMPONENTS[widgetId] || (() => <div>Widget not found</div>);
             const widgetConfig = availableWidgets[widgetId];
 
             return (
-              <div key={widgetId} className="grid-item">
-                <Widget
-                  id={widgetId}
-                  title={widgetConfig.title}
-                  onMenuOpen={handleWidgetMenuOpen}
-                  onDragStart={(_, id) => {
-                    console.log('Widget drag started:', id);
-                    setDraggedWidgetId(id);
-                  }}
-                  onDragEnd={(_, id) => {
-                    console.log('Widget drag ended:', id);
-                    setDraggedWidgetId(null);
-                  }}
-                >
-                  <WidgetComponent
-                    settings={widgetSettings[widgetId]}
-                    onSettingsChange={(newSettings) => updateWidgetSettings(widgetId, newSettings)}
-                  />
-                </Widget>
-              </div>
+              <Widget
+                key={widgetId}
+                id={widgetId}
+                title={widgetConfig.title}
+                onMenuOpen={handleWidgetMenuOpen}
+                onDragStart={(_, id) => {
+                  console.log('Widget drag started:', id);
+                  setDraggedWidgetId(id);
+                }}
+                onDragEnd={(_, id) => {
+                  console.log('Widget drag ended:', id);
+                  setDraggedWidgetId(null);
+                }}
+              >
+                <WidgetComponent
+                  settings={widgetSettings[widgetId]}
+                  onSettingsChange={(newSettings) => updateWidgetSettings(widgetId, newSettings)}
+                />
+              </Widget>
             );
           })}
-        </ResponsiveGridLayout>
+        </SimpleGridLayout>
       </div>
 
       {/* Add Widget Menu */}

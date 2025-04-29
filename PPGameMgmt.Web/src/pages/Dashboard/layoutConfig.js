@@ -3,136 +3,107 @@
  * This file contains the layout configurations for different screen sizes
  */
 
+// Define default positions for known widgets
+// Using a 12-column grid with 3-column widgets for a 4-column layout
+const defaultPositions = {
+  playerStats: { x: 0, y: 0, w: 3, h: 2 },
+  gameStats: { x: 3, y: 0, w: 3, h: 2 },
+  topGames: { x: 6, y: 0, w: 3, h: 3 },
+  bonusStats: { x: 9, y: 0, w: 3, h: 2 },
+  recentActivity: { x: 0, y: 2, w: 3, h: 3 },
+  playerSegments: { x: 3, y: 2, w: 3, h: 3 },
+  gameRecommendations: { x: 6, y: 3, w: 3, h: 3 },
+  bonusEffectiveness: { x: 9, y: 2, w: 3, h: 3 },
+  playerRetention: { x: 0, y: 5, w: 12, h: 3 }
+};
+
 // Create layout configurations for the dashboard
 export const createLayouts = (activeWidgets) => {
-  // Helper function to create layouts based on active widgets
-  const createLayoutForActiveWidgets = (baseLayout) => {
-    // Create a new layout for active widgets
-    return activeWidgets.map((widgetId, index) => {
-      // Find the base layout item for this widget
-      const baseItem = baseLayout.find(item => item.i === widgetId);
+  // Create layouts for large screens (lg)
+  const lgLayout = activeWidgets.map((widgetId) => {
+    const defaultPos = defaultPositions[widgetId] || { x: 0, y: 0, w: 6, h: 2 };
+    return {
+      i: widgetId,
+      x: defaultPos.x,
+      y: defaultPos.y,
+      w: defaultPos.w,
+      h: defaultPos.h,
+      minW: 3,
+      maxW: 12,
+      static: false,
+      isDraggable: true,
+      isResizable: false
+    };
+  });
 
-      // For large screens (lg), position in a 2-column grid
-      if (baseLayout === lgLayoutBase) {
-        return {
-          i: widgetId,
-          x: index % 2 * 6, // Alternate between x=0 and x=6
-          y: Math.floor(index / 2) * 3, // New row every 2 widgets
-          w: 6,
-          h: baseItem ? baseItem.h : 2,
-          minW: 3,
-          maxW: 12,
-          static: false,
-          isDraggable: true,
-          isResizable: false
-        };
-      }
-      // For medium screens (md), position in a 2-column grid
-      else if (baseLayout === mdLayoutBase) {
-        return {
-          i: widgetId,
-          x: index % 2 * 5, // Alternate between x=0 and x=5
-          y: Math.floor(index / 2) * 3, // New row every 2 widgets
-          w: 5,
-          h: baseItem ? baseItem.h : 2,
-          minW: 3,
-          maxW: 10,
-          static: false,
-          isDraggable: true,
-          isResizable: false
-        };
-      }
-      // For smaller screens, stack vertically
-      else {
-        const colWidth = baseLayout === smLayoutBase ? 6 :
-                         baseLayout === xsLayoutBase ? 4 : 2;
-        return {
-          i: widgetId,
-          x: 0,
-          y: index * 3, // Stack vertically with some spacing
-          w: colWidth,
-          h: baseItem ? baseItem.h : 2,
-          static: false,
-          isDraggable: true,
-          isResizable: false
-        };
-      }
-    });
-  };
+  // Create layouts for medium screens (md)
+  const mdLayout = activeWidgets.map((widgetId, index) => {
+    const defaultPos = defaultPositions[widgetId] || { x: 0, y: 0, w: 4, h: 2 };
+    return {
+      i: widgetId,
+      x: index % 3 * 4, // Create a 3-column layout (0, 4, 8)
+      y: Math.floor(index / 3) * 3, // New row every 3 widgets
+      w: 4, // Each widget takes 4 columns (out of 12)
+      h: defaultPos.h,
+      minW: 3,
+      maxW: 12,
+      static: false,
+      isDraggable: true,
+      isResizable: false
+    };
+  });
 
-  // Base layouts for all possible widgets - Large screens (12 columns)
-  // Note: x and y are in grid units, not pixels
-  const lgLayoutBase = [
-    { i: 'playerStats', x: 0, y: 0, w: 6, h: 2, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameStats', x: 6, y: 0, w: 6, h: 2, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'topGames', x: 0, y: 2, w: 6, h: 3, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusStats', x: 6, y: 2, w: 6, h: 2, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'recentActivity', x: 0, y: 5, w: 6, h: 3, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerSegments', x: 6, y: 5, w: 6, h: 3, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameRecommendations', x: 0, y: 8, w: 6, h: 3, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusEffectiveness', x: 6, y: 8, w: 6, h: 3, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerRetention', x: 0, y: 11, w: 12, h: 3, minW: 3, maxW: 12, static: false, isDraggable: true, isResizable: false }
-  ];
+  // Create layouts for small screens (sm)
+  const smLayout = activeWidgets.map((widgetId, index) => {
+    const defaultPos = defaultPositions[widgetId] || { x: 0, y: 0, w: 6, h: 2 };
+    return {
+      i: widgetId,
+      x: index % 2 * 6, // Create a 2-column layout (0, 6)
+      y: Math.floor(index / 2) * 3, // New row every 2 widgets
+      w: 6, // Each widget takes 6 columns (out of 12)
+      h: defaultPos.h,
+      static: false,
+      isDraggable: true,
+      isResizable: false
+    };
+  });
 
-  // For medium screens (10 columns)
-  const mdLayoutBase = [
-    { i: 'playerStats', x: 0, y: 0, w: 5, h: 2, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameStats', x: 5, y: 0, w: 5, h: 2, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'topGames', x: 0, y: 2, w: 5, h: 3, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusStats', x: 5, y: 2, w: 5, h: 2, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'recentActivity', x: 0, y: 5, w: 5, h: 3, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerSegments', x: 5, y: 5, w: 5, h: 3, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameRecommendations', x: 0, y: 8, w: 5, h: 3, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusEffectiveness', x: 5, y: 8, w: 5, h: 3, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerRetention', x: 0, y: 11, w: 10, h: 3, minW: 3, maxW: 10, static: false, isDraggable: true, isResizable: false }
-  ];
+  // Create layouts for extra small screens (xs)
+  const xsLayout = activeWidgets.map((widgetId, index) => {
+    const defaultPos = defaultPositions[widgetId] || { x: 0, y: 0, w: 4, h: 2 };
+    return {
+      i: widgetId,
+      x: 0,
+      y: index * 3, // Stack vertically
+      w: 4,
+      h: defaultPos.h,
+      static: false,
+      isDraggable: true,
+      isResizable: false
+    };
+  });
 
-  // For small screens (6 columns)
-  const smLayoutBase = [
-    { i: 'playerStats', x: 0, y: 0, w: 6, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameStats', x: 0, y: 2, w: 6, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'topGames', x: 0, y: 4, w: 6, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusStats', x: 0, y: 7, w: 6, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'recentActivity', x: 0, y: 9, w: 6, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerSegments', x: 0, y: 12, w: 6, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameRecommendations', x: 0, y: 15, w: 6, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusEffectiveness', x: 0, y: 18, w: 6, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerRetention', x: 0, y: 21, w: 6, h: 3, static: false, isDraggable: true, isResizable: false }
-  ];
+  // Create layouts for extra extra small screens (xxs)
+  const xxsLayout = activeWidgets.map((widgetId, index) => {
+    const defaultPos = defaultPositions[widgetId] || { x: 0, y: 0, w: 2, h: 2 };
+    return {
+      i: widgetId,
+      x: 0,
+      y: index * 3, // Stack vertically
+      w: 2,
+      h: defaultPos.h,
+      static: false,
+      isDraggable: true,
+      isResizable: false
+    };
+  });
 
-  // For extra small screens (4 columns)
-  const xsLayoutBase = [
-    { i: 'playerStats', x: 0, y: 0, w: 4, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameStats', x: 0, y: 2, w: 4, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'topGames', x: 0, y: 4, w: 4, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusStats', x: 0, y: 7, w: 4, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'recentActivity', x: 0, y: 9, w: 4, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerSegments', x: 0, y: 12, w: 4, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameRecommendations', x: 0, y: 15, w: 4, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusEffectiveness', x: 0, y: 18, w: 4, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerRetention', x: 0, y: 21, w: 4, h: 3, static: false, isDraggable: true, isResizable: false }
-  ];
-
-  // For extra extra small screens (2 columns)
-  const xxsLayoutBase = [
-    { i: 'playerStats', x: 0, y: 0, w: 2, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameStats', x: 0, y: 2, w: 2, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'topGames', x: 0, y: 4, w: 2, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusStats', x: 0, y: 7, w: 2, h: 2, static: false, isDraggable: true, isResizable: false },
-    { i: 'recentActivity', x: 0, y: 9, w: 2, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerSegments', x: 0, y: 12, w: 2, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'gameRecommendations', x: 0, y: 15, w: 2, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'bonusEffectiveness', x: 0, y: 18, w: 2, h: 3, static: false, isDraggable: true, isResizable: false },
-    { i: 'playerRetention', x: 0, y: 21, w: 2, h: 3, static: false, isDraggable: true, isResizable: false }
-  ];
-
-  // Filter layouts to only include active widgets
   return {
-    lg: createLayoutForActiveWidgets(lgLayoutBase),
-    md: createLayoutForActiveWidgets(mdLayoutBase),
-    sm: createLayoutForActiveWidgets(smLayoutBase),
-    xs: createLayoutForActiveWidgets(xsLayoutBase),
-    xxs: createLayoutForActiveWidgets(xxsLayoutBase)
+    lg: lgLayout,
+    md: mdLayout,
+    sm: smLayout,
+    xs: xsLayout,
+    xxs: xxsLayout
   };
 };
 

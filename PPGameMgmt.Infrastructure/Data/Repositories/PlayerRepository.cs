@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Models;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
@@ -138,6 +139,30 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             }
         }
 
+        public async Task<PagedResult<Player>> GetPlayersBySegmentPagedAsync(PlayerSegment segment, PaginationParameters parameters)
+        {
+            try
+            {
+                _logger?.LogInformation($"Getting paged players by segment: {segment}, page {parameters.PageNumber}, size {parameters.PageSize}");
+
+                var query = _context.Players.Where(p => p.Segment == segment);
+                var totalCount = await query.CountAsync();
+                var players = await query
+                    .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                    .Take(parameters.PageSize)
+                    .ToListAsync();
+
+                _logger?.LogInformation($"Retrieved {players.Count} players with segment {segment} (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+
+                return new PagedResult<Player>(players, totalCount, parameters.PageNumber, parameters.PageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error retrieving paged players by segment: {segment}");
+                throw;
+            }
+        }
+
         public async Task<IEnumerable<Player>> GetActivePlayers(int daysActive)
         {
             try
@@ -158,6 +183,32 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             catch (Exception ex)
             {
                 _logger?.LogError(ex, $"Error retrieving active players for the last {daysActive} days");
+                throw;
+            }
+        }
+
+        public async Task<PagedResult<Player>> GetActivePlayersPagedAsync(int daysActive, PaginationParameters parameters)
+        {
+            try
+            {
+                var cutoffDate = DateTime.UtcNow.AddDays(-daysActive);
+
+                _logger?.LogInformation($"Getting paged active players since {cutoffDate}, page {parameters.PageNumber}, size {parameters.PageSize}");
+
+                var query = _context.Players.Where(p => p.LastLoginDate >= cutoffDate);
+                var totalCount = await query.CountAsync();
+                var players = await query
+                    .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                    .Take(parameters.PageSize)
+                    .ToListAsync();
+
+                _logger?.LogInformation($"Retrieved {players.Count} active players (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+
+                return new PagedResult<Player>(players, totalCount, parameters.PageNumber, parameters.PageSize);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error retrieving paged active players for the last {daysActive} days");
                 throw;
             }
         }

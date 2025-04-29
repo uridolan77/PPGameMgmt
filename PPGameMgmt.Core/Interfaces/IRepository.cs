@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Models;
 
 namespace PPGameMgmt.Core.Interfaces
 {
@@ -10,7 +11,9 @@ namespace PPGameMgmt.Core.Interfaces
     {
         Task<T> GetByIdAsync(string id);
         Task<IEnumerable<T>> GetAllAsync();
+        Task<PagedResult<T>> GetPagedAsync(PaginationParameters parameters);
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
+        Task<PagedResult<T>> FindPagedAsync(Expression<Func<T, bool>> predicate, PaginationParameters parameters);
         Task AddAsync(T entity);
         Task UpdateAsync(T entity);
         Task DeleteAsync(T entity);
@@ -20,24 +23,34 @@ namespace PPGameMgmt.Core.Interfaces
     {
         Task<Player> GetPlayerWithSessionsAndBonusesAsync(string playerId);
         Task<IEnumerable<Player>> GetPlayersBySegmentAsync(PlayerSegment segment);
+        Task<PagedResult<Player>> GetPlayersBySegmentPagedAsync(PlayerSegment segment, PaginationParameters parameters);
         Task<IEnumerable<Player>> GetActivePlayers(int daysActive);
+        Task<PagedResult<Player>> GetActivePlayersPagedAsync(int daysActive, PaginationParameters parameters);
         Task UpdatePlayerSegmentAsync(string playerId, PlayerSegment segment);
     }
 
     public interface IGameRepository : IRepository<Game>
     {
         Task<IEnumerable<Game>> GetGamesByTypeAsync(GameType type);
+        Task<PagedResult<Game>> GetGamesByTypePagedAsync(GameType type, PaginationParameters parameters);
         Task<IEnumerable<Game>> GetGamesByCategoryAsync(GameCategory category);
+        Task<PagedResult<Game>> GetGamesByCategoryPagedAsync(GameCategory category, PaginationParameters parameters);
         Task<IEnumerable<Game>> GetPopularGamesAsync(int count);
+        Task<PagedResult<Game>> GetPopularGamesPagedAsync(PaginationParameters parameters);
         Task<IEnumerable<Game>> GetNewReleasesAsync(int count);
+        Task<PagedResult<Game>> GetNewReleasesPagedAsync(PaginationParameters parameters);
     }
 
     public interface IBonusRepository : IRepository<Bonus>
     {
         Task<IEnumerable<Bonus>> GetActiveGlobalBonusesAsync();
+        Task<PagedResult<Bonus>> GetActiveGlobalBonusesPagedAsync(PaginationParameters parameters);
         Task<IEnumerable<Bonus>> GetBonusesByTypeAsync(BonusType type);
+        Task<PagedResult<Bonus>> GetBonusesByTypePagedAsync(BonusType type, PaginationParameters parameters);
         Task<IEnumerable<Bonus>> GetBonusesForPlayerSegmentAsync(PlayerSegment segment);
+        Task<PagedResult<Bonus>> GetBonusesForPlayerSegmentPagedAsync(PlayerSegment segment, PaginationParameters parameters);
         Task<IEnumerable<Bonus>> GetBonusesForGameAsync(string gameId);
+        Task<PagedResult<Bonus>> GetBonusesForGamePagedAsync(string gameId, PaginationParameters parameters);
     }
 
     public interface IGameSessionRepository : IRepository<GameSession>

@@ -1,56 +1,49 @@
 /* Dashboard-specific styles */
 
-/* React Grid Layout styles */
+/* Dashboard grid styles */
 .dashboard-grid {
   width: 100%;
 }
 
-.react-grid-item {
-  transition: all 200ms ease;
-  transition-property: left, top, width, height;
+/* Drag and drop styles */
+.dragging {
+  opacity: 0.6 !important;
+  cursor: grabbing !important;
+  z-index: 1000 !important;
 }
 
-.react-grid-item.react-grid-placeholder {
-  background: rgba(59, 130, 246, 0.2);
-  border: 2px dashed rgba(59, 130, 246, 0.4);
-  border-radius: 12px;
-  opacity: 0.6;
-  z-index: 2;
-  transition-duration: 100ms;
-  transition-timing-function: ease;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -o-user-select: none;
-  user-select: none;
+.dragging-over {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.4) !important;
+  border-radius: 12px !important;
 }
 
-.dark-mode .react-grid-item.react-grid-placeholder {
-  background: rgba(96, 165, 250, 0.2);
-  border: 2px dashed rgba(96, 165, 250, 0.4);
+.dark-mode .dragging-over {
+  background-color: rgba(96, 165, 250, 0.1) !important;
+  border: 2px dashed rgba(96, 165, 250, 0.4) !important;
 }
 
-.react-grid-item.cssTransforms {
-  transition-property: transform;
+/* Widget hover and drag effects */
+.dashboard-widget {
+  transition: all 0.3s ease;
 }
 
-.react-grid-item.resizing {
-  z-index: 1;
-  will-change: width, height;
+.dashboard-widget:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
 }
 
-.react-grid-item.react-draggable-dragging {
-  transition: none;
-  z-index: 3;
-  will-change: transform;
-  cursor: grabbing;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
-  opacity: 0.8;
+.dark-mode .dashboard-widget:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.dashboard-widget.dragging {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23) !important;
   transform: scale(1.02) !important;
 }
 
-.dark-mode .react-grid-item.react-draggable-dragging {
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), 0 6px 6px rgba(0, 0, 0, 0.4);
+.dark-mode .dashboard-widget.dragging {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), 0 6px 6px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* Dashboard animations */

@@ -94,26 +94,60 @@ const SimpleGridLayout = ({ children, layouts, onLayoutChange }) => {
   return (
     <Box sx={{ flexGrow: 1, width: '100%' }}>
       {sortedRows.map(rowY => (
-        <Grid container spacing={1} key={`row-${rowY}`} sx={{ mb: 1 }}>
+        <Grid
+          container
+          spacing={3}
+          key={`row-${rowY}`}
+          sx={{
+            mb: 3,
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'flex-start'
+          }}
+        >
           {rowGroups[rowY].map(item => {
             const isDragging = draggedItem && draggedItem.i === item.i;
             const isDragOver = dragOverItem && dragOverItem.i === item.i;
 
             // Calculate grid size based on widget width
-            let gridSize = 6; // Default to half width
-            if (item.w <= 4) gridSize = 4; // One third width
-            if (item.w <= 3) gridSize = 3; // One quarter width
+            // For a 12-column grid, map the widget width to Material-UI grid size
+            // We directly use the width from the layout as the grid size
+            // This allows for more precise control over the column widths
+            let gridSize = item.w;
+
+            // Ensure the grid size is within valid bounds (1-12)
+            gridSize = Math.max(1, Math.min(12, gridSize));
 
             return (
-              <Grid item xs={12} md={gridSize} key={item.i}>
-                <Paper
-                  elevation={isDragging ? 6 : isDragOver ? 3 : 1}
+              <Grid
+                item
+                xs={12}
+                sm={gridSize >= 6 ? 12 : 6}
+                md={gridSize >= 9 ? 12 : (gridSize >= 6 ? 6 : (gridSize >= 4 ? 4 : 3))}
+                lg={gridSize}
+                key={item.i}
+              >
+                <Box
                   sx={{
-                    cursor: 'move',
                     opacity: isDragging ? 0.6 : 1,
-                    backgroundColor: isDragOver ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
                     transition: 'all 0.2s ease',
-                    height: '100%'
+                    transform: isDragOver ? 'scale(1.02)' : 'scale(1)',
+                    height: '100%',
+                    position: 'relative',
+                    '&::after': isDragOver ? {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      border: (theme) => `2px dashed ${theme.palette.mode === 'dark'
+                        ? 'rgba(96, 165, 250, 0.5)'
+                        : 'rgba(59, 130, 246, 0.5)'}`,
+                      borderRadius: '12px',
+                      pointerEvents: 'none',
+                      zIndex: 10
+                    } : {}
                   }}
                   draggable
                   onDragStart={(e) => handleDragStart(e, item)}
@@ -122,7 +156,7 @@ const SimpleGridLayout = ({ children, layouts, onLayoutChange }) => {
                   onDragEnd={handleDragEnd}
                 >
                   {widgetMap[item.i]}
-                </Paper>
+                </Box>
               </Grid>
             );
           })}

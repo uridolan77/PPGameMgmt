@@ -7,10 +7,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.API.Models;
+using PPGameMgmt.API.Models.Requests;
 using PPGameMgmt.Core.CQRS.Commands.Players;
 using PPGameMgmt.Core.CQRS.Queries.Players;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Models;
 
 namespace PPGameMgmt.API.Controllers.V1
 {
@@ -49,30 +51,30 @@ namespace PPGameMgmt.API.Controllers.V1
         {
             try
             {
-                IEnumerable<Player> players;
-                int totalCount;
+                var parameters = new PaginationParameters
+                {
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                };
+
+                PagedResult<Player> pagedResult;
 
                 if (segment.HasValue)
                 {
                     _logger.LogInformation($"Getting players by segment: {segment}, page {pageNumber}, size {pageSize}");
-                    var query = new GetPlayersBySegmentQuery { Segment = segment.Value };
-                    players = await _mediator.Send(query);
-                    totalCount = players.Count();
-
-                    // Apply pagination (in a real app, this would be done at the database level)
-                    players = players.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+                    pagedResult = await _playerService.GetPlayersBySegmentPagedAsync(segment.Value, parameters);
                 }
                 else
                 {
                     _logger.LogInformation($"Getting all active players, page {pageNumber}, size {pageSize}");
-                    players = await _playerService.GetActivePlayers(30); // Active within last 30 days
-                    totalCount = players.Count();
-
-                    // Apply pagination (in a real app, this would be done at the database level)
-                    players = players.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+                    pagedResult = await _playerService.GetActivePlayersPagedAsync(30, parameters); // Active within last 30 days
                 }
 
-                return OkPaginatedResponse(players, pageNumber, pageSize, totalCount);
+                return OkPaginatedResponse(
+                    pagedResult.Items,
+                    pagedResult.PageNumber,
+                    pagedResult.PageSize,
+                    pagedResult.TotalCount);
             }
             catch (Exception ex)
             {
@@ -156,8 +158,5 @@ namespace PPGameMgmt.API.Controllers.V1
         }
     }
 
-    public class PlayerSegmentUpdateRequest
-    {
-        public PlayerSegment Segment { get; set; }
-    }
+    // Request models moved to PPGameMgmt.API.Models.Requests namespace
 }

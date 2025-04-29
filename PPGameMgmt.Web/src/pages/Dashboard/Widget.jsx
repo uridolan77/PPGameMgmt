@@ -60,16 +60,12 @@ const Widget = ({
         position: 'relative',
         height: '100%',
         width: '100%',
-        boxShadow: isHovered
-          ? '0 8px 16px rgba(0, 0, 0, 0.12)'
-          : '0 4px 8px rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.08)',
         borderRadius: '12px',
         backgroundColor: theme.palette.background.paper,
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
-        transition: 'all 0.3s ease',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
       }}
       className="dashboard-widget"
     >
