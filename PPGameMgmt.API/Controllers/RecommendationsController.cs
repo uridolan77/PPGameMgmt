@@ -24,6 +24,22 @@ namespace PPGameMgmt.API.Controllers
             _recommendationService = recommendationService ?? throw new ArgumentNullException(nameof(recommendationService));
         }
 
+        [HttpGet("test")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public ActionResult<string> TestRecommendations()
+        {
+            try
+            {
+                _logger.LogInformation("Testing recommendations endpoint");
+                return Ok("Recommendations endpoint is working");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error testing recommendations endpoint");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error testing recommendations endpoint");
+            }
+        }
+
         [HttpGet("{playerId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -31,16 +47,62 @@ namespace PPGameMgmt.API.Controllers
         {
             try
             {
+                // Create a mock recommendation for testing
+                if (playerId == "mock")
+                {
+                    var mockRecommendation = new Recommendation
+                    {
+                        Id = "R001",
+                        PlayerId = playerId,
+                        CreatedAt = DateTime.UtcNow,
+                        ValidUntil = DateTime.UtcNow.AddDays(7),
+                        IsDisplayed = false,
+                        IsClicked = false,
+                        IsAccepted = false,
+                        IsViewed = false,
+                        IsPlayed = false,
+                        RecommendedGames = new List<GameRecommendation>
+                        {
+                            new GameRecommendation
+                            {
+                                GameId = "G001",
+                                GameName = "Test Game 1",
+                                Score = 0.95,
+                                RecommendationReason = "Test recommendation"
+                            },
+                            new GameRecommendation
+                            {
+                                GameId = "G002",
+                                GameName = "Test Game 2",
+                                Score = 0.85,
+                                RecommendationReason = "Test recommendation"
+                            }
+                        },
+                        RecommendedBonus = new BonusRecommendation
+                        {
+                            BonusId = "B001",
+                            BonusName = "Test Bonus",
+                            BonusType = BonusType.DepositMatch,
+                            Amount = 100,
+                            PercentageMatch = 100,
+                            Score = 0.9,
+                            RecommendationReason = "Test recommendation"
+                        }
+                    };
+
+                    return Ok(mockRecommendation);
+                }
+
                 var recommendation = await _recommendationService.GetLatestRecommendationAsync(playerId);
-                
+
                 if (recommendation == null)
                 {
                     return NotFound();
                 }
-                
+
                 // Record that this recommendation was displayed
                 await _recommendationService.RecordRecommendationDisplayedAsync(recommendation.Id);
-                
+
                 return Ok(recommendation);
             }
             catch (Exception ex)
@@ -74,12 +136,12 @@ namespace PPGameMgmt.API.Controllers
             try
             {
                 var bonusRecommendation = await _recommendationService.GetBonusRecommendationAsync(playerId);
-                
+
                 if (bonusRecommendation == null)
                 {
                     return NotFound();
                 }
-                
+
                 return Ok(bonusRecommendation);
             }
             catch (Exception ex)

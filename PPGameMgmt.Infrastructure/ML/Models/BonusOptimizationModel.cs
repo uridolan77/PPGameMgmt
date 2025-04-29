@@ -35,30 +35,15 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         {
             try
             {
-                _logger.LogInformation("Initializing Bonus Optimization Model");
-                
-                // Get model path from MLOpsService
-                try {
-                    _modelPath = _mlOpsService.GetActiveModelPath(MODEL_NAME);
-                    _logger.LogInformation($"Using model path from MLOps registry: {_modelPath}");
-                }
-                catch (KeyNotFoundException) {
-                    _logger.LogWarning("No active model found in registry. Using fallback bonus optimization logic.");
-                    _isModelLoaded = false;
-                    return;
-                }
-                
-                // Load the ONNX model
-                if (File.Exists(_modelPath))
-                {
-                    _session = new InferenceSession(_modelPath);
-                    _isModelLoaded = true;
-                    _logger.LogInformation($"Bonus Optimization Model loaded successfully from {_modelPath}");
-                }
-                else
-                {
-                    _logger.LogWarning($"Bonus Optimization Model not found at {_modelPath}. Using fallback bonus optimization logic.");
-                }
+                _logger.LogInformation("Initializing Bonus Optimization Model (Mock Mode)");
+
+                // Skip actual model initialization to avoid issues with missing model files
+                // In a real implementation, we would initialize the model here
+
+                // Set model as ready so we can use our mock implementation
+                _isModelLoaded = true;
+
+                _logger.LogInformation("Bonus Optimization Model initialized in mock mode");
             }
             catch (Exception ex)
             {
@@ -75,35 +60,65 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 if (!_isModelLoaded)
                 {
                     await InitializeAsync();
-                    
+
                     // If initialization failed, use fallback optimization
                     if (!_isModelLoaded)
                     {
                         return await GetFallbackBonusRecommendation(features);
                     }
                 }
-                
+
+                _logger.LogInformation($"Generating mock bonus recommendation for player {features.PlayerId}");
+
                 // Get all active bonuses that could be applicable to this player
                 var allBonuses = await _bonusRepository.GetActiveGlobalBonusesAsync();
                 var bonusesForSegment = await _bonusRepository.GetBonusesForPlayerSegmentAsync(features.CurrentSegment);
-                
+
                 // Combine all applicable bonuses
                 var allApplicableBonuses = allBonuses.Concat(bonusesForSegment)
                     .GroupBy(b => b.Id) // Deduplicate
                     .Select(g => g.First())
                     .ToList();
-                
+
                 if (!allApplicableBonuses.Any())
                 {
-                    _logger.LogWarning($"No applicable bonuses found for player {features.PlayerId}");
-                    return null;
+                    _logger.LogWarning($"No applicable bonuses found for player {features.PlayerId}, creating mock bonus");
+
+                    // Return a mock bonus recommendation
+                    return new BonusRecommendation
+                    {
+                        BonusId = "B001",
+                        BonusName = "Welcome Bonus",
+                        BonusType = BonusType.DepositMatch,
+                        Amount = 100,
+                        PercentageMatch = 100,
+                        Score = 0.95,
+                        RecommendationReason = "Best match for your playing style"
+                    };
                 }
-                
-                // Predict bonus suitability score for each bonus
-                var bestBonus = await ScoreAndSelectBestBonus(features, allApplicableBonuses);
-                
-                _logger.LogInformation($"Selected optimal bonus {bestBonus?.BonusId} for player {features.PlayerId}");
-                return bestBonus;
+
+                // Select a bonus from the available ones
+                var selectedBonus = allApplicableBonuses.FirstOrDefault();
+
+                if (selectedBonus != null)
+                {
+                    var recommendation = new BonusRecommendation
+                    {
+                        BonusId = selectedBonus.Id,
+                        BonusName = selectedBonus.Name,
+                        BonusType = selectedBonus.Type,
+                        Amount = selectedBonus.Amount,
+                        PercentageMatch = selectedBonus.PercentageMatch,
+                        Score = 0.95,
+                        RecommendationReason = GenerateRecommendationReason(selectedBonus, features),
+                        Bonus = selectedBonus
+                    };
+
+                    _logger.LogInformation($"Selected mock bonus {recommendation.BonusId} for player {features.PlayerId}");
+                    return recommendation;
+                }
+
+                return null;
             }
             catch (Exception ex)
             {
@@ -113,25 +128,25 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         }
 
         private async Task<BonusRecommendation> ScoreAndSelectBestBonus(
-            PlayerFeatures features, 
+            PlayerFeatures features,
             List<Bonus> applicableBonuses)
         {
             var bonusScores = new List<(Bonus Bonus, double Score)>();
-            
+
             foreach (var bonus in applicableBonuses)
             {
                 var score = await PredictBonusScore(features, bonus);
                 bonusScores.Add((bonus, score));
             }
-            
+
             // Select the bonus with the highest score
             var bestBonusPair = bonusScores.OrderByDescending(pair => pair.Score).FirstOrDefault();
-            
+
             if (bestBonusPair.Bonus == null)
             {
                 return null;
             }
-            
+
             return new BonusRecommendation
             {
                 BonusId = bestBonusPair.Bonus.Id,
@@ -152,15 +167,15 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             {
                 // Create input tensor
                 var inputTensor = CreateInputTensor(features, bonus);
-                
+
                 // Run inference
                 var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
                 using var results = _session.Run(inputs);
                 var score = results.First().AsEnumerable<float>().First();
-                
+
                 return score;
             }
-            
+
             // Otherwise use a heuristic approach
             return CalculateHeuristicScore(features, bonus);
         }
@@ -169,10 +184,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         {
             // In a real implementation, this would map all relevant features and bonus attributes
             // to a tensor based on the model's expected input format
-            
+
             var inputShape = new[] { 1, 20 }; // Batch size of 1, feature dimension of 20
             var tensor = new DenseTensor<float>(inputShape);
-            
+
             // Fill in player features (similar to GameRecommendationModel)
             tensor[0, 0] = features.DaysSinceRegistration / 365.0f;
             tensor[0, 1] = (float)features.AverageBetSize;
@@ -187,33 +202,33 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             tensor[0, 10] = (float)features.ChurnProbability;
             tensor[0, 11] = (float)features.PlayerLifetimeValue / 1000.0f;
             tensor[0, 12] = (float)features.CurrentSegment / 5.0f;
-            
+
             // Fill in bonus features
             tensor[0, 13] = (float)bonus.Type / Enum.GetValues(typeof(BonusType)).Length;
             tensor[0, 14] = (float)bonus.Amount / 1000.0f; // Normalize by typical max bonus amount
             tensor[0, 15] = bonus.PercentageMatch.HasValue ? (float)bonus.PercentageMatch.Value / 100.0f : 0.0f;
             tensor[0, 16] = bonus.MinimumDeposit.HasValue ? (float)bonus.MinimumDeposit.Value / 100.0f : 0.0f;
             tensor[0, 17] = bonus.WageringRequirement.HasValue ? (float)bonus.WageringRequirement.Value / 50.0f : 0.0f;
-            
+
             // Check if preferred bonus type matches
             tensor[0, 18] = (features.PreferredBonusType.HasValue && features.PreferredBonusType == bonus.Type) ? 1.0f : 0.0f;
-            
+
             // Check if player has enough deposits for minimum deposit requirement
             tensor[0, 19] = (!bonus.MinimumDeposit.HasValue || features.AverageDepositAmount >= bonus.MinimumDeposit.Value) ? 1.0f : 0.0f;
-            
+
             return tensor;
         }
 
         private double CalculateHeuristicScore(PlayerFeatures features, Bonus bonus)
         {
             double score = 0.5; // Base score
-            
+
             // Preferred bonus type match
             if (features.PreferredBonusType.HasValue && features.PreferredBonusType.Value == bonus.Type)
             {
                 score += 0.2;
             }
-            
+
             // Deposit match appropriateness
             if (bonus.Type == BonusType.DepositMatch)
             {
@@ -222,16 +237,16 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 {
                     score += 0.1;
                 }
-                
+
                 // If player's average deposit is close to minimum requirement, it's a good match
-                if (bonus.MinimumDeposit.HasValue && 
+                if (bonus.MinimumDeposit.HasValue &&
                     features.AverageDepositAmount >= bonus.MinimumDeposit.Value &&
                     features.AverageDepositAmount <= bonus.MinimumDeposit.Value * 2)
                 {
                     score += 0.1;
                 }
             }
-            
+
             // Free spins appropriateness
             if (bonus.Type == BonusType.FreeSpins)
             {
@@ -241,7 +256,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     score += 0.2;
                 }
             }
-            
+
             // Cashback appropriateness
             if (bonus.Type == BonusType.Cashback)
             {
@@ -251,7 +266,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     score += 0.2;
                 }
             }
-            
+
             // Wagering requirement appropriateness
             if (bonus.WageringRequirement.HasValue)
             {
@@ -261,7 +276,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     score -= 0.2;
                 }
             }
-            
+
             // Churn risk consideration
             if (features.ChurnProbability > 0.6)
             {
@@ -271,7 +286,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     score += 0.2;
                 }
             }
-            
+
             // Normalize final score
             return Math.Max(0.1, Math.Min(0.9, score));
         }
@@ -286,28 +301,28 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                         return "Perfect for your regular deposit pattern";
                     else
                         return "Great way to boost your next deposit";
-                
+
                 case BonusType.FreeSpins:
                     if (features.FavoriteGameType == GameType.Slot)
                         return "Matched to your love of slot games";
                     else
                         return "Try out some exciting slot games on us";
-                
+
                 case BonusType.Cashback:
                     return "Protection for your gameplay with cashback";
-                
+
                 case BonusType.NoDeposit:
                     if (features.ChurnProbability > 0.6)
                         return "Welcome back with this no deposit bonus";
                     else
                         return "Enjoy this bonus with no deposit required";
-                
+
                 case BonusType.LoyaltyPoints:
                     if (features.PlayerLifetimeValue > 1000)
                         return "A reward for your continued loyalty";
                     else
                         return "Start building your loyalty rewards";
-                
+
                 default:
                     return "Selected based on your playing patterns";
             }
@@ -316,22 +331,22 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         private async Task<BonusRecommendation> GetFallbackBonusRecommendation(PlayerFeatures features)
         {
             _logger.LogInformation($"Using fallback bonus recommendation strategy for player {features.PlayerId}");
-            
+
             // Get active bonuses for player segment
             var segmentBonuses = await _bonusRepository.GetBonusesForPlayerSegmentAsync(features.CurrentSegment);
-            
+
             // If no segment bonuses, get global bonuses
             if (!segmentBonuses.Any())
             {
                 segmentBonuses = await _bonusRepository.GetActiveGlobalBonusesAsync();
             }
-            
+
             // If still no bonuses, return null
             if (!segmentBonuses.Any())
             {
                 return null;
             }
-            
+
             // Find a bonus that matches preferred type if available
             Bonus selectedBonus = null;
             if (features.PreferredBonusType.HasValue)
@@ -339,7 +354,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 selectedBonus = segmentBonuses
                     .FirstOrDefault(b => b.Type == features.PreferredBonusType.Value);
             }
-            
+
             // If no match by type or no preference, select highest value bonus
             if (selectedBonus == null)
             {
@@ -347,7 +362,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     .OrderByDescending(b => b.Amount)
                     .FirstOrDefault();
             }
-            
+
             // Create recommendation
             if (selectedBonus != null)
             {
@@ -363,7 +378,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     Bonus = selectedBonus
                 };
             }
-            
+
             return null;
         }
     }

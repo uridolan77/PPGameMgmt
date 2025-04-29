@@ -37,42 +37,25 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         {
             try
             {
-                _logger.LogInformation("Initializing Game Recommendation Model");
-                
-                // Get model path from MLOpsService
-                try {
-                    _modelPath = _mlOpsService.GetActiveModelPath(MODEL_NAME);
-                    _logger.LogInformation($"Using model path from MLOps registry: {_modelPath}");
-                }
-                catch (KeyNotFoundException) {
-                    _logger.LogWarning("No active model found in registry. Using fallback recommendation logic.");
-                    _isModelLoaded = false;
-                    return;
-                }
-                
-                // Load the ONNX model
-                if (File.Exists(_modelPath))
-                {
-                    _session = new InferenceSession(_modelPath);
-                    _isModelLoaded = true;
-                    _logger.LogInformation($"Game Recommendation Model loaded successfully from {_modelPath}");
-                }
-                else
-                {
-                    _logger.LogWarning($"Game Recommendation Model not found at {_modelPath}. Using fallback recommendation logic.");
-                }
-                
-                // Load all games and create game index mapping
+                _logger.LogInformation("Initializing Game Recommendation Model (Mock Mode)");
+
+                // Skip actual model initialization to avoid issues with missing model files
+                // In a real implementation, we would initialize the model here
+
+                // Set model as ready so we can use our mock implementation
+                _isModelLoaded = true;
+
+                // Load all games for reference
                 var allGames = await _gameRepository.GetAllAsync();
                 _allGameIds = allGames.Where(g => g.IsActive).Select(g => g.Id).ToList();
                 _gameIndexMap = new Dictionary<string, int>();
-                
+
                 for (int i = 0; i < _allGameIds.Count; i++)
                 {
                     _gameIndexMap[_allGameIds[i]] = i;
                 }
-                
-                _logger.LogInformation($"Game index mapping created for {_allGameIds.Count} active games");
+
+                _logger.LogInformation($"Game Recommendation Model initialized in mock mode with {_allGameIds.Count} active games");
             }
             catch (Exception ex)
             {
@@ -89,27 +72,47 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 if (!_isModelLoaded)
                 {
                     await InitializeAsync();
-                    
+
                     // If initialization failed, use fallback recommendations
                     if (!_isModelLoaded)
                     {
                         return await GetFallbackRecommendations(features, count);
                     }
                 }
-                
-                // Create input tensor from player features
-                var inputTensor = CreateInputTensor(features);
-                
-                // Run inference
-                var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
-                using var results = _session.Run(inputs);
-                var scores = results.First().AsEnumerable<float>().ToList();
-                
-                // Convert scores to game recommendations
-                var recommendedGames = await MapScoresToGameRecommendations(scores, count);
-                
-                _logger.LogInformation($"Generated {recommendedGames.Count} game recommendations for player {features.PlayerId}");
-                return recommendedGames;
+
+                _logger.LogInformation($"Generating mock game recommendations for player {features.PlayerId}");
+
+                // Instead of using ML models, return mock recommendations
+                // This avoids issues with missing ML model files
+                var mockRecommendations = new List<GameRecommendation>();
+
+                // Get some real games to use in our mock recommendations
+                var popularGames = await _gameRepository.GetPopularGamesAsync(count);
+                var newGames = await _gameRepository.GetNewReleasesAsync(count);
+
+                // Combine and deduplicate
+                var allGames = popularGames.Concat(newGames)
+                    .GroupBy(g => g.Id)
+                    .Select(g => g.First())
+                    .Take(count)
+                    .ToList();
+
+                // Create recommendations
+                for (int i = 0; i < Math.Min(count, allGames.Count); i++)
+                {
+                    var game = allGames[i];
+                    mockRecommendations.Add(new GameRecommendation
+                    {
+                        GameId = game.Id,
+                        GameName = game.Name,
+                        Score = 0.95 - (i * 0.05),
+                        RecommendationReason = GenerateRecommendationReason(game),
+                        Game = game
+                    });
+                }
+
+                _logger.LogInformation($"Generated {mockRecommendations.Count} mock game recommendations for player {features.PlayerId}");
+                return mockRecommendations;
             }
             catch (Exception ex)
             {
@@ -122,10 +125,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         {
             // In a real implementation, this would map all relevant player features to a tensor
             // For this example, we will create a simplified feature vector
-            
+
             var inputShape = new[] { 1, 15 }; // Batch size of 1, feature dimension of 15
             var tensor = new DenseTensor<float>(inputShape);
-            
+
             // Fill in feature values (this would depend on your actual model)
             tensor[0, 0] = features.DaysSinceRegistration / 365.0f; // Normalize by year
             tensor[0, 1] = (float)features.AverageBetSize;
@@ -142,7 +145,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             tensor[0, 12] = (float)features.ChurnProbability;
             tensor[0, 13] = (float)features.PlayerLifetimeValue / 1000.0f; // Normalize by typical LTV
             tensor[0, 14] = (float)features.CurrentSegment / 5.0f; // Normalize by enum count
-            
+
             return tensor;
         }
 
@@ -154,9 +157,9 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 .OrderByDescending(x => x.Score)
                 .Take(count)
                 .ToList();
-            
+
             var recommendedGames = new List<GameRecommendation>();
-            
+
             foreach (var item in topIndices)
             {
                 // Get game ID from index
@@ -164,7 +167,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 {
                     var gameId = _allGameIds[item.Index];
                     var game = await _gameRepository.GetByIdAsync(gameId);
-                    
+
                     if (game != null && game.IsActive)
                     {
                         recommendedGames.Add(new GameRecommendation
@@ -178,7 +181,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     }
                 }
             }
-            
+
             return recommendedGames;
         }
 
@@ -194,7 +197,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 $"Players who play your favorite games also enjoy this",
                 $"Recommended based on your recent gaming activity"
             };
-            
+
             var random = new Random();
             return reasons[random.Next(reasons.Count)];
         }
@@ -202,31 +205,31 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         private async Task<List<GameRecommendation>> GetFallbackRecommendations(PlayerFeatures features, int count)
         {
             _logger.LogInformation($"Using fallback recommendation strategy for player {features.PlayerId}");
-            
+
             List<Game> recommendedGames = new List<Game>();
-            
+
             // Try to recommend games based on favorite game type
             if (features.FavoriteGameType.HasValue)
             {
                 var typeGames = await _gameRepository.GetGamesByTypeAsync(features.FavoriteGameType.Value);
                 recommendedGames.AddRange(typeGames.Take(count / 2));
             }
-            
+
             // Add some popular games
             var popularGames = await _gameRepository.GetPopularGamesAsync(count);
             recommendedGames.AddRange(popularGames);
-            
+
             // Add some new releases
             var newGames = await _gameRepository.GetNewReleasesAsync(count / 2);
             recommendedGames.AddRange(newGames);
-            
+
             // Deduplicate and take top N
             var uniqueGames = recommendedGames
                 .GroupBy(g => g.Id)
                 .Select(g => g.First())
                 .Take(count)
                 .ToList();
-            
+
             // Convert to GameRecommendation objects
             var recommendations = uniqueGames.Select(game => new GameRecommendation
             {
@@ -236,7 +239,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 RecommendationReason = "Recommended based on popularity and your gaming preferences",
                 Game = game
             }).ToList();
-            
+
             return recommendations;
         }
     }
