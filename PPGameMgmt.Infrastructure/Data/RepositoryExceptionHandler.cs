@@ -31,7 +31,7 @@ namespace PPGameMgmt.Infrastructure.Data
             catch (DbUpdateConcurrencyException ex)
             {
                 logger?.LogError(ex, "Concurrency conflict detected with {EntityName}: {Message}", entityName, ex.Message);
-                throw new ConcurrencyException(entityName, ex.Message, ex);
+                throw new ConcurrencyException(entityName, GetEntityId(ex), "The data was modified by another user while you were editing it");
             }
             catch (DbUpdateException ex)
             {
@@ -40,15 +40,15 @@ namespace PPGameMgmt.Infrastructure.Data
                 // Handle specific database constraint violations
                 if (IsDuplicateKeyException(ex))
                 {
-                    throw new BusinessRuleViolationException("DuplicateKey", $"A {entityName} with the same key already exists.", ex);
+                    throw new BusinessRuleViolationException("DuplicateKey", $"A {entityName} with the same key already exists.", "Please use a different identifier");
                 }
                 
                 if (IsForeignKeyViolation(ex))
                 {
-                    throw new BusinessRuleViolationException("ForeignKeyViolation", $"Cannot perform operation on {entityName} because it would violate a relationship constraint.", ex);
+                    throw new BusinessRuleViolationException("ForeignKeyViolation", $"Cannot perform operation on {entityName} because it would violate a relationship constraint.", "The related data must exist first");
                 }
                 
-                throw new InfrastructureException("Database", errorMessage, ex);
+                throw new InfrastructureException("Database", errorMessage, ex.Message);
             }
             catch (SqlException ex)
             {
@@ -106,7 +106,7 @@ namespace PPGameMgmt.Infrastructure.Data
             catch (DbUpdateConcurrencyException ex)
             {
                 logger?.LogError(ex, "Concurrency conflict detected with {EntityName}: {Message}", entityName, ex.Message);
-                throw new ConcurrencyException(entityName, ex.Message, ex);
+                throw new ConcurrencyException(entityName, GetEntityId(ex), "The data was modified by another user while you were editing it");
             }
             catch (DbUpdateException ex)
             {
@@ -115,15 +115,15 @@ namespace PPGameMgmt.Infrastructure.Data
                 // Handle specific database constraint violations
                 if (IsDuplicateKeyException(ex))
                 {
-                    throw new BusinessRuleViolationException("DuplicateKey", $"A {entityName} with the same key already exists.", ex);
+                    throw new BusinessRuleViolationException("DuplicateKey", $"A {entityName} with the same key already exists.", "Please use a different identifier");
                 }
                 
                 if (IsForeignKeyViolation(ex))
                 {
-                    throw new BusinessRuleViolationException("ForeignKeyViolation", $"Cannot perform operation on {entityName} because it would violate a relationship constraint.", ex);
+                    throw new BusinessRuleViolationException("ForeignKeyViolation", $"Cannot perform operation on {entityName} because it would violate a relationship constraint.", "The related data must exist first");
                 }
                 
-                throw new InfrastructureException("Database", errorMessage, ex);
+                throw new InfrastructureException("Database", errorMessage, ex.Message);
             }
             catch (SqlException ex)
             {
@@ -195,6 +195,31 @@ namespace PPGameMgmt.Infrastructure.Data
             }, entityName, errorMessage, logger);
         }
 
+        /// <summary>
+        /// Attempts to extract the entity ID from a concurrency exception
+        /// </summary>
+        private static string GetEntityId(DbUpdateConcurrencyException ex)
+        {
+            try
+            {
+                var entry = ex.Entries.FirstOrDefault();
+                if (entry != null)
+                {
+                    var property = entry.Properties.FirstOrDefault(p => p.Metadata.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase));
+                    if (property != null)
+                    {
+                        return property.CurrentValue?.ToString() ?? "unknown";
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore any errors in extracting the ID
+            }
+            
+            return "unknown";
+        }
+        
         /// <summary>
         /// Determines if an exception is related to duplicate key constraint
         /// </summary>

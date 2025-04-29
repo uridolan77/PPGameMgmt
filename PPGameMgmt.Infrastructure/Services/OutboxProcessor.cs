@@ -87,7 +87,7 @@ namespace PPGameMgmt.Infrastructure.Services
                     }
                     
                     // Create a generic DeserializeData method call with the correct type
-                    var deserializeMethod = typeof(OutboxProcessor).GetMethod(nameof(DeserializeAndDispatchEvent));
+                    var deserializeMethod = typeof(OutboxProcessor).GetMethod("DeserializeAndDispatchEvent");
                     var genericMethod = deserializeMethod.MakeGenericMethod(eventType);
                     
                     await (Task)genericMethod.Invoke(this, new object[] { message, eventDispatcher });

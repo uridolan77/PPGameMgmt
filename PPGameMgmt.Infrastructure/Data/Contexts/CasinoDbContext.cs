@@ -20,6 +20,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         public DbSet<BonusClaim> BonusClaims { get; set; }
         public DbSet<PlayerFeatures> PlayerFeatures { get; set; }
         public DbSet<Recommendation> Recommendations { get; set; }
+        public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

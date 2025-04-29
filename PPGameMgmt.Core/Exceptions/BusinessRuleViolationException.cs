@@ -47,6 +47,18 @@ namespace PPGameMgmt.Core.Exceptions
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="BusinessRuleViolationException"/> class with a ruleName, message and additional details
+        /// </summary>
+        /// <param name="ruleName">The name of the business rule that was violated</param>
+        /// <param name="message">The message that describes the error</param>
+        /// <param name="details">Additional details about the rule violation</param>
+        public BusinessRuleViolationException(string ruleName, string message, string details) 
+            : base($"{message}. {details}")
+        {
+            RuleName = ruleName;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="BusinessRuleViolationException"/> class with a specific message and inner exception
         /// </summary>
         /// <param name="message">The message that describes the error</param>
