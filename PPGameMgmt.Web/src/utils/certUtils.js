@@ -10,20 +10,21 @@ export const validateApiConnection = async () => {
   try {
     const apiUrl = config.apiUrl;
     console.log(`Testing API connection to ${apiUrl}...`);
-    
+
     // Make a simple request to test the connection
     // The fetch options { mode: 'no-cors' } are only for the initial test
     // to bypass potential SSL certificate issues
-    await fetch(`${apiUrl}/ping`, { 
+    // Using /recommendations/test which is a known endpoint that exists
+    await fetch(`${apiUrl}/recommendations/test`, {
       method: 'GET',
-      mode: 'no-cors' 
+      mode: 'no-cors'
     });
-    
+
     console.log('API connection successful');
     return true;
   } catch (error) {
     console.error('API connection test failed:', error);
-    
+
     // If we're in development, show helpful instructions for certificate issues
     if (process.env.NODE_ENV === 'development') {
       console.warn(

@@ -97,7 +97,6 @@ const Layout = () => {
       <List>
         {menuItems.map((item) => (
           <ListItem
-            button={true}
             key={item.text}
             component={RouterLink}
             to={item.path}
