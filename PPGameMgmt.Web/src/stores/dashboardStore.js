@@ -198,7 +198,10 @@ const useDashboardStore = create(
       })),
 
       // Update layout after user drag/resize
-      updateLayout: (newLayout) => set({ layout: newLayout }),
+      updateLayout: (newLayouts) => set({ layout: newLayouts }),
+
+      // Set active widgets
+      setActiveWidgets: (widgets) => set({ activeWidgets: widgets }),
 
       // Update settings for a specific widget
       updateWidgetSettings: (widgetId, settings) => set((state) => ({

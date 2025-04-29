@@ -1,13 +1,19 @@
 using System;
+using System.Reflection;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using PPGameMgmt.Core.CQRS.Events;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Services;
+using PPGameMgmt.Infrastructure.CQRS;
 using PPGameMgmt.Infrastructure.Data;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.Infrastructure.Data.Repositories;
@@ -16,19 +22,43 @@ using PPGameMgmt.Infrastructure.ML.Models;
 using PPGameMgmt.API.Middleware;
 using PPGameMgmt.API.Hubs;
 using PPGameMgmt.API.Services;
+using PPGameMgmt.API.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Add API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+});
+
+builder.Services.AddVersionedApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+// Configure Swagger with API versioning
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "PPGameMgmt API",
+        Title = "PPGameMgmt API v1",
         Version = "v1",
         Description = "API for managing personalized player game recommendations and bonuses"
+    });
+
+    c.SwaggerDoc("v2", new OpenApiInfo
+    {
+        Title = "PPGameMgmt API v2",
+        Version = "v2",
+        Description = "API for managing personalized player game recommendations and bonuses (v2)"
     });
 
     // Add security definition for API Management subscription key
@@ -55,10 +85,41 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+
+    // Configure the Swagger doc to work with API versioning
+    c.OperationFilter<SwaggerDefaultValues>();
 });
 
 // Add API Management configuration
 builder.Services.AddApiManagementConfiguration(builder.Configuration);
+
+// Add Authorization with policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanManagePlayers", policy =>
+        policy.RequireClaim("Permission", "players.manage"));
+
+    options.AddPolicy("CanViewBonuses", policy =>
+        policy.RequireClaim("Permission", "bonuses.view"));
+
+    options.AddPolicy("CanManageBonuses", policy =>
+        policy.RequireClaim("Permission", "bonuses.manage"));
+
+    options.AddPolicy("CanViewGames", policy =>
+        policy.RequireClaim("Permission", "games.view"));
+
+    options.AddPolicy("CanManageGames", policy =>
+        policy.RequireClaim("Permission", "games.manage"));
+
+    options.AddPolicy("CanViewRecommendations", policy =>
+        policy.RequireClaim("Permission", "recommendations.view"));
+
+    options.AddPolicy("CanManageRecommendations", policy =>
+        policy.RequireClaim("Permission", "recommendations.manage"));
+
+    options.AddPolicy("IsAdmin", policy =>
+        policy.RequireClaim("Role", "admin"));
+});
 
 // Database context - Using MySQL with EF Core
 var connectionString = builder.Configuration.GetConnectionString("MySqlConnection");
@@ -87,6 +148,14 @@ builder.Services.AddSignalR()
     {
         options.Configuration.ChannelPrefix = "PPGameMgmt:SignalR";
     });
+
+// Register MediatR for CQRS
+builder.Services.AddMediatR(cfg => {
+    cfg.RegisterServicesFromAssembly(typeof(PPGameMgmt.Core.CQRS.Commands.Players.UpdatePlayerSegmentCommand).Assembly);
+});
+
+// Register Domain Event Dispatcher
+builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
 // Register NotificationService
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -158,7 +227,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "PPGameMgmt API v1");
+        options.SwaggerEndpoint("/swagger/v2/swagger.json", "PPGameMgmt API v2");
+    });
 }
 else
 {

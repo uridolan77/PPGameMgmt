@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import React, { useRef, useState } from 'react';
+import { Box, Typography, IconButton, useTheme } from '@mui/material';
 import { MoreVert as MoreVertIcon } from '@mui/icons-material';
 
 /**
@@ -16,6 +16,8 @@ const Widget = ({
   onDragEnd
 }) => {
   const widgetRef = useRef(null);
+  const theme = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleDragStart = (e) => {
     // Set the drag data
@@ -51,19 +53,25 @@ const Widget = ({
       draggable="true"
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         overflow: 'hidden',
         position: 'relative',
         height: '100%',
         width: '100%',
-        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-        borderRadius: '4px',
-        backgroundColor: '#fff',
-        cursor: 'grab',
+        boxShadow: isHovered
+          ? '0 8px 16px rgba(0, 0, 0, 0.12)'
+          : '0 4px 8px rgba(0, 0, 0, 0.08)',
+        borderRadius: '12px',
+        backgroundColor: theme.palette.background.paper,
         display: 'flex',
         flexDirection: 'column',
-        flex: 1
+        flex: 1,
+        transition: 'all 0.3s ease',
+        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
       }}
+      className="dashboard-widget"
     >
       {/* Widget Header */}
       <div
@@ -71,15 +79,45 @@ const Widget = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '8px 12px',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-          backgroundColor: 'rgba(0, 0, 0, 0.05)',
+          padding: '12px 16px',
+          borderBottom: `1px solid ${theme.palette.mode === 'dark'
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.06)'}`,
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(to right, rgba(96, 165, 250, 0.1), rgba(139, 92, 246, 0.1))'
+            : 'linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05))',
           cursor: 'move',
-          userSelect: 'none'
+          userSelect: 'none',
+          borderTopLeftRadius: '12px',
+          borderTopRightRadius: '12px',
+          position: 'relative',
         }}
-        className="react-grid-item-handle"
+        className="widget-header"
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+        {/* Drag handle indicator */}
+        <div style={{
+          position: 'absolute',
+          top: '8px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '30px',
+          height: '4px',
+          borderRadius: '2px',
+          backgroundColor: theme.palette.mode === 'dark'
+            ? 'rgba(255, 255, 255, 0.2)'
+            : 'rgba(0, 0, 0, 0.1)',
+        }}></div>
+
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 600,
+            fontSize: '0.95rem',
+            color: theme.palette.mode === 'dark'
+              ? theme.palette.primary.light
+              : theme.palette.primary.dark,
+          }}
+        >
           {title}
         </Typography>
 
@@ -88,6 +126,15 @@ const Widget = ({
             size="small"
             onClick={(e) => onMenuOpen(e, id)}
             aria-label="widget options"
+            sx={{
+              transition: 'transform 0.2s ease',
+              '&:hover': {
+                transform: 'rotate(90deg)',
+                backgroundColor: theme.palette.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.1)'
+                  : 'rgba(0, 0, 0, 0.04)',
+              }
+            }}
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
@@ -99,12 +146,14 @@ const Widget = ({
         style={{
           flex: 1, // Take remaining space
           overflow: 'auto',
-          padding: '16px',
+          padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
-          alignItems: 'stretch'
+          alignItems: 'stretch',
+          backgroundColor: theme.palette.background.paper,
         }}
+        className="widget-content"
       >
         {children}
       </div>
