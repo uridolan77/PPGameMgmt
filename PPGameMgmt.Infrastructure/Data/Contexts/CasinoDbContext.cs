@@ -70,6 +70,21 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(e => e.ThumbnailUrl).HasMaxLength(200);
                 entity.Property(e => e.GameUrl).HasMaxLength(200);
 
+                // Configure enum conversions for MySQL ENUM types
+                entity.Property(e => e.Type)
+                    .HasColumnName("type")
+                    .HasConversion(
+                        v => v.ToString(),
+                        v => (GameType)Enum.Parse(typeof(GameType), v)
+                    );
+
+                entity.Property(e => e.Category)
+                    .HasColumnName("category")
+                    .HasConversion(
+                        v => v.ToString(),
+                        v => (GameCategory)Enum.Parse(typeof(GameCategory), v)
+                    );
+
                 // Relationships
                 entity.HasMany(g => g.GameSessions)
                       .WithOne(gs => gs.Game)
