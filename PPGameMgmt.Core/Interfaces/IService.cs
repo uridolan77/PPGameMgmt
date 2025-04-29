@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Models; // Added reference to Models namespace for pagination classes
 
 namespace PPGameMgmt.Core.Interfaces
 {

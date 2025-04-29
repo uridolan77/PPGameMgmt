@@ -42,7 +42,7 @@ namespace PPGameMgmt.Core.Specifications
             public override Expression<Func<Player, bool>> ToExpression()
             {
                 var cutoffDate = DateTime.UtcNow.AddDays(-_daysSinceLastActivity);
-                return player => player.LastActivityDate >= cutoffDate;
+                return player => player.LastLoginDate >= cutoffDate;
             }
         }
 
@@ -55,7 +55,12 @@ namespace PPGameMgmt.Core.Specifications
 
             public PlayersByCountry(string countryCode)
             {
-                _countryCode = countryCode?.ToUpper();
+                if (string.IsNullOrEmpty(countryCode))
+                {
+                    throw new ArgumentNullException(nameof(countryCode));
+                }
+                
+                _countryCode = countryCode.ToUpper();
             }
 
             public override Expression<Func<Player, bool>> ToExpression()
