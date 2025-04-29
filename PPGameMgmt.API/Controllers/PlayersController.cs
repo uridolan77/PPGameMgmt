@@ -38,8 +38,9 @@ namespace PPGameMgmt.API.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Player>>> GetAllPlayers([FromQuery] PlayerSegment? segment = null)
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<Player>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<Player>>), StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<ApiResponse<IEnumerable<Player>>>> GetAllPlayers([FromQuery] PlayerSegment? segment = null)
         {
             try
             {
@@ -56,12 +57,12 @@ namespace PPGameMgmt.API.Controllers
                     players = await _playerService.GetActivePlayers(30); // Active within last 30 days
                 }
 
-                return Ok(players);
+                return OkResponse(players);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving players");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving players");
+                return ServerErrorResponse<IEnumerable<Player>>("Error retrieving players");
             }
         }
 
