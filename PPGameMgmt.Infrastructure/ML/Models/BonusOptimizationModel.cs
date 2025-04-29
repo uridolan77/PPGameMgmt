@@ -11,6 +11,8 @@ namespace PPGameMgmt.Infrastructure.ML.Models
 {
     public class BonusOptimizationModel
     {
+        public const string MODEL_NAME = "bonus_optimization_model";
+
         private readonly ILogger<BonusOptimizationModel> _logger;
         private MLContext _mlContext;
         private ITransformer _model;
@@ -29,7 +31,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             try
             {
                 _logger.LogInformation("Initializing bonus optimization model");
-                
+
                 if (File.Exists(_modelPath))
                 {
                     _logger.LogInformation($"Loading model from: {_modelPath}");
@@ -42,7 +44,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     _logger.LogWarning($"Model file not found at: {_modelPath}");
                     _isInitialized = false;
                 }
-                
+
                 return _isInitialized;
             }
             catch (Exception ex)
@@ -52,7 +54,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             }
         }
 
-        public async Task<List<BonusRecommendation>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, List<Bonus> availableBonuses, int maxRecommendations = 3)
+        public async Task<List<object>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, List<object> availableBonuses, int maxRecommendations = 3)
         {
             if (!_isInitialized)
             {
@@ -63,10 +65,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             try
             {
                 _logger.LogInformation($"Generating bonus recommendations for player: {playerId}");
-                
+
                 // Create prediction engine
                 var predictionEngine = _mlContext.Model.CreatePredictionEngine<PlayerBonusFeatureInput, BonusOptimizationPrediction>(_model);
-                
+
                 // Generate recommendations for each available bonus
                 var recommendations = new List<BonusRecommendation>();
                 foreach (var bonus in availableBonuses)
@@ -77,8 +79,8 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                         PlayerId = playerId,
                         BonusId = bonus.Id,
                         BonusTypeIndex = (int)bonus.Type,
-                        BonusAmount = (float)bonus.Amount,
-                        WageringRequirement = bonus.WageringRequirement,
+                        BonusAmount = (float)bonus.Value,
+                        WageringRequirement = (int)bonus.WageringRequirement, // Cast to int
                         DepositFrequencyPerMonth = playerFeatures.DepositFrequencyPerMonth,
                         AverageDepositAmount = (float)playerFeatures.AverageDepositAmount,
                         DaysSinceRegistration = playerFeatures.DaysSinceRegistration,
@@ -87,10 +89,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                         TotalBonusesClaimed = playerFeatures.TotalBonusesClaimed,
                         PreferredBonusTypeIndex = (int?)playerFeatures.PreferredBonusType ?? -1
                     };
-                    
+
                     // Get prediction
                     var prediction = await Task.Run(() => predictionEngine.Predict(input));
-                    
+
                     // Add recommendation if score is above threshold
                     if (prediction.ConversionProbability > 0.3) // Threshold can be adjusted
                     {
@@ -105,12 +107,12 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                         });
                     }
                 }
-                
+
                 // Sort by score and take top recommendations
                 recommendations.Sort((a, b) => b.Score.CompareTo(a.Score));
-                var topRecommendations = recommendations.Count <= maxRecommendations ? 
+                var topRecommendations = recommendations.Count <= maxRecommendations ?
                     recommendations : recommendations.GetRange(0, maxRecommendations);
-                
+
                 _logger.LogInformation($"Generated {topRecommendations.Count} bonus recommendations for player: {playerId}");
                 return topRecommendations;
             }
@@ -120,53 +122,53 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 return new List<BonusRecommendation>();
             }
         }
-        
+
         public class PlayerBonusFeatureInput
         {
             [LoadColumn(0)]
             public string PlayerId { get; set; }
-            
+
             [LoadColumn(1)]
             public string BonusId { get; set; }
-            
+
             [LoadColumn(2)]
             public int BonusTypeIndex { get; set; }
-            
+
             [LoadColumn(3)]
             public float BonusAmount { get; set; }
-            
+
             [LoadColumn(4)]
             public int WageringRequirement { get; set; }
-            
+
             [LoadColumn(5)]
             public int DepositFrequencyPerMonth { get; set; }
-            
+
             [LoadColumn(6)]
             public float AverageDepositAmount { get; set; }
-            
+
             [LoadColumn(7)]
             public int DaysSinceRegistration { get; set; }
-            
+
             [LoadColumn(8)]
             public float PlayerLifetimeValue { get; set; }
-            
+
             [LoadColumn(9)]
             public float BonusUsageRate { get; set; }
-            
+
             [LoadColumn(10)]
             public int TotalBonusesClaimed { get; set; }
-            
+
             [LoadColumn(11)]
             public int PreferredBonusTypeIndex { get; set; }
         }
-        
+
         public class BonusOptimizationPrediction
         {
             [ColumnName("PredictedLabel")]
             public bool WillClaim { get; set; }
-            
+
             public float ConversionProbability { get; set; }
-            
+
             public float ExpectedROI { get; set; }
         }
     }

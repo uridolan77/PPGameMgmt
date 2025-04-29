@@ -1,7 +1,11 @@
+using System;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities.Recommendations;
 
 namespace PPGameMgmt.Infrastructure.Data.Contexts
 {
@@ -17,6 +21,10 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         public DbSet<Game> Games { get; set; }
         public DbSet<PlayerFeatures> PlayerFeatures { get; set; }
         public DbSet<OutboxMessage> OutboxMessages { get; set; }
+        public DbSet<Core.Entities.Bonuses.BonusClaim> BonusClaims { get; set; }
+        public DbSet<Core.Entities.Bonuses.Bonus> Bonuses { get; set; }
+        public DbSet<Core.Entities.Recommendations.GameRecommendation> GameRecommendations { get; set; }
+        public DbSet<Core.Entities.Recommendations.BonusRecommendation> BonusRecommendations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -111,7 +119,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                     .HasColumnName("preferred_bonus_type")
                     .HasConversion(
                         v => v.HasValue ? v.ToString() : null,
-                        v => string.IsNullOrEmpty(v) ? null : (BonusType?)Enum.Parse(typeof(BonusType), v)
+                        v => string.IsNullOrEmpty(v) ? null : (Core.Entities.BonusType?)Enum.Parse(typeof(Core.Entities.BonusType), v)
                     );
 
                 entity.Property(e => e.CurrentSegment)

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data
@@ -18,7 +19,7 @@ namespace PPGameMgmt.Infrastructure.Data
         public IGameRepository Games { get; }
         public IBonusRepository Bonuses { get; }
         public IGameSessionRepository GameSessions { get; }
-        public IBonusClaimRepository BonusClaims { get; }
+        public IRepository<BonusClaim> BonusClaims { get; }
         public IPlayerFeaturesRepository PlayerFeatures { get; }
         public IRecommendationRepository Recommendations { get; }
 
@@ -28,7 +29,7 @@ namespace PPGameMgmt.Infrastructure.Data
             IGameRepository gameRepository,
             IBonusRepository bonusRepository,
             IGameSessionRepository gameSessionRepository,
-            IBonusClaimRepository bonusClaimRepository,
+            IRepository<BonusClaim> bonusClaimRepository,
             IPlayerFeaturesRepository playerFeaturesRepository,
             IRecommendationRepository recommendationRepository,
             ILogger<UnitOfWork> logger = null)

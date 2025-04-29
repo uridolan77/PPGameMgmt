@@ -11,6 +11,8 @@ namespace PPGameMgmt.Infrastructure.ML.Models
 {
     public class GameRecommendationModel
     {
+        public const string MODEL_NAME = "game_recommendation_model";
+
         private readonly ILogger<GameRecommendationModel> _logger;
         private MLContext _mlContext;
         private ITransformer _model;
@@ -29,7 +31,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             try
             {
                 _logger.LogInformation("Initializing game recommendation model");
-                
+
                 if (File.Exists(_modelPath))
                 {
                     _logger.LogInformation($"Loading model from: {_modelPath}");
@@ -42,7 +44,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     _logger.LogWarning($"Model file not found at: {_modelPath}");
                     _isInitialized = false;
                 }
-                
+
                 return _isInitialized;
             }
             catch (Exception ex)
@@ -52,7 +54,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             }
         }
 
-        public async Task<List<GameRecommendation>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, int maxRecommendations = 5)
+        public async Task<List<object>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, int maxRecommendations = 5)
         {
             if (!_isInitialized)
             {
@@ -63,10 +65,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             try
             {
                 _logger.LogInformation($"Generating game recommendations for player: {playerId}");
-                
+
                 // Create prediction engine
                 var predictionEngine = _mlContext.Model.CreatePredictionEngine<PlayerFeatureInput, GameRecommendationPrediction>(_model);
-                
+
                 // Convert player features to input format
                 var input = new PlayerFeatureInput
                 {
@@ -80,10 +82,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                     PreferredDevice = playerFeatures.PreferredDevice,
                     AverageSessionDurationMinutes = (float)playerFeatures.AverageSessionLengthMinutes
                 };
-                
+
                 // Get prediction
                 var prediction = await Task.Run(() => predictionEngine.Predict(input));
-                
+
                 // Convert prediction to recommendations
                 var recommendations = new List<GameRecommendation>();
                 for (int i = 0; i < Math.Min(maxRecommendations, prediction.GameIds.Length); i++)
@@ -98,7 +100,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                         Reason = "ML-based recommendation"
                     });
                 }
-                
+
                 _logger.LogInformation($"Generated {recommendations.Count} game recommendations for player: {playerId}");
                 return recommendations;
             }
@@ -108,42 +110,42 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 return new List<GameRecommendation>();
             }
         }
-        
+
         public class PlayerFeatureInput
         {
             [LoadColumn(0)]
             public string PlayerId { get; set; }
-            
+
             [LoadColumn(1)]
             public int DaysSinceRegistration { get; set; }
-            
+
             [LoadColumn(2)]
             public int FavoriteGameTypeIndex { get; set; }
-            
+
             [LoadColumn(3)]
             public float AverageBetSize { get; set; }
-            
+
             [LoadColumn(4)]
             public float SessionsPerWeek { get; set; }
-            
+
             [LoadColumn(5)]
             public float SessionFrequency { get; set; }
-            
+
             [LoadColumn(6)]
             public string CountryCode { get; set; }
-            
+
             [LoadColumn(7)]
             public string PreferredDevice { get; set; }
-            
+
             [LoadColumn(8)]
             public float AverageSessionDurationMinutes { get; set; }
         }
-        
+
         public class GameRecommendationPrediction
         {
             [VectorType(10)]
             public string[] GameIds { get; set; }
-            
+
             [VectorType(10)]
             public float[] Scores { get; set; }
         }

@@ -1,16 +1,7 @@
 import React from 'react';
-import { 
-  Box, 
-  Grid, 
-  Card, 
-  CardContent, 
-  Typography, 
-  Container, 
-  Paper,
-  CardHeader,
-  Divider
-} from '@mui/material';
 import { useStore } from '../../../core/store';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Dashboard: React.FC = () => {
   const { auth, preferences } = useStore();
@@ -18,132 +9,167 @@ const Dashboard: React.FC = () => {
   const { dashboardWidgets } = preferences;
 
   const StatCard = ({ title, value, subtitle }: { title: string, value: string, subtitle?: string }) => (
-    <Paper elevation={2} sx={{ height: '100%' }}>
-      <Box p={3}>
-        <Typography color="text.secondary" variant="subtitle2" fontWeight="medium">
+    <Card>
+      <CardContent className="p-6">
+        <CardDescription className="text-sm font-medium">
           {title}
-        </Typography>
-        <Typography variant="h4" sx={{ mt: 1, mb: 1 }} fontWeight="medium">
-          {value}
-        </Typography>
+        </CardDescription>
+        <div className="mt-1 mb-1">
+          <p className="text-3xl font-bold">{value}</p>
+        </div>
         {subtitle && (
-          <Typography variant="body2" color="text.secondary">
+          <CardDescription className="text-sm">
             {subtitle}
-          </Typography>
+          </CardDescription>
         )}
-      </Box>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Dashboard
-      </Typography>
-      
-      <Typography variant="body1" paragraph>
-        Welcome back, {user?.username || 'User'}! Here's an overview of your platform.
-      </Typography>
+    <div className="container mx-auto py-6">
+      <div className="flex flex-col gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.username || 'User'}! Here's an overview of your platform.
+          </p>
+        </div>
 
-      {/* Stats Overview */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        {/* Stats Overview */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard 
             title="Total Players" 
             value="4,283" 
             subtitle="+12% from last month" 
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
           <StatCard 
             title="Active Games" 
             value="186" 
             subtitle="15 new this week" 
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
           <StatCard 
             title="Bonus Campaigns" 
             value="24" 
             subtitle="3 ending soon" 
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
           <StatCard 
             title="Avg. Session Time" 
             value="18 min" 
             subtitle="+5% from last week" 
           />
-        </Grid>
-      </Grid>
+        </div>
 
-      {/* Customizable Widgets */}
-      <Grid container spacing={3}>
-        {dashboardWidgets.includes('playerStats') && (
-          <Grid item xs={12} md={6}>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="players">Players</TabsTrigger>
+            <TabsTrigger value="games">Games</TabsTrigger>
+            <TabsTrigger value="activities">Activities</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="mt-6 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {dashboardWidgets.includes('playerStats') && (
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle>Player Statistics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[250px] flex items-center justify-center">
+                    <p className="text-muted-foreground">
+                      Player statistics chart will be displayed here
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {dashboardWidgets.includes('gameStats') && (
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle>Game Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[250px] flex items-center justify-center">
+                    <p className="text-muted-foreground">
+                      Game performance chart will be displayed here
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {dashboardWidgets.includes('topGames') && (
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle>Top Games</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[250px] flex items-center justify-center">
+                    <p className="text-muted-foreground">
+                      Top games list will be displayed here
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {dashboardWidgets.includes('recentActivity') && (
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle>Recent Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[250px] flex items-center justify-center">
+                    <p className="text-muted-foreground">
+                      Recent activity feed will be displayed here
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="players" className="mt-6 space-y-4">
             <Card>
-              <CardHeader title="Player Statistics" />
-              <Divider />
+              <CardHeader>
+                <CardTitle>Player Overview</CardTitle>
+                <CardDescription>Track all your player metrics in one place</CardDescription>
+              </CardHeader>
               <CardContent>
-                <Box height={250} display="flex" alignItems="center" justifyContent="center">
-                  <Typography color="text.secondary">
-                    Player statistics chart will be displayed here
-                  </Typography>
-                </Box>
+                <p className="text-muted-foreground">
+                  Detailed player statistics will be displayed here
+                </p>
               </CardContent>
             </Card>
-          </Grid>
-        )}
-        
-        {dashboardWidgets.includes('gameStats') && (
-          <Grid item xs={12} md={6}>
+          </TabsContent>
+
+          <TabsContent value="games" className="mt-6 space-y-4">
             <Card>
-              <CardHeader title="Game Performance" />
-              <Divider />
+              <CardHeader>
+                <CardTitle>Games Overview</CardTitle>
+                <CardDescription>Monitor your game performance metrics</CardDescription>
+              </CardHeader>
               <CardContent>
-                <Box height={250} display="flex" alignItems="center" justifyContent="center">
-                  <Typography color="text.secondary">
-                    Game performance chart will be displayed here
-                  </Typography>
-                </Box>
+                <p className="text-muted-foreground">
+                  Detailed game statistics will be displayed here
+                </p>
               </CardContent>
             </Card>
-          </Grid>
-        )}
-        
-        {dashboardWidgets.includes('topGames') && (
-          <Grid item xs={12} md={6}>
+          </TabsContent>
+
+          <TabsContent value="activities" className="mt-6 space-y-4">
             <Card>
-              <CardHeader title="Top Games" />
-              <Divider />
+              <CardHeader>
+                <CardTitle>Recent Activities</CardTitle>
+                <CardDescription>Track all recent activities across your platform</CardDescription>
+              </CardHeader>
               <CardContent>
-                <Box height={250} display="flex" alignItems="center" justifyContent="center">
-                  <Typography color="text.secondary">
-                    Top games list will be displayed here
-                  </Typography>
-                </Box>
+                <p className="text-muted-foreground">
+                  Activity feed will be displayed here
+                </p>
               </CardContent>
             </Card>
-          </Grid>
-        )}
-        
-        {dashboardWidgets.includes('recentActivity') && (
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardHeader title="Recent Activity" />
-              <Divider />
-              <CardContent>
-                <Box height={250} display="flex" alignItems="center" justifyContent="center">
-                  <Typography color="text.secondary">
-                    Recent activity feed will be displayed here
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-      </Grid>
-    </Container>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 };
 

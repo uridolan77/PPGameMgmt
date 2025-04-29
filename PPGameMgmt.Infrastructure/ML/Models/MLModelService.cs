@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
+using GameRecommendation = PPGameMgmt.Core.Entities.Recommendations.GameRecommendation;
+using BonusRecommendation = PPGameMgmt.Core.Entities.Recommendations.BonusRecommendation;
 using PPGameMgmt.Infrastructure.ML.Models;
 
 namespace PPGameMgmt.Infrastructure.ML.Models
@@ -204,10 +206,15 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 {
                     mockRecommendations.Add(new GameRecommendation
                     {
+                        Id = Guid.NewGuid().ToString(),
+                        PlayerId = playerFeatures.PlayerId,
                         GameId = $"G{i:D3}",
-                        GameName = $"Popular Game {i}",
                         Score = 0.95 - (i * 0.05),
-                        RecommendationReason = $"Based on your gaming preferences"
+                        RecommendationDate = DateTime.UtcNow,
+                        Reason = $"Based on your gaming preferences",
+                        IsShown = false,
+                        IsClicked = false,
+                        IsPlayed = false
                     });
                 }
 
@@ -238,13 +245,14 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 // This avoids issues with missing ML model files
                 return new BonusRecommendation
                 {
+                    Id = Guid.NewGuid().ToString(),
+                    PlayerId = playerFeatures.PlayerId,
                     BonusId = "B001",
-                    BonusName = "Welcome Bonus",
-                    BonusType = BonusType.DepositMatch,
-                    Amount = 100,
-                    PercentageMatch = 100,
                     Score = 0.95,
-                    RecommendationReason = "Best match for new players"
+                    RecommendationDate = DateTime.UtcNow,
+                    Reason = "Best match for new players",
+                    IsShown = false,
+                    IsClaimed = false
                 };
             }
             catch (Exception ex)
