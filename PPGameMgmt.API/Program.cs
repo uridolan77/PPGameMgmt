@@ -43,6 +43,9 @@ try
         })
         .AddEndpointsApiExplorer()
         
+        // Add AutoMapper
+        .AddAutoMapperServices()
+        
         // Add API Management and Rate Limiting
         .AddApiManagementConfiguration(builder.Configuration)
         .AddRateLimitingConfiguration(builder.Configuration)

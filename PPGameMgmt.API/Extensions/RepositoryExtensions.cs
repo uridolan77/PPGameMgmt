@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Infrastructure.Data;
 using PPGameMgmt.Infrastructure.Data.Repositories;
 
 namespace PPGameMgmt.API.Extensions
@@ -24,6 +25,9 @@ namespace PPGameMgmt.API.Extensions
             
             // Add Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            
+            // Add Transaction Manager
+            services.AddScoped<ITransactionManager, TransactionManager>();
             
             return services;
         }

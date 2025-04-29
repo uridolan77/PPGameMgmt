@@ -14,6 +14,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
     public class GameRepository : Repository<Game>, IGameRepository
     {
         private readonly ILogger<GameRepository> _logger;
+        private const string _entityName = "Game";
 
         public GameRepository(CasinoDbContext context, ILogger<GameRepository> logger = null)
             : base(context, logger)
@@ -23,57 +24,54 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
 
         public override async Task<Game> GetByIdAsync(string id)
         {
-            try
-            {
-                _logger?.LogInformation($"Getting game with ID: {id}");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting game with ID: {id}");
 
-                // Use EF Core to get the game by ID
-                var game = await _context.Games.FindAsync(id);
+                    // Use EF Core to get the game by ID
+                    var game = await _context.Games.FindAsync(id);
 
-                _logger?.LogInformation(game != null
-                    ? $"Retrieved game with ID: {id}"
-                    : $"No game found with ID: {id}");
+                    _logger?.LogInformation(game != null
+                        ? $"Retrieved game with ID: {id}"
+                        : $"No game found with ID: {id}");
 
-                return game;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error retrieving game with ID: {id}");
-                throw;
-            }
+                    return game;
+                },
+                _entityName,
+                $"Error retrieving game with ID: {id}",
+                _logger
+            );
         }
 
         public override async Task<IEnumerable<Game>> GetAllAsync()
         {
-            try
-            {
-                _logger?.LogInformation("Getting all games");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation("Getting all games");
 
-                // Use EF Core to get all games
-                var games = await _context.Games.ToListAsync();
+                    // Use EF Core to get all games
+                    var games = await _context.Games.ToListAsync();
 
-                _logger?.LogInformation($"Retrieved {games.Count} games");
+                    _logger?.LogInformation($"Retrieved {games.Count} games");
 
-                return games;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error retrieving all games");
-                throw;
-            }
+                    return games;
+                },
+                _entityName,
+                "Error retrieving all games",
+                _logger
+            );
         }
 
         public override async Task<IEnumerable<Game>> FindAsync(Expression<Func<Game, bool>> predicate)
         {
-            try
-            {
-                return await _context.Games.Where(predicate).ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error finding games with predicate");
-                throw;
-            }
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    return await _context.Games.Where(predicate).ToListAsync();
+                },
+                _entityName,
+                "Error finding games with predicate",
+                _logger
+            );
         }
 
         // Note: AddAsync, UpdateAsync, and DeleteAsync are inherited from the base Repository class
@@ -81,129 +79,124 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
 
         public async Task<IEnumerable<Game>> GetGamesByTypeAsync(GameType type)
         {
-            try
-            {
-                _logger?.LogInformation($"Getting games by type: {type}");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting games by type: {type}");
 
-                // Use EF Core to get games by type
-                var games = await _context.Games
-                    .Where(g => g.Type == type && g.IsActive)
-                    .ToListAsync();
+                    // Use EF Core to get games by type
+                    var games = await _context.Games
+                        .Where(g => g.Type == type && g.IsActive)
+                        .ToListAsync();
 
-                _logger?.LogInformation($"Retrieved {games.Count} games of type {type}");
+                    _logger?.LogInformation($"Retrieved {games.Count} games of type {type}");
 
-                return games;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error retrieving games by type: {type}");
-                throw;
-            }
+                    return games;
+                },
+                _entityName,
+                $"Error retrieving games by type: {type}",
+                _logger
+            );
         }
 
         public async Task<IEnumerable<Game>> GetGamesByCategoryAsync(GameCategory category)
         {
-            try
-            {
-                _logger?.LogInformation($"Getting games by category: {category}");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting games by category: {category}");
 
-                // Use EF Core to get games by category
-                var games = await _context.Games
-                    .Where(g => g.Category == category && g.IsActive)
-                    .ToListAsync();
+                    // Use EF Core to get games by category
+                    var games = await _context.Games
+                        .Where(g => g.Category == category && g.IsActive)
+                        .ToListAsync();
 
-                _logger?.LogInformation($"Retrieved {games.Count} games of category {category}");
+                    _logger?.LogInformation($"Retrieved {games.Count} games of category {category}");
 
-                return games;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error retrieving games by category: {category}");
-                throw;
-            }
+                    return games;
+                },
+                _entityName,
+                $"Error retrieving games by category: {category}",
+                _logger
+            );
         }
 
         public async Task<IEnumerable<Game>> GetFeaturedGamesAsync()
         {
-            try
-            {
-                _logger?.LogInformation("Getting featured games");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation("Getting featured games");
 
-                // Use EF Core to get featured games
-                var games = await _context.Games
-                    .Where(g => g.IsFeatured && g.IsActive)
-                    .ToListAsync();
+                    // Use EF Core to get featured games
+                    var games = await _context.Games
+                        .Where(g => g.IsFeatured && g.IsActive)
+                        .ToListAsync();
 
-                _logger?.LogInformation($"Retrieved {games.Count} featured games");
+                    _logger?.LogInformation($"Retrieved {games.Count} featured games");
 
-                return games;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error retrieving featured games");
-                throw;
-            }
+                    return games;
+                },
+                _entityName,
+                "Error retrieving featured games",
+                _logger
+            );
         }
 
         public async Task<IEnumerable<Game>> GetPopularGamesAsync(int count)
         {
-            try
-            {
-                _logger?.LogInformation($"Getting popular games (top {count})");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting popular games (top {count})");
 
-                // Get most played games by aggregating session data
-                var popularGameIds = await _context.GameSessions
-                    .Where(gs => gs.StartTime >= DateTime.UtcNow.AddDays(-30)) // Last 30 days
-                    .GroupBy(gs => gs.GameId)
-                    .OrderByDescending(g => g.Count())
-                    .Select(g => g.Key)
-                    .Take(count)
-                    .ToListAsync();
+                    // Get most played games by aggregating session data
+                    var popularGameIds = await _context.GameSessions
+                        .Where(gs => gs.StartTime >= DateTime.UtcNow.AddDays(-30)) // Last 30 days
+                        .GroupBy(gs => gs.GameId)
+                        .OrderByDescending(g => g.Count())
+                        .Select(g => g.Key)
+                        .Take(count)
+                        .ToListAsync();
 
-                // Return the actual game objects in the correct order
-                var games = await _context.Games
-                    .Where(g => popularGameIds.Contains(g.Id) && g.IsActive)
-                    .ToListAsync();
+                    // Return the actual game objects in the correct order
+                    var games = await _context.Games
+                        .Where(g => popularGameIds.Contains(g.Id) && g.IsActive)
+                        .ToListAsync();
 
-                // Preserve the order from popularGameIds
-                var orderedGames = popularGameIds
-                    .Select(id => games.FirstOrDefault(g => g.Id == id))
-                    .Where(g => g != null)
-                    .ToList();
+                    // Preserve the order from popularGameIds
+                    var orderedGames = popularGameIds
+                        .Select(id => games.FirstOrDefault(g => g.Id == id))
+                        .Where(g => g != null)
+                        .ToList();
 
-                _logger?.LogInformation($"Retrieved {orderedGames.Count} popular games");
+                    _logger?.LogInformation($"Retrieved {orderedGames.Count} popular games");
 
-                return orderedGames;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error retrieving popular games");
-                throw;
-            }
+                    return orderedGames;
+                },
+                _entityName,
+                $"Error retrieving popular games",
+                _logger
+            );
         }
 
         public async Task<IEnumerable<Game>> GetNewReleasesAsync(int count)
         {
-            try
-            {
-                _logger?.LogInformation($"Getting new releases (top {count})");
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting new releases (top {count})");
 
-                // Use EF Core to get new releases
-                var games = await _context.Games
-                    .Where(g => g.IsActive)
-                    .OrderByDescending(g => g.ReleaseDate)
-                    .Take(count)
-                    .ToListAsync();
+                    // Use EF Core to get new releases
+                    var games = await _context.Games
+                        .Where(g => g.IsActive)
+                        .OrderByDescending(g => g.ReleaseDate)
+                        .Take(count)
+                        .ToListAsync();
 
-                _logger?.LogInformation($"Retrieved {games.Count} new releases");
+                    _logger?.LogInformation($"Retrieved {games.Count} new releases");
 
-                return games;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error retrieving new releases");
-                throw;
-            }
+                    return games;
+                },
+                _entityName,
+                $"Error retrieving new releases",
+                _logger
+            );
         }
     }
 }

@@ -5,6 +5,7 @@ using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Services;
 using PPGameMgmt.Infrastructure.ML.Features;
 using PPGameMgmt.Infrastructure.ML.Models;
+using System.Reflection;
 
 namespace PPGameMgmt.API.Extensions
 {
@@ -75,6 +76,15 @@ namespace PPGameMgmt.API.Extensions
             services.AddScoped<IMLModelService, MLModelService>();
             services.AddSingleton<IMLOpsService, MLOpsService>();
             
+            return services;
+        }
+        
+        /// <summary>
+        /// Adds AutoMapper configuration to the service collection
+        /// </summary>
+        public static IServiceCollection AddAutoMapperServices(this IServiceCollection services)
+        {
+            services.AddAutoMapper(Assembly.GetExecutingAssembly());
             return services;
         }
     }

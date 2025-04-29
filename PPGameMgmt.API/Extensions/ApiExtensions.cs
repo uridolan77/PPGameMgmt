@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using PPGameMgmt.API.Filters;
 using PPGameMgmt.API.HealthChecks;
 using PPGameMgmt.API.Swagger;
 using System;
@@ -83,6 +84,9 @@ namespace PPGameMgmt.API.Extensions
                 // Add documentation filters
                 c.OperationFilter<SwaggerDocumentationFilter>();
                 c.SchemaFilter<SwaggerExampleFilter>();
+                
+                // Add exception documentation filter
+                c.OperationFilter<SwaggerExceptionDocumentationFilter>();
 
                 // Include XML comments if available
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -110,7 +114,7 @@ namespace PPGameMgmt.API.Extensions
         }
 
         /// <summary>
-        /// Adds API controllers with standardized response caching
+        /// Adds API controllers with standardized response caching and global filters
         /// </summary>
         public static IServiceCollection AddApiControllers(this IServiceCollection services)
         {
@@ -128,6 +132,9 @@ namespace PPGameMgmt.API.Extensions
                     {
                         Duration = 60
                     });
+                
+                // Add the global StandardApiResponseFilter
+                options.Filters.Add<StandardApiResponseFilter>();
             });
 
             return services;

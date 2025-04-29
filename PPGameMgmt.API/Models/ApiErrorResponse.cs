@@ -23,9 +23,19 @@ namespace PPGameMgmt.API.Models
         public string CorrelationId { get; set; }
         
         /// <summary>
+        /// Error code for domain-specific errors
+        /// </summary>
+        public string ErrorCode { get; set; }
+        
+        /// <summary>
         /// List of detailed error messages
         /// </summary>
         public List<string> Errors { get; set; } = new List<string>();
+        
+        /// <summary>
+        /// Validation errors with property names
+        /// </summary>
+        public IDictionary<string, string[]> ValidationErrors { get; set; }
         
         /// <summary>
         /// Technical error message (only included in development environment)

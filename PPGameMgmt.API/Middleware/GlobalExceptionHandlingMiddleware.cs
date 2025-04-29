@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using PPGameMgmt.API.Models;
+using PPGameMgmt.Core.Exceptions;
 
 namespace PPGameMgmt.API.Middleware
 {
@@ -49,7 +50,6 @@ namespace PPGameMgmt.API.Middleware
             // Add correlation ID to response headers
             context.Response.Headers.Append("X-Correlation-Id", correlationId);
 
-            // Create error response
             var errorResponse = new ApiErrorResponse
             {
                 StatusCode = (int)statusCode,
@@ -57,6 +57,18 @@ namespace PPGameMgmt.API.Middleware
                 CorrelationId = correlationId,
                 Errors = GetErrorDetails(exception)
             };
+
+            // Add domain-specific error codes if available
+            if (exception is DomainException domainException)
+            {
+                errorResponse.ErrorCode = domainException.ErrorCode;
+                
+                // Add validation details if available
+                if (domainException is ValidationException validationEx && validationEx.Errors.Count > 0)
+                {
+                    errorResponse.ValidationErrors = validationEx.Errors;
+                }
+            }
 
             // Add technical details in development environment
             if (_environment.IsDevelopment())
@@ -77,6 +89,15 @@ namespace PPGameMgmt.API.Middleware
             // Map exception types to HTTP status codes
             return exception switch
             {
+                // Domain exceptions
+                EntityNotFoundException => HttpStatusCode.NotFound,
+                ValidationException => HttpStatusCode.BadRequest,
+                BusinessRuleViolationException => HttpStatusCode.UnprocessableEntity,
+                ConcurrencyException => HttpStatusCode.Conflict,
+                InfrastructureException => HttpStatusCode.ServiceUnavailable,
+                DomainException => HttpStatusCode.BadRequest,
+                
+                // Standard exceptions
                 KeyNotFoundException => HttpStatusCode.NotFound,
                 UnauthorizedAccessException => HttpStatusCode.Unauthorized,
                 ArgumentException => HttpStatusCode.BadRequest,
@@ -93,6 +114,12 @@ namespace PPGameMgmt.API.Middleware
 
         private static string GetUserFriendlyMessage(Exception exception, HttpStatusCode statusCode)
         {
+            // Return specific messages for domain exceptions
+            if (exception is DomainException)
+            {
+                return exception.Message;
+            }
+            
             // Provide user-friendly messages based on status code
             return statusCode switch
             {
@@ -105,6 +132,7 @@ namespace PPGameMgmt.API.Middleware
                 HttpStatusCode.Gone => "The requested resource is no longer available.",
                 HttpStatusCode.UnsupportedMediaType => "The request contains an unsupported media type.",
                 HttpStatusCode.TooManyRequests => "Too many requests. Please try again later.",
+                HttpStatusCode.UnprocessableEntity => "The request was well-formed but could not be processed due to semantic errors.",
                 HttpStatusCode.InternalServerError => "An unexpected error occurred. Please try again later.",
                 HttpStatusCode.NotImplemented => "This feature is not implemented.",
                 HttpStatusCode.BadGateway => "The server received an invalid response from an upstream server.",
