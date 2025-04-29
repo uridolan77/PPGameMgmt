@@ -6,6 +6,7 @@ export interface ApiClientConfig {
   defaultHeaders?: Record<string, string>;
   timeout?: number;
   retryConfig?: RetryConfig;
+  cacheConfig?: CacheConfig; // New cache configuration
 }
 
 // Configuration for retry logic
@@ -15,12 +16,21 @@ export interface RetryConfig {
   retryStatusCodes: number[]; // HTTP status codes that should trigger a retry
 }
 
+// New cache configuration interface
+export interface CacheConfig {
+  enabled: boolean;
+  maxAge: number; // Cache TTL in milliseconds
+  excludePaths?: RegExp[]; // Paths that should not be cached
+}
+
 export class ApiClient {
   private baseUrl: string;
   private authToken: string | null = null;
   private defaultHeaders: Record<string, string>;
   private timeout: number;
   private retryConfig: RetryConfig;
+  private cacheConfig: CacheConfig;
+  private cacheStore: Map<string, { data: any; timestamp: number }> = new Map();
   
   constructor(config: ApiClientConfig) {
     this.baseUrl = config.baseUrl;
@@ -35,6 +45,13 @@ export class ApiClient {
       retryDelay: 300,
       retryStatusCodes: [408, 429, 500, 502, 503, 504]
     };
+
+    // Default cache configuration
+    this.cacheConfig = config.cacheConfig || {
+      enabled: false,
+      maxAge: 5 * 60 * 1000, // 5 minutes
+      excludePaths: [/\/auth\//] // Don't cache auth endpoints
+    };
   }
   
   // Authentication methods
@@ -46,6 +63,67 @@ export class ApiClient {
     } else {
       delete this.defaultHeaders['Authorization'];
     }
+  }
+
+  // Clear cache entries
+  clearCache(pattern?: RegExp): void {
+    if (!pattern) {
+      this.cacheStore.clear();
+      return;
+    }
+
+    // Clear specific cache entries
+    for (const key of this.cacheStore.keys()) {
+      if (pattern.test(key)) {
+        this.cacheStore.delete(key);
+      }
+    }
+  }
+
+  // Check if a URL should be cached
+  private shouldCache(url: string, method: string): boolean {
+    if (!this.cacheConfig.enabled) return false;
+    if (method !== 'GET') return false;
+    
+    // Check for excluded paths
+    if (this.cacheConfig.excludePaths) {
+      for (const pattern of this.cacheConfig.excludePaths) {
+        if (pattern.test(url)) return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // Get cache key
+  private getCacheKey(url: string, params?: Record<string, any>): string {
+    const paramString = params ? JSON.stringify(params) : '';
+    return `${url}|${paramString}`;
+  }
+
+  // Check cache for a request
+  private getCachedResponse<T>(url: string, params?: Record<string, any>): T | null {
+    const key = this.getCacheKey(url, params);
+    const cached = this.cacheStore.get(key);
+    
+    if (!cached) return null;
+    
+    // Check if cache is expired
+    if (Date.now() - cached.timestamp > this.cacheConfig.maxAge) {
+      this.cacheStore.delete(key);
+      return null;
+    }
+    
+    return cached.data as T;
+  }
+
+  // Store response in cache
+  private setCachedResponse<T>(url: string, params: Record<string, any> | undefined, data: T): void {
+    const key = this.getCacheKey(url, params);
+    this.cacheStore.set(key, {
+      data,
+      timestamp: Date.now()
+    });
   }
 
   async refreshToken(): Promise<string> {
@@ -69,8 +147,17 @@ export class ApiClient {
     headers?: Record<string, string>;
     signal?: AbortSignal; // Support for abort signals
     skipRetry?: boolean; // Option to skip retry logic
+    skipCache?: boolean; // Option to skip cache
   }): Promise<T> {
-    const { method, url, data, params, headers = {}, signal, skipRetry = false } = config;
+    const { method, url, data, params, headers = {}, signal, skipRetry = false, skipCache = false } = config;
+    
+    // Check cache for GET requests
+    if (!skipCache && method === 'GET' && this.shouldCache(url, method)) {
+      const cachedResponse = this.getCachedResponse<T>(url, params);
+      if (cachedResponse) {
+        return Promise.resolve(cachedResponse);
+      }
+    }
     
     // Number of retries performed
     let retries = 0;
@@ -176,6 +263,11 @@ export class ApiClient {
           responseData = await response.text() as unknown as T;
         }
         
+        // Store in cache if applicable
+        if (!skipCache && method === 'GET' && this.shouldCache(url, method)) {
+          this.setCachedResponse(url, params, responseData);
+        }
+        
         return responseData;
         
       } catch (error) {
@@ -219,13 +311,14 @@ export class ApiClient {
   }
   
   // HTTP methods with proper typing and AbortSignal support
-  async get<T>(url: string, params?: Record<string, any>, options?: { signal?: AbortSignal; skipRetry?: boolean }): Promise<T> {
+  async get<T>(url: string, params?: Record<string, any>, options?: { signal?: AbortSignal; skipRetry?: boolean; skipCache?: boolean }): Promise<T> {
     return this.request<T>({ 
       method: 'GET', 
       url, 
       params,
       signal: options?.signal,
-      skipRetry: options?.skipRetry
+      skipRetry: options?.skipRetry,
+      skipCache: options?.skipCache
     });
   }
   
@@ -271,5 +364,10 @@ export class ApiClient {
 
 // Create and export a default instance with environment variables
 export const apiClient = new ApiClient({ 
-  baseUrl: import.meta.env.VITE_API_URL || '/api'
+  baseUrl: import.meta.env.VITE_API_URL || '/api',
+  cacheConfig: {
+    enabled: true,
+    maxAge: 2 * 60 * 1000, // 2 minutes
+    excludePaths: [/\/auth\//]
+  }
 });

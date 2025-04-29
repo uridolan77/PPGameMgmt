@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +31,7 @@ namespace PPGameMgmt.API.HealthChecks
                 var options = ConfigurationOptions.Parse(_redisConnectionString);
                 options.AbortOnConnectFail = false;
                 
-                using var connection = await ConnectionMultiplexer.ConnectAsync(options, cancellationToken);
+                using var connection = await ConnectionMultiplexer.ConnectAsync(options);
                 var db = connection.GetDatabase();
                 
                 // Ping Redis to check if it's responsive

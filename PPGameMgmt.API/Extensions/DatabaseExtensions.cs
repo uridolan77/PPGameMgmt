@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 using System;
+using PPGameMgmt.Core.Interfaces; // Add missing namespace for ICacheService
+using PPGameMgmt.Infrastructure.Services; // Add namespace for RedisCacheService
 
 namespace PPGameMgmt.API.Extensions
 {

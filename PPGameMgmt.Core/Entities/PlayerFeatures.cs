@@ -108,9 +108,6 @@ namespace PPGameMgmt.Core.Entities
         [Column("bonus_usage_rate")]
         public double BonusUsageRate { get; set; }
         
-        [Column("preferred_bonus_type")]
-        public BonusType? PreferredBonusType { get; set; }
-        
         [Column("bonus_to_deposit_conversion_rate")]
         public double BonusToDepositConversionRate { get; set; }
         

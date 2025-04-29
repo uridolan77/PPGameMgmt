@@ -1,5 +1,13 @@
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PPGameMgmt.API.Models;
 using PPGameMgmt.Core.Exceptions;
 
@@ -107,7 +115,7 @@ namespace PPGameMgmt.API.Middleware
                 FormatException => HttpStatusCode.BadRequest,
                 NotImplementedException => HttpStatusCode.NotImplemented,
                 TimeoutException => HttpStatusCode.GatewayTimeout,
-                // Add more mappings as needed
+                // Default case
                 _ => HttpStatusCode.InternalServerError,
             };
         }
@@ -133,11 +141,12 @@ namespace PPGameMgmt.API.Middleware
                 HttpStatusCode.UnsupportedMediaType => "The request contains an unsupported media type.",
                 HttpStatusCode.TooManyRequests => "Too many requests. Please try again later.",
                 HttpStatusCode.UnprocessableEntity => "The request was well-formed but could not be processed due to semantic errors.",
-                HttpStatusCode.InternalServerError => "An unexpected error occurred. Please try again later.",
-                HttpStatusCode.NotImplemented => "This feature is not implemented.",
-                HttpStatusCode.BadGateway => "The server received an invalid response from an upstream server.",
                 HttpStatusCode.ServiceUnavailable => "The service is temporarily unavailable. Please try again later.",
                 HttpStatusCode.GatewayTimeout => "The request timed out. Please try again later.",
+                // Combine NotImplemented and InternalServerError into a single case
+                HttpStatusCode.NotImplemented or HttpStatusCode.InternalServerError => "An unexpected error occurred. Please try again later.",
+                HttpStatusCode.BadGateway => "The server received an invalid response from an upstream server.",
+                // Default case
                 _ => "An error occurred while processing your request."
             };
         }

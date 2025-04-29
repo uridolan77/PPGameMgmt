@@ -49,12 +49,6 @@ namespace PPGameMgmt.Core.Entities
         [Column("gender")]
         public string Gender { get; set; }
 
-        // Navigation properties
-        [NotMapped]
-        public ICollection<GameSession> GameSessions { get; set; } = new List<GameSession>();
-        
-        [NotMapped]
-        public ICollection<BonusClaim> BonusClaims { get; set; } = new List<BonusClaim>();
     }
 
     public enum PlayerSegment

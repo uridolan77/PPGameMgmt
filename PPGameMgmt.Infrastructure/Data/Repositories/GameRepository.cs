@@ -6,12 +6,16 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Exceptions;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Models;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
 {
+    /// <summary>
+    /// Repository implementation for Game entity
+    /// </summary>
     public class GameRepository : Repository<Game>, IGameRepository
     {
         private readonly ILogger<GameRepository> _logger;
@@ -75,9 +79,6 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             );
         }
 
-        // Note: AddAsync, UpdateAsync, and DeleteAsync are inherited from the base Repository class
-        // and don't need to be overridden unless custom behavior is needed
-
         public async Task<IEnumerable<Game>> GetGamesByTypeAsync(GameType type)
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
@@ -120,56 +121,22 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             );
         }
 
-        public async Task<IEnumerable<Game>> GetFeaturedGamesAsync()
-        {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Getting featured games");
-
-                    // Use EF Core to get featured games
-                    var games = await _context.Games
-                        .Where(g => g.IsFeatured && g.IsActive)
-                        .ToListAsync();
-
-                    _logger?.LogInformation($"Retrieved {games.Count} featured games");
-
-                    return games;
-                },
-                _entityName,
-                "Error retrieving featured games",
-                _logger
-            );
-        }
-
         public async Task<IEnumerable<Game>> GetPopularGamesAsync(int count)
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Getting popular games (top {count})");
+                    _logger?.LogInformation($"Getting top {count} popular games");
 
-                    // Get most played games by aggregating session data
-                    var popularGameIds = await _context.GameSessions
-                        .Where(gs => gs.StartTime >= DateTime.UtcNow.AddDays(-30)) // Last 30 days
-                        .GroupBy(gs => gs.GameId)
-                        .OrderByDescending(g => g.Count())
-                        .Select(g => g.Key)
+                    // Use EF Core to get popular games based on popularity score
+                    var games = await _context.Games
+                        .Where(g => g.IsActive)
+                        .OrderByDescending(g => g.PopularityScore)
                         .Take(count)
                         .ToListAsync();
 
-                    // Return the actual game objects in the correct order
-                    var games = await _context.Games
-                        .Where(g => popularGameIds.Contains(g.Id) && g.IsActive)
-                        .ToListAsync();
+                    _logger?.LogInformation($"Retrieved {games.Count} popular games");
 
-                    // Preserve the order from popularGameIds
-                    var orderedGames = popularGameIds
-                        .Select(id => games.FirstOrDefault(g => g.Id == id))
-                        .Where(g => g != null)
-                        .ToList();
-
-                    _logger?.LogInformation($"Retrieved {orderedGames.Count} popular games");
-
-                    return orderedGames;
+                    return games;
                 },
                 _entityName,
                 $"Error retrieving popular games",
@@ -181,137 +148,188 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Getting new releases (top {count})");
+                    _logger?.LogInformation($"Getting top {count} new game releases");
 
-                    // Use EF Core to get new releases
+                    // Use EF Core to get new game releases based on release date
                     var games = await _context.Games
                         .Where(g => g.IsActive)
                         .OrderByDescending(g => g.ReleaseDate)
                         .Take(count)
                         .ToListAsync();
 
-                    _logger?.LogInformation($"Retrieved {games.Count} new releases");
+                    _logger?.LogInformation($"Retrieved {games.Count} new game releases");
 
                     return games;
                 },
                 _entityName,
-                $"Error retrieving new releases",
+                $"Error retrieving new game releases",
                 _logger
             );
         }
 
-        public async Task<PagedResult<Game>> GetGamesByTypePagedAsync(GameType type, PaginationParameters parameters)
+        public async Task<IEnumerable<Game>> SearchGamesAsync(string searchTerm)
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Getting paged games by type: {type}, page {parameters.PageNumber}, size {parameters.PageSize}");
+                    _logger?.LogInformation($"Searching games with term: {searchTerm}");
 
-                    var query = _context.Games.Where(g => g.Type == type && g.IsActive);
-                    var totalCount = await query.CountAsync();
-                    var games = await query
-                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                        .Take(parameters.PageSize)
-                        .ToListAsync();
+                    if (string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        return await GetAllAsync();
+                    }
 
-                    _logger?.LogInformation($"Retrieved {games.Count} games of type {type} (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+                    // Normalize search term
+                    var normalizedSearchTerm = searchTerm.ToLower();
 
-                    return new PagedResult<Game>(games, totalCount, parameters.PageNumber, parameters.PageSize);
-                },
-                _entityName,
-                $"Error retrieving paged games by type: {type}",
-                _logger
-            );
-        }
-
-        public async Task<PagedResult<Game>> GetGamesByCategoryPagedAsync(GameCategory category, PaginationParameters parameters)
-        {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation($"Getting paged games by category: {category}, page {parameters.PageNumber}, size {parameters.PageSize}");
-
-                    var query = _context.Games.Where(g => g.Category == category && g.IsActive);
-                    var totalCount = await query.CountAsync();
-                    var games = await query
-                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                        .Take(parameters.PageSize)
-                        .ToListAsync();
-
-                    _logger?.LogInformation($"Retrieved {games.Count} games of category {category} (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
-
-                    return new PagedResult<Game>(games, totalCount, parameters.PageNumber, parameters.PageSize);
-                },
-                _entityName,
-                $"Error retrieving paged games by category: {category}",
-                _logger
-            );
-        }
-
-        public async Task<PagedResult<Game>> GetPopularGamesPagedAsync(PaginationParameters parameters)
-        {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation($"Getting paged popular games, page {parameters.PageNumber}, size {parameters.PageSize}");
-
-                    // Get most played games by aggregating session data
-                    var popularGameIds = await _context.GameSessions
-                        .Where(gs => gs.StartTime >= DateTime.UtcNow.AddDays(-30)) // Last 30 days
-                        .GroupBy(gs => gs.GameId)
-                        .OrderByDescending(g => g.Count())
-                        .Select(g => g.Key)
-                        .ToListAsync();
-
-                    // Get total count for pagination
-                    var totalCount = popularGameIds.Count;
-
-                    // Apply pagination to the IDs
-                    var pagedIds = popularGameIds
-                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                        .Take(parameters.PageSize)
-                        .ToList();
-
-                    // Return the actual game objects in the correct order
+                    // Use EF Core to search games by name, provider, or description
                     var games = await _context.Games
-                        .Where(g => pagedIds.Contains(g.Id) && g.IsActive)
+                        .Where(g => g.IsActive &&
+                                  (g.Name.ToLower().Contains(normalizedSearchTerm) ||
+                                   g.Provider.ToLower().Contains(normalizedSearchTerm) ||
+                                   g.Description.ToLower().Contains(normalizedSearchTerm)))
                         .ToListAsync();
 
-                    // Preserve the order from popularGameIds
-                    var orderedGames = pagedIds
-                        .Select(id => games.FirstOrDefault(g => g.Id == id))
-                        .Where(g => g != null)
-                        .ToList();
+                    _logger?.LogInformation($"Found {games.Count} games matching search term: {searchTerm}");
 
-                    _logger?.LogInformation($"Retrieved {orderedGames.Count} popular games (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
-
-                    return new PagedResult<Game>(orderedGames, totalCount, parameters.PageNumber, parameters.PageSize);
+                    return games;
                 },
                 _entityName,
-                $"Error retrieving paged popular games",
+                $"Error searching games with term: {searchTerm}",
                 _logger
             );
         }
 
-        public async Task<PagedResult<Game>> GetNewReleasesPagedAsync(PaginationParameters parameters)
+        public async Task<IEnumerable<Game>> GetGamesByProviderAsync(string provider)
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Getting paged new releases, page {parameters.PageNumber}, size {parameters.PageSize}");
+                    _logger?.LogInformation($"Getting games by provider: {provider}");
 
-                    var query = _context.Games
-                        .Where(g => g.IsActive)
-                        .OrderByDescending(g => g.ReleaseDate);
-                    
-                    var totalCount = await query.CountAsync();
-                    var games = await query
-                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                        .Take(parameters.PageSize)
+                    // Use EF Core to get games by provider
+                    var games = await _context.Games
+                        .Where(g => g.IsActive && g.Provider.ToLower() == provider.ToLower())
                         .ToListAsync();
 
-                    _logger?.LogInformation($"Retrieved {games.Count} new releases (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+                    _logger?.LogInformation($"Retrieved {games.Count} games from provider {provider}");
 
-                    return new PagedResult<Game>(games, totalCount, parameters.PageNumber, parameters.PageSize);
+                    return games;
                 },
                 _entityName,
-                $"Error retrieving paged new releases",
+                $"Error retrieving games by provider: {provider}",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Game>> GetGamesByRtpRangeAsync(decimal minRtp, decimal maxRtp)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting games with RTP between {minRtp}% and {maxRtp}%");
+
+                    // Use EF Core to get games by RTP range
+                    var games = await _context.Games
+                        .Where(g => g.IsActive && g.RTP >= minRtp && g.RTP <= maxRtp)
+                        .OrderByDescending(g => g.RTP)
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {games.Count} games with RTP between {minRtp}% and {maxRtp}%");
+
+                    return games;
+                },
+                _entityName,
+                $"Error retrieving games with RTP between {minRtp}% and {maxRtp}%",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Game>> GetGamesByDeviceCompatibilityAsync(string deviceType)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting games compatible with device type: {deviceType}");
+
+                    // Assuming there's a CompatibleDevices field or a device compatibility flag
+                    // This implementation may need to be adjusted based on actual entity structure
+                    var games = await _context.Games
+                        .Where(g => g.IsActive && g.CompatibleDevices.Contains(deviceType))
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {games.Count} games compatible with device type: {deviceType}");
+
+                    return games;
+                },
+                _entityName,
+                $"Error retrieving games compatible with device type: {deviceType}",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Game>> GetGamesByFeatureAsync(string featureName)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting games with feature: {featureName}");
+
+                    // Assuming there's a Features array or a related Features entity
+                    // This implementation may need to be adjusted based on actual entity structure
+                    var games = await _context.Games
+                        .Where(g => g.IsActive && g.Features.Contains(featureName))
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {games.Count} games with feature: {featureName}");
+
+                    return games;
+                },
+                _entityName,
+                $"Error retrieving games with feature: {featureName}",
+                _logger
+            );
+        }
+
+        public async Task UpdateGamePopularityScoreAsync(string gameId, int newPopularityScore)
+        {
+            await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Updating popularity score for game with ID: {gameId} to {newPopularityScore}");
+
+                    var game = await _context.Games.FindAsync(gameId);
+                    
+                    if (game == null)
+                    {
+                        throw new EntityNotFoundException(_entityName, gameId);
+                    }
+
+                    game.PopularityScore = newPopularityScore;
+                    
+                    // Update the entity
+                    _context.Games.Update(game);
+                    await _context.SaveChangesAsync();
+
+                    _logger?.LogInformation($"Updated popularity score for game with ID: {gameId} to {newPopularityScore}");
+
+                    return true;
+                },
+                _entityName,
+                $"Error updating popularity score for game with ID: {gameId}",
+                _logger
+            );
+        }
+
+        public async Task<bool> GameExistsAsync(string gameId)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Checking if game with ID: {gameId} exists");
+
+                    var exists = await _context.Games
+                        .AnyAsync(g => g.Id == gameId);
+
+                    _logger?.LogInformation($"Game with ID: {gameId} exists: {exists}");
+
+                    return exists;
+                },
+                _entityName,
+                $"Error checking if game with ID: {gameId} exists",
                 _logger
             );
         }

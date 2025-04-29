@@ -1,6 +1,12 @@
-import { useQuery, useMutation, QueryKey, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, QueryKey, UseQueryOptions, UseMutationOptions, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiClient } from './client';
 import { ApiError, PaginatedResponse } from './types';
+import { queryClient, DataCategory, getQueryOptions } from './reactQueryConfig';
+
+// Export the QueryClientProvider with our configured client
+export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+};
 
 // Type definitions for our custom hooks
 type QueryFn<TData> = () => Promise<TData>;
@@ -9,6 +15,7 @@ interface UseApiQueryOptions<TData> extends Omit<UseQueryOptions<TData, ApiError
   // Options specific to our API client
   abortOnUnmount?: boolean;
   skipRetry?: boolean;
+  category?: DataCategory; // Added category for cache optimization
 }
 
 interface UseApiMutationOptions<TData, TVariables> extends Omit<UseMutationOptions<TData, ApiError, TVariables>, 'mutationFn'> {
@@ -22,19 +29,44 @@ export function useApiQuery<TData>(
   queryFn: QueryFn<TData>,
   options?: UseApiQueryOptions<TData>
 ) {
-  const { abortOnUnmount = true, skipRetry, ...queryOptions } = options || {};
+  const { 
+    abortOnUnmount = true, 
+    skipRetry, 
+    category, 
+    ...queryOptions 
+  } = options || {};
+  
+  // Get optimal cache settings if category is provided
+  const cacheSettings = category ? getQueryOptions(category) : {};
   
   return useQuery<TData, ApiError>({
     queryKey,
     queryFn: async ({ signal }) => {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
+        // Merge abort signals if both exist
+        const mergedSignal = signal 
+          ? new AbortController().signal
+          : controller.signal;
+        
+        if (signal) {
+          // Forward abort from React Query
+          signal.addEventListener('abort', () => controller.abort());
+        }
+        
         // If the query function is a direct API call, pass the abort signal
         if (queryFn.toString().includes('apiClient')) {
-          return await queryFn();
-        } 
+          const result = await queryFn();
+          clearTimeout(timeoutId);
+          return result;
+        }
         
-        // For regular function, we don't have a clean way to pass the signal
-        return await queryFn();
+        // For regular function
+        const result = await queryFn();
+        clearTimeout(timeoutId);
+        return result;
       } catch (error) {
         // Ensure errors are properly typed
         if (error instanceof ApiError) {
@@ -48,6 +80,7 @@ export function useApiQuery<TData>(
         );
       }
     },
+    ...cacheSettings, // Apply optimal cache settings
     ...queryOptions,
   });
 }
@@ -95,51 +128,54 @@ export function useApiMutation<TData, TVariables>(
   });
 }
 
-// Helper functions to create common API query patterns
+// Helper functions to create common API query patterns with category optimization
 export const createApiHelpers = {
   // Helper for getting a list of resources
-  getList: <T>(resource: string) => {
-    return (params?: Record<string, any>) => 
-      apiClient.get<T[]>(`/${resource}`, params);
+  getList: <T>(resource: string, category?: DataCategory) => {
+    return (params?: Record<string, any>, options?: { signal?: AbortSignal }) => 
+      apiClient.get<T[]>(`/${resource}`, params, options);
   },
   
   // Helper for getting paginated resources
-  getPaginated: <T>(resource: string) => {
-    return (page: number, pageSize: number, params?: Record<string, any>) => 
+  getPaginated: <T>(resource: string, category?: DataCategory) => {
+    return (page: number, pageSize: number, params?: Record<string, any>, options?: { signal?: AbortSignal }) => 
       apiClient.get<PaginatedResponse<T>>(`/${resource}`, { 
         page, 
         pageSize, 
         ...params 
-      });
+      }, options);
   },
   
   // Helper for getting a single resource
-  getOne: <T>(resource: string) => {
-    return (id: string | number) => 
-      apiClient.get<T>(`/${resource}/${id}`);
+  getOne: <T>(resource: string, category?: DataCategory) => {
+    return (id: string | number, options?: { signal?: AbortSignal }) => 
+      apiClient.get<T>(`/${resource}/${id}`, undefined, options);
   },
   
   // Helper for creating a resource
   create: <T, D = any>(resource: string) => {
-    return (data: D) => 
-      apiClient.post<T>(`/${resource}`, data);
+    return (data: D, options?: { signal?: AbortSignal }) => 
+      apiClient.post<T>(`/${resource}`, data, options);
   },
   
   // Helper for updating a resource
   update: <T, D = any>(resource: string) => {
-    return (id: string | number, data: D) => 
-      apiClient.put<T>(`/${resource}/${id}`, data);
+    return (id: string | number, data: D, options?: { signal?: AbortSignal }) => 
+      apiClient.put<T>(`/${resource}/${id}`, data, options);
   },
   
   // Helper for patching a resource
   patch: <T, D = any>(resource: string) => {
-    return (id: string | number, data: D) => 
-      apiClient.patch<T>(`/${resource}/${id}`, data);
+    return (id: string | number, data: D, options?: { signal?: AbortSignal }) => 
+      apiClient.patch<T>(`/${resource}/${id}`, data, options);
   },
   
   // Helper for deleting a resource
   remove: <T = void>(resource: string) => {
-    return (id: string | number) => 
-      apiClient.delete<T>(`/${resource}/${id}`);
+    return (id: string | number, options?: { signal?: AbortSignal }) => 
+      apiClient.delete<T>(`/${resource}/${id}`, options);
   }
 };
+
+// Export the query client for direct access
+export { queryClient };

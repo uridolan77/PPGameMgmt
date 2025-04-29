@@ -4,39 +4,28 @@ using System.Threading.Tasks;
 namespace PPGameMgmt.Core.Interfaces
 {
     /// <summary>
-    /// Service for handling distributed caching operations
+    /// Interface for caching service
     /// </summary>
     public interface ICacheService
     {
         /// <summary>
-        /// Gets an item from the cache or null if not found
+        /// Gets a value from the cache with the given key
         /// </summary>
-        /// <typeparam name="T">The type of the item</typeparam>
-        /// <param name="key">Cache key</param>
-        Task<T?> GetAsync<T>(string key) where T : class;
+        Task<T> GetAsync<T>(string key);
         
         /// <summary>
-        /// Sets an item in the cache with optional absolute expiration
+        /// Sets a value in the cache with the given key
         /// </summary>
-        /// <typeparam name="T">The type of the item</typeparam>
-        /// <param name="key">Cache key</param>
-        /// <param name="value">Item to cache</param>
-        /// <param name="absoluteExpiration">Optional absolute expiration time</param>
-        Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpiration = null) where T : class;
+        Task SetAsync<T>(string key, T value, TimeSpan? expiry = null);
         
         /// <summary>
-        /// Removes an item from the cache
+        /// Removes a value from the cache with the given key
         /// </summary>
-        /// <param name="key">Cache key to remove</param>
         Task RemoveAsync(string key);
         
         /// <summary>
-        /// Gets an item from cache or executes the factory function to get and cache the value
+        /// Determines whether the cache contains the given key
         /// </summary>
-        /// <typeparam name="T">The type of the item</typeparam>
-        /// <param name="key">Cache key</param>
-        /// <param name="factory">Factory function to get the value if not in cache</param>
-        /// <param name="absoluteExpiration">Optional absolute expiration time</param>
-        Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpiration = null) where T : class;
+        Task<bool> ExistsAsync(string key);
     }
 }

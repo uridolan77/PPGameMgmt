@@ -13,6 +13,9 @@ using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
 {
+    /// <summary>
+    /// Repository implementation for Player entity
+    /// </summary>
     public class PlayerRepository : Repository<Player>, IPlayerRepository
     {
         private readonly ILogger<PlayerRepository> _logger;
@@ -135,16 +138,21 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Getting paged players by segment: {segment}, page {parameters.PageNumber}, size {parameters.PageSize}");
+                    _logger?.LogInformation($"Getting paged players by segment: {segment}, Page: {parameters.PageNumber}, Size: {parameters.PageSize}");
 
+                    // Create query for players in the segment
                     var query = _context.Players.Where(p => p.Segment == segment);
+
+                    // Get total count
                     var totalCount = await query.CountAsync();
+
+                    // Apply pagination
                     var players = await query
                         .Skip((parameters.PageNumber - 1) * parameters.PageSize)
                         .Take(parameters.PageSize)
                         .ToListAsync();
 
-                    _logger?.LogInformation($"Retrieved {players.Count} players with segment {segment} (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+                    _logger?.LogInformation($"Retrieved {players.Count} players on page {parameters.PageNumber} out of {totalCount} total players");
 
                     return new PagedResult<Player>(players, totalCount, parameters.PageNumber, parameters.PageSize);
                 },
@@ -154,15 +162,14 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             );
         }
 
-        public async Task<IEnumerable<Player>> GetActivePlayers(int daysActive)
+        public async Task<IEnumerable<Player>> GetActivePlayersAsync(int daysActive)
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
+                    _logger?.LogInformation($"Getting active players within the last {daysActive} days");
+
                     var cutoffDate = DateTime.UtcNow.AddDays(-daysActive);
-
-                    _logger?.LogInformation($"Getting active players since {cutoffDate}");
-
-                    // Use EF Core to get active players
+                    
                     var players = await _context.Players
                         .Where(p => p.LastLoginDate >= cutoffDate)
                         .ToListAsync();
@@ -172,7 +179,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                     return players;
                 },
                 _entityName,
-                $"Error retrieving active players for the last {daysActive} days",
+                $"Error retrieving active players within the last {daysActive} days",
                 _logger
             );
         }
@@ -181,23 +188,121 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
+                    _logger?.LogInformation($"Getting paged active players within the last {daysActive} days, Page: {parameters.PageNumber}, Size: {parameters.PageSize}");
+
                     var cutoffDate = DateTime.UtcNow.AddDays(-daysActive);
 
-                    _logger?.LogInformation($"Getting paged active players since {cutoffDate}, page {parameters.PageNumber}, size {parameters.PageSize}");
-
+                    // Create query for active players
                     var query = _context.Players.Where(p => p.LastLoginDate >= cutoffDate);
+
+                    // Get total count
                     var totalCount = await query.CountAsync();
+
+                    // Apply pagination
                     var players = await query
                         .Skip((parameters.PageNumber - 1) * parameters.PageSize)
                         .Take(parameters.PageSize)
                         .ToListAsync();
 
-                    _logger?.LogInformation($"Retrieved {players.Count} active players (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+                    _logger?.LogInformation($"Retrieved {players.Count} active players on page {parameters.PageNumber} out of {totalCount} total active players");
 
                     return new PagedResult<Player>(players, totalCount, parameters.PageNumber, parameters.PageSize);
                 },
                 _entityName,
-                $"Error retrieving paged active players for the last {daysActive} days",
+                $"Error retrieving paged active players within the last {daysActive} days",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Player>> GetTopValuePlayersAsync(int count)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting top {count} value players");
+
+                    var players = await _context.Players
+                        .OrderByDescending(p => p.TotalDeposits - p.TotalWithdrawals)
+                        .Take(count)
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {players.Count} top value players");
+
+                    return players;
+                },
+                _entityName,
+                $"Error retrieving top {count} value players",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Player>> GetPlayersByGamePlayedAsync(string gameId)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting players who have played game with ID: {gameId}");
+
+                    var playerIds = await _context.GameSessions
+                        .Where(gs => gs.GameId == gameId)
+                        .Select(gs => gs.PlayerId)
+                        .Distinct()
+                        .ToListAsync();
+
+                    var players = await _context.Players
+                        .Where(p => playerIds.Contains(p.Id))
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {players.Count} players who have played game with ID: {gameId}");
+
+                    return players;
+                },
+                _entityName,
+                $"Error retrieving players who have played game with ID: {gameId}",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Player>> GetPlayersByBonusClaimedAsync(string bonusId)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting players who have claimed bonus with ID: {bonusId}");
+
+                    var playerIds = await _context.BonusClaims
+                        .Where(bc => bc.BonusId == bonusId)
+                        .Select(bc => bc.PlayerId)
+                        .Distinct()
+                        .ToListAsync();
+
+                    var players = await _context.Players
+                        .Where(p => playerIds.Contains(p.Id))
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {players.Count} players who have claimed bonus with ID: {bonusId}");
+
+                    return players;
+                },
+                _entityName,
+                $"Error retrieving players who have claimed bonus with ID: {bonusId}",
+                _logger
+            );
+        }
+
+        public async Task<IEnumerable<Player>> GetPlayersByMinimumDepositAsync(decimal depositAmount)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting players with total deposits >= {depositAmount}");
+
+                    var players = await _context.Players
+                        .Where(p => p.TotalDeposits >= depositAmount)
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {players.Count} players with total deposits >= {depositAmount}");
+
+                    return players;
+                },
+                _entityName,
+                $"Error retrieving players with total deposits >= {depositAmount}",
                 _logger
             );
         }
@@ -206,23 +311,46 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
         {
             await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Updating player {playerId} segment to {segment}");
+                    _logger?.LogInformation($"Updating player segment for ID: {playerId} to {segment}");
 
                     var player = await _context.Players.FindAsync(playerId);
-
+                    
                     if (player == null)
                     {
                         throw new EntityNotFoundException(_entityName, playerId);
                     }
 
                     player.Segment = segment;
+                    
+                    // Update the entity
                     _context.Players.Update(player);
                     await _context.SaveChangesAsync();
 
-                    _logger?.LogInformation($"Successfully updated player {playerId} segment to {segment}");
+                    _logger?.LogInformation($"Updated player segment for ID: {playerId} to {segment}");
+
+                    return true;
                 },
                 _entityName,
-                $"Error updating player {playerId} segment to {segment}",
+                $"Error updating player segment for ID: {playerId}",
+                _logger
+            );
+        }
+
+        public async Task<bool> PlayerExistsAsync(string playerId)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Checking if player with ID: {playerId} exists");
+
+                    var exists = await _context.Players
+                        .AnyAsync(p => p.Id == playerId);
+
+                    _logger?.LogInformation($"Player with ID: {playerId} exists: {exists}");
+
+                    return exists;
+                },
+                _entityName,
+                $"Error checking if player with ID: {playerId} exists",
                 _logger
             );
         }

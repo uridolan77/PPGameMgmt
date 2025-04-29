@@ -38,7 +38,7 @@ namespace PPGameMgmt.API.Controllers
                 TotalPages = totalPages
             };
             
-            var response = ApiResponse<T>.Success(data, paginationMetadata, message);
+            var response = ApiResponse<T>.SuccessWithPagination(data, paginationMetadata, message);
             return Ok(response);
         }
         

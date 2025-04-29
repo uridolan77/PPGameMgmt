@@ -53,8 +53,8 @@ namespace PPGameMgmt.Core.Entities
         public bool IsActive { get; set; }
         
         // Navigation properties
-        [NotMapped]
-        public ICollection<GameSession> GameSessions { get; set; } = new List<GameSession>();
+        //[NotMapped]
+        //public ICollection<GameSession> GameSessions { get; set; } = new List<GameSession>();
     }
 
     public enum GameType

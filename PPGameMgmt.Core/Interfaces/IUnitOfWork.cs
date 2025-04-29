@@ -7,12 +7,6 @@ namespace PPGameMgmt.Core.Interfaces
     {
         IPlayerRepository Players { get; }
         IGameRepository Games { get; }
-        IBonusRepository Bonuses { get; }
-        IGameSessionRepository GameSessions { get; }
-        IBonusClaimRepository BonusClaims { get; }
-        IPlayerFeaturesRepository PlayerFeatures { get; }
-        IRecommendationRepository Recommendations { get; }
-
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();

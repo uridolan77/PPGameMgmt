@@ -7,6 +7,8 @@ using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Infrastructure.CQRS;
 using PPGameMgmt.Infrastructure.Data.Migrations;
 using PPGameMgmt.Infrastructure.Services;
+using PPGameMgmt.Infrastructure.Data.Repositories;
+using Scrutor;
 
 namespace PPGameMgmt.API.Extensions
 {

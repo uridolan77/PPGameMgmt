@@ -31,36 +31,6 @@ namespace PPGameMgmt.Core.Interfaces
         Task<IEnumerable<Game>> SearchGamesAsync(string searchTerm);
     }
 
-    public interface IBonusService
-    {
-        Task<Bonus> GetBonusAsync(string bonusId);
-        Task<IEnumerable<Bonus>> GetAllActiveBonusesAsync();
-        Task<IEnumerable<Bonus>> GetBonusesByTypeAsync(BonusType type);
-        Task<IEnumerable<Bonus>> GetBonusesForPlayerSegmentAsync(PlayerSegment segment);
-        Task<IEnumerable<Bonus>> GetBonusesForGameAsync(string gameId);
-        Task<IEnumerable<BonusClaim>> GetPlayerBonusClaimsAsync(string playerId);
-        Task<BonusClaim> ClaimBonusAsync(string playerId, string bonusId);
-    }
-
-    public interface IRecommendationService
-    {
-        Task<Recommendation> GetPersonalizedRecommendationAsync(string playerId);
-        Task<Recommendation> GetLatestRecommendationAsync(string playerId);
-        Task<IEnumerable<GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5);
-        Task<BonusRecommendation> GetBonusRecommendationAsync(string playerId);
-        Task RecordRecommendationDisplayedAsync(string recommendationId);
-        Task RecordRecommendationClickedAsync(string recommendationId);
-        Task RecordRecommendationAcceptedAsync(string recommendationId);
-    }
-
-    public interface IBonusOptimizationService
-    {
-        Task<BonusRecommendation> GetOptimalBonusAsync(string playerId);
-        Task<BonusRecommendation> GetOptimalBonusAsync(PlayerFeatures playerFeatures);
-        Task<IEnumerable<Bonus>> RankBonusesForPlayerAsync(string playerId);
-        Task<bool> IsBonusAppropriateForPlayerAsync(string playerId, string bonusId);
-        Task<decimal> PredictBonusConversionRateAsync(string playerId, string bonusId);
-    }
 
     public interface IMLModelService
     {
@@ -71,7 +41,7 @@ namespace PPGameMgmt.Core.Interfaces
         Task EvaluateModelPerformanceAsync();
 
         // Add missing methods required by service implementations
-        Task<IEnumerable<GameRecommendation>> PredictTopGamesAsync(PlayerFeatures playerFeatures, int count);
-        Task<BonusRecommendation> PredictBestBonusAsync(PlayerFeatures playerFeatures);
+        //Task<IEnumerable<GameRecommendation>> PredictTopGamesAsync(PlayerFeatures playerFeatures, int count);
+        //Task<BonusRecommendation> PredictBestBonusAsync(PlayerFeatures playerFeatures);
     }
 }
