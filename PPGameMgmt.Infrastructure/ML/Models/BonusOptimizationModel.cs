@@ -1,385 +1,173 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.ML.OnnxRuntime;
-using Microsoft.ML.OnnxRuntime.Tensors;
+using Microsoft.ML;
+using Microsoft.ML.Data;
 using PPGameMgmt.Core.Entities;
-using PPGameMgmt.Core.Interfaces;
 
 namespace PPGameMgmt.Infrastructure.ML.Models
 {
     public class BonusOptimizationModel
     {
         private readonly ILogger<BonusOptimizationModel> _logger;
-        private readonly IBonusRepository _bonusRepository;
-        private readonly IMLOpsService _mlOpsService;
-        private InferenceSession _session;
+        private MLContext _mlContext;
+        private ITransformer _model;
         private string _modelPath;
-        private bool _isModelLoaded = false;
-        internal const string MODEL_NAME = "bonus_optimization";
+        private bool _isInitialized = false;
 
-        public BonusOptimizationModel(
-            ILogger<BonusOptimizationModel> logger,
-            IBonusRepository bonusRepository,
-            IMLOpsService mlOpsService)
+        public BonusOptimizationModel(ILogger<BonusOptimizationModel> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _bonusRepository = bonusRepository ?? throw new ArgumentNullException(nameof(bonusRepository));
-            _mlOpsService = mlOpsService ?? throw new ArgumentNullException(nameof(mlOpsService));
+            _logger = logger;
+            _mlContext = new MLContext(seed: 42);
+            _modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ML", "Models", "bonus_optimization_model.zip");
         }
 
-        public async Task InitializeAsync()
+        public async Task<bool> InitializeAsync()
         {
             try
             {
-                _logger.LogInformation("Initializing Bonus Optimization Model (Mock Mode)");
-
-                // Skip actual model initialization to avoid issues with missing model files
-                // In a real implementation, we would initialize the model here
-
-                // Set model as ready so we can use our mock implementation
-                _isModelLoaded = true;
-
-                _logger.LogInformation("Bonus Optimization Model initialized in mock mode");
+                _logger.LogInformation("Initializing bonus optimization model");
+                
+                if (File.Exists(_modelPath))
+                {
+                    _logger.LogInformation($"Loading model from: {_modelPath}");
+                    _model = await Task.Run(() => _mlContext.Model.Load(_modelPath, out _));
+                    _isInitialized = true;
+                    _logger.LogInformation("Bonus optimization model loaded successfully");
+                }
+                else
+                {
+                    _logger.LogWarning($"Model file not found at: {_modelPath}");
+                    _isInitialized = false;
+                }
+                
+                return _isInitialized;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initializing Bonus Optimization Model");
-                _isModelLoaded = false;
+                _logger.LogError(ex, "Error initializing bonus optimization model");
+                return false;
             }
         }
 
-        public async Task<BonusRecommendation> PredictBestBonusAsync(PlayerFeatures features)
+        public async Task<List<BonusRecommendation>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, List<Bonus> availableBonuses, int maxRecommendations = 3)
         {
+            if (!_isInitialized)
+            {
+                _logger.LogWarning("Model not initialized. Cannot generate bonus recommendations");
+                return new List<BonusRecommendation>();
+            }
+
             try
             {
-                // Make sure we have initialized the model
-                if (!_isModelLoaded)
+                _logger.LogInformation($"Generating bonus recommendations for player: {playerId}");
+                
+                // Create prediction engine
+                var predictionEngine = _mlContext.Model.CreatePredictionEngine<PlayerBonusFeatureInput, BonusOptimizationPrediction>(_model);
+                
+                // Generate recommendations for each available bonus
+                var recommendations = new List<BonusRecommendation>();
+                foreach (var bonus in availableBonuses)
                 {
-                    await InitializeAsync();
-
-                    // If initialization failed, use fallback optimization
-                    if (!_isModelLoaded)
+                    // Convert player features to input format
+                    var input = new PlayerBonusFeatureInput
                     {
-                        return await GetFallbackBonusRecommendation(features);
+                        PlayerId = playerId,
+                        BonusId = bonus.Id,
+                        BonusTypeIndex = (int)bonus.Type,
+                        BonusAmount = (float)bonus.Amount,
+                        WageringRequirement = bonus.WageringRequirement,
+                        DepositFrequencyPerMonth = playerFeatures.DepositFrequencyPerMonth,
+                        AverageDepositAmount = (float)playerFeatures.AverageDepositAmount,
+                        DaysSinceRegistration = playerFeatures.DaysSinceRegistration,
+                        PlayerLifetimeValue = (float)playerFeatures.PlayerLifetimeValue,
+                        BonusUsageRate = (float)playerFeatures.BonusUsageRate,
+                        TotalBonusesClaimed = playerFeatures.TotalBonusesClaimed,
+                        PreferredBonusTypeIndex = (int?)playerFeatures.PreferredBonusType ?? -1
+                    };
+                    
+                    // Get prediction
+                    var prediction = await Task.Run(() => predictionEngine.Predict(input));
+                    
+                    // Add recommendation if score is above threshold
+                    if (prediction.ConversionProbability > 0.3) // Threshold can be adjusted
+                    {
+                        recommendations.Add(new BonusRecommendation
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            PlayerId = playerId,
+                            BonusId = bonus.Id,
+                            Score = prediction.ConversionProbability,
+                            RecommendationDate = DateTime.UtcNow,
+                            Reason = $"ML-based optimization (ROI: {prediction.ExpectedROI:P2})"
+                        });
                     }
                 }
-
-                _logger.LogInformation($"Generating mock bonus recommendation for player {features.PlayerId}");
-
-                // Get all active bonuses that could be applicable to this player
-                var allBonuses = await _bonusRepository.GetActiveGlobalBonusesAsync();
-                var bonusesForSegment = await _bonusRepository.GetBonusesForPlayerSegmentAsync(features.CurrentSegment);
-
-                // Combine all applicable bonuses
-                var allApplicableBonuses = allBonuses.Concat(bonusesForSegment)
-                    .GroupBy(b => b.Id) // Deduplicate
-                    .Select(g => g.First())
-                    .ToList();
-
-                if (!allApplicableBonuses.Any())
-                {
-                    _logger.LogWarning($"No applicable bonuses found for player {features.PlayerId}, creating mock bonus");
-
-                    // Return a mock bonus recommendation
-                    return new BonusRecommendation
-                    {
-                        BonusId = "B001",
-                        BonusName = "Welcome Bonus",
-                        BonusType = BonusType.DepositMatch,
-                        Amount = 100,
-                        PercentageMatch = 100,
-                        Score = 0.95,
-                        RecommendationReason = "Best match for your playing style"
-                    };
-                }
-
-                // Select a bonus from the available ones
-                var selectedBonus = allApplicableBonuses.FirstOrDefault();
-
-                if (selectedBonus != null)
-                {
-                    var recommendation = new BonusRecommendation
-                    {
-                        BonusId = selectedBonus.Id,
-                        BonusName = selectedBonus.Name,
-                        BonusType = selectedBonus.Type,
-                        Amount = selectedBonus.Amount,
-                        PercentageMatch = selectedBonus.PercentageMatch,
-                        Score = 0.95,
-                        RecommendationReason = GenerateRecommendationReason(selectedBonus, features),
-                        Bonus = selectedBonus
-                    };
-
-                    _logger.LogInformation($"Selected mock bonus {recommendation.BonusId} for player {features.PlayerId}");
-                    return recommendation;
-                }
-
-                return null;
+                
+                // Sort by score and take top recommendations
+                recommendations.Sort((a, b) => b.Score.CompareTo(a.Score));
+                var topRecommendations = recommendations.Count <= maxRecommendations ? 
+                    recommendations : recommendations.GetRange(0, maxRecommendations);
+                
+                _logger.LogInformation($"Generated {topRecommendations.Count} bonus recommendations for player: {playerId}");
+                return topRecommendations;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error predicting optimal bonus for player {features.PlayerId}");
-                return await GetFallbackBonusRecommendation(features);
+                _logger.LogError(ex, $"Error generating bonus recommendations for player: {playerId}");
+                return new List<BonusRecommendation>();
             }
         }
-
-        private async Task<BonusRecommendation> ScoreAndSelectBestBonus(
-            PlayerFeatures features,
-            List<Bonus> applicableBonuses)
+        
+        public class PlayerBonusFeatureInput
         {
-            var bonusScores = new List<(Bonus Bonus, double Score)>();
-
-            foreach (var bonus in applicableBonuses)
-            {
-                var score = await PredictBonusScore(features, bonus);
-                bonusScores.Add((bonus, score));
-            }
-
-            // Select the bonus with the highest score
-            var bestBonusPair = bonusScores.OrderByDescending(pair => pair.Score).FirstOrDefault();
-
-            if (bestBonusPair.Bonus == null)
-            {
-                return null;
-            }
-
-            return new BonusRecommendation
-            {
-                BonusId = bestBonusPair.Bonus.Id,
-                BonusName = bestBonusPair.Bonus.Name,
-                BonusType = bestBonusPair.Bonus.Type,
-                Amount = bestBonusPair.Bonus.Amount,
-                PercentageMatch = bestBonusPair.Bonus.PercentageMatch,
-                Score = bestBonusPair.Score,
-                RecommendationReason = GenerateRecommendationReason(bestBonusPair.Bonus, features),
-                Bonus = bestBonusPair.Bonus
-            };
+            [LoadColumn(0)]
+            public string PlayerId { get; set; }
+            
+            [LoadColumn(1)]
+            public string BonusId { get; set; }
+            
+            [LoadColumn(2)]
+            public int BonusTypeIndex { get; set; }
+            
+            [LoadColumn(3)]
+            public float BonusAmount { get; set; }
+            
+            [LoadColumn(4)]
+            public int WageringRequirement { get; set; }
+            
+            [LoadColumn(5)]
+            public int DepositFrequencyPerMonth { get; set; }
+            
+            [LoadColumn(6)]
+            public float AverageDepositAmount { get; set; }
+            
+            [LoadColumn(7)]
+            public int DaysSinceRegistration { get; set; }
+            
+            [LoadColumn(8)]
+            public float PlayerLifetimeValue { get; set; }
+            
+            [LoadColumn(9)]
+            public float BonusUsageRate { get; set; }
+            
+            [LoadColumn(10)]
+            public int TotalBonusesClaimed { get; set; }
+            
+            [LoadColumn(11)]
+            public int PreferredBonusTypeIndex { get; set; }
         }
-
-        private async Task<double> PredictBonusScore(PlayerFeatures features, Bonus bonus)
+        
+        public class BonusOptimizationPrediction
         {
-            // If we have the ML model loaded, use it for prediction
-            if (_isModelLoaded)
-            {
-                // Create input tensor
-                var inputTensor = CreateInputTensor(features, bonus);
-
-                // Run inference
-                var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", inputTensor) };
-                using var results = _session.Run(inputs);
-                var score = results.First().AsEnumerable<float>().First();
-
-                return score;
-            }
-
-            // Otherwise use a heuristic approach
-            return CalculateHeuristicScore(features, bonus);
-        }
-
-        private DenseTensor<float> CreateInputTensor(PlayerFeatures features, Bonus bonus)
-        {
-            // In a real implementation, this would map all relevant features and bonus attributes
-            // to a tensor based on the model's expected input format
-
-            var inputShape = new[] { 1, 20 }; // Batch size of 1, feature dimension of 20
-            var tensor = new DenseTensor<float>(inputShape);
-
-            // Fill in player features (similar to GameRecommendationModel)
-            tensor[0, 0] = features.DaysSinceRegistration / 365.0f;
-            tensor[0, 1] = (float)features.AverageBetSize;
-            tensor[0, 2] = (float)features.AverageSessionLengthMinutes / 60.0f;
-            tensor[0, 3] = features.SessionFrequencyPerWeek / 7.0f;
-            tensor[0, 4] = (float)features.AverageDepositAmount / 100.0f;
-            tensor[0, 5] = features.DepositFrequencyPerMonth / 30.0f;
-            tensor[0, 6] = (float)features.BonusUsageRate;
-            tensor[0, 7] = (float)features.BonusToDepositConversionRate;
-            tensor[0, 8] = (float)features.WageringCompletionRate;
-            tensor[0, 9] = (float)features.RiskScore;
-            tensor[0, 10] = (float)features.ChurnProbability;
-            tensor[0, 11] = (float)features.PlayerLifetimeValue / 1000.0f;
-            tensor[0, 12] = (float)features.CurrentSegment / 5.0f;
-
-            // Fill in bonus features
-            tensor[0, 13] = (float)bonus.Type / Enum.GetValues(typeof(BonusType)).Length;
-            tensor[0, 14] = (float)bonus.Amount / 1000.0f; // Normalize by typical max bonus amount
-            tensor[0, 15] = bonus.PercentageMatch.HasValue ? (float)bonus.PercentageMatch.Value / 100.0f : 0.0f;
-            tensor[0, 16] = bonus.MinimumDeposit.HasValue ? (float)bonus.MinimumDeposit.Value / 100.0f : 0.0f;
-            tensor[0, 17] = bonus.WageringRequirement.HasValue ? (float)bonus.WageringRequirement.Value / 50.0f : 0.0f;
-
-            // Check if preferred bonus type matches
-            tensor[0, 18] = (features.PreferredBonusType.HasValue && features.PreferredBonusType == bonus.Type) ? 1.0f : 0.0f;
-
-            // Check if player has enough deposits for minimum deposit requirement
-            tensor[0, 19] = (!bonus.MinimumDeposit.HasValue || features.AverageDepositAmount >= bonus.MinimumDeposit.Value) ? 1.0f : 0.0f;
-
-            return tensor;
-        }
-
-        private double CalculateHeuristicScore(PlayerFeatures features, Bonus bonus)
-        {
-            double score = 0.5; // Base score
-
-            // Preferred bonus type match
-            if (features.PreferredBonusType.HasValue && features.PreferredBonusType.Value == bonus.Type)
-            {
-                score += 0.2;
-            }
-
-            // Deposit match appropriateness
-            if (bonus.Type == BonusType.DepositMatch)
-            {
-                // If player has low deposit frequency, deposit match is more valuable
-                if (features.DepositFrequencyPerMonth < 3)
-                {
-                    score += 0.1;
-                }
-
-                // If player's average deposit is close to minimum requirement, it's a good match
-                if (bonus.MinimumDeposit.HasValue &&
-                    features.AverageDepositAmount >= bonus.MinimumDeposit.Value &&
-                    features.AverageDepositAmount <= bonus.MinimumDeposit.Value * 2)
-                {
-                    score += 0.1;
-                }
-            }
-
-            // Free spins appropriateness
-            if (bonus.Type == BonusType.FreeSpins)
-            {
-                // If player prefers slots, free spins are more valuable
-                if (features.FavoriteGameType == GameType.Slot)
-                {
-                    score += 0.2;
-                }
-            }
-
-            // Cashback appropriateness
-            if (bonus.Type == BonusType.Cashback)
-            {
-                // Cashback is better for high-value players
-                if (features.PlayerLifetimeValue > 500)
-                {
-                    score += 0.2;
-                }
-            }
-
-            // Wagering requirement appropriateness
-            if (bonus.WageringRequirement.HasValue)
-            {
-                // If player has low wagering completion rate and high requirement, reduce score
-                if (features.WageringCompletionRate < 0.5 && bonus.WageringRequirement.Value > 20)
-                {
-                    score -= 0.2;
-                }
-            }
-
-            // Churn risk consideration
-            if (features.ChurnProbability > 0.6)
-            {
-                // For high churn risk, no-deposit bonuses are better
-                if (bonus.Type == BonusType.NoDeposit || bonus.Type == BonusType.FreeSpins)
-                {
-                    score += 0.2;
-                }
-            }
-
-            // Normalize final score
-            return Math.Max(0.1, Math.Min(0.9, score));
-        }
-
-        private string GenerateRecommendationReason(Bonus bonus, PlayerFeatures features)
-        {
-            // Generate a personalized reason based on player features and bonus type
-            switch (bonus.Type)
-            {
-                case BonusType.DepositMatch:
-                    if (features.DepositFrequencyPerMonth > 5)
-                        return "Perfect for your regular deposit pattern";
-                    else
-                        return "Great way to boost your next deposit";
-
-                case BonusType.FreeSpins:
-                    if (features.FavoriteGameType == GameType.Slot)
-                        return "Matched to your love of slot games";
-                    else
-                        return "Try out some exciting slot games on us";
-
-                case BonusType.Cashback:
-                    return "Protection for your gameplay with cashback";
-
-                case BonusType.NoDeposit:
-                    if (features.ChurnProbability > 0.6)
-                        return "Welcome back with this no deposit bonus";
-                    else
-                        return "Enjoy this bonus with no deposit required";
-
-                case BonusType.LoyaltyPoints:
-                    if (features.PlayerLifetimeValue > 1000)
-                        return "A reward for your continued loyalty";
-                    else
-                        return "Start building your loyalty rewards";
-
-                default:
-                    return "Selected based on your playing patterns";
-            }
-        }
-
-        private async Task<BonusRecommendation> GetFallbackBonusRecommendation(PlayerFeatures features)
-        {
-            _logger.LogInformation($"Using fallback bonus recommendation strategy for player {features.PlayerId}");
-
-            // Get active bonuses for player segment
-            var segmentBonuses = await _bonusRepository.GetBonusesForPlayerSegmentAsync(features.CurrentSegment);
-
-            // If no segment bonuses, get global bonuses
-            if (!segmentBonuses.Any())
-            {
-                segmentBonuses = await _bonusRepository.GetActiveGlobalBonusesAsync();
-            }
-
-            // If still no bonuses, return null
-            if (!segmentBonuses.Any())
-            {
-                return null;
-            }
-
-            // Find a bonus that matches preferred type if available
-            Bonus selectedBonus = null;
-            if (features.PreferredBonusType.HasValue)
-            {
-                selectedBonus = segmentBonuses
-                    .FirstOrDefault(b => b.Type == features.PreferredBonusType.Value);
-            }
-
-            // If no match by type or no preference, select highest value bonus
-            if (selectedBonus == null)
-            {
-                selectedBonus = segmentBonuses
-                    .OrderByDescending(b => b.Amount)
-                    .FirstOrDefault();
-            }
-
-            // Create recommendation
-            if (selectedBonus != null)
-            {
-                return new BonusRecommendation
-                {
-                    BonusId = selectedBonus.Id,
-                    BonusName = selectedBonus.Name,
-                    BonusType = selectedBonus.Type,
-                    Amount = selectedBonus.Amount,
-                    PercentageMatch = selectedBonus.PercentageMatch,
-                    Score = 0.5, // Default score for fallback
-                    RecommendationReason = "Selected based on your player profile",
-                    Bonus = selectedBonus
-                };
-            }
-
-            return null;
+            [ColumnName("PredictedLabel")]
+            public bool WillClaim { get; set; }
+            
+            public float ConversionProbability { get; set; }
+            
+            public float ExpectedROI { get; set; }
         }
     }
 }

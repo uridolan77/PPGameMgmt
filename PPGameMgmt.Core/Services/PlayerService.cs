@@ -67,7 +67,8 @@ namespace PPGameMgmt.Core.Services
                 throw new ArgumentException("Days active must be positive", nameof(daysActive));
             }
 
-            return await _playerRepository.GetActivePlayers(daysActive);
+            // Changed from GetActivePlayers to GetActivePlayersAsync to match the interface
+            return await _playerRepository.GetActivePlayersAsync(daysActive);
         }
 
         public async Task<PagedResult<Player>> GetActivePlayersPagedAsync(int daysActive, PaginationParameters parameters)

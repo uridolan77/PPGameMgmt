@@ -108,8 +108,7 @@ namespace PPGameMgmt.Infrastructure.ML.Features
                 // Get required repositories
                 var playerRepo = scope.ServiceProvider.GetRequiredService<IPlayerRepository>();
                 var sessionRepo = scope.ServiceProvider.GetRequiredService<IGameSessionRepository>();
-                var bonusClaimRepo = scope.ServiceProvider.GetRequiredService<IBonusClaimRepository>();
-                
+
                 // Get player
                 var player = await playerRepo.GetByIdAsync(playerId);
                 if (player == null)
@@ -120,7 +119,6 @@ namespace PPGameMgmt.Infrastructure.ML.Features
 
                 // Feature extraction logic (similar to the service)
                 var recentSessions = await sessionRepo.GetRecentSessionsByPlayerIdAsync(playerId, 30);
-                var recentClaims = await bonusClaimRepo.GetRecentClaimsByPlayerIdAsync(playerId, 30);
 
                 // Build features object
                 var features = new PlayerFeatures
@@ -134,7 +132,6 @@ namespace PPGameMgmt.Infrastructure.ML.Features
                     PreferredGameGenre = CalculatePreferredGenre(recentSessions),
                     SessionFrequency = CalculateSessionFrequency(recentSessions),
                     TypicalDepositAmount = player.AverageDepositAmount,
-                    TotalBonusesClaimed = recentClaims.Count(),
                     PreferredPlayingTimeOfDay = CalculatePreferredPlayingTime(recentSessions),
                     LastActive = recentSessions.Any()
                         ? recentSessions.Max(s => s.EndTime ?? s.StartTime)

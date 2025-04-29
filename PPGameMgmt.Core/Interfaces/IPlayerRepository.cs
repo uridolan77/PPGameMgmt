@@ -13,6 +13,13 @@ namespace PPGameMgmt.Core.Interfaces
     public interface IPlayerRepository : IRepository<Player>
     {
         /// <summary>
+        /// Gets a player by string ID (overload of the Guid version from IRepository)
+        /// </summary>
+        /// <param name="id">The player's string identifier</param>
+        /// <returns>Player entity if found</returns>
+        Task<Player> GetByIdAsync(string id);
+
+        /// <summary>
         /// Gets a player with all related data (game sessions and bonus claims)
         /// </summary>
         /// <param name="playerId">The player's unique identifier</param>

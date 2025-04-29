@@ -70,17 +70,6 @@ namespace PPGameMgmt.Core.Specifications
         }
 
         /// <summary>
-        /// Specification for players who have claimed at least one bonus
-        /// </summary>
-        public class PlayersWithBonusClaims : Specification<Player>
-        {
-            public override Expression<Func<Player, bool>> ToExpression()
-            {
-                return player => player.BonusClaims.Count > 0;
-            }
-        }
-        
-        /// <summary>
         /// Specification for high-value players with significant deposits
         /// </summary>
         public class HighValuePlayers : Specification<Player>

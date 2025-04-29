@@ -120,6 +120,9 @@ namespace PPGameMgmt.Core.Entities
         [Column("total_bonuses_claimed")]
         public int TotalBonusesClaimed { get; set; }
         
+        [Column("preferred_bonus_type")]
+        public BonusType? PreferredBonusType { get; set; }
+        
         // Social Features
         [Column("referred_others")]
         public bool ReferredOthers { get; set; }

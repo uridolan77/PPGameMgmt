@@ -12,6 +12,13 @@ namespace PPGameMgmt.Core.Interfaces
     public interface IGameRepository : IRepository<Game>
     {
         /// <summary>
+        /// Gets a game by string ID (overload of the Guid version from IRepository)
+        /// </summary>
+        /// <param name="id">The game's string identifier</param>
+        /// <returns>Game entity if found</returns>
+        Task<Game> GetByIdAsync(string id);
+
+        /// <summary>
         /// Gets games by their type
         /// </summary>
         /// <param name="type">The game type to filter by</param>

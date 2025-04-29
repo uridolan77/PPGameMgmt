@@ -35,14 +35,4 @@ namespace PPGameMgmt.Core.Interfaces
     {
         // Add specific player features repository methods here
     }
-
-    /// <summary>
-    /// Interface for outbox repository (for outbox pattern)
-    /// </summary>
-    public interface IOutboxRepository
-    {
-        Task AddMessageAsync(object message);
-        Task<IEnumerable<object>> GetPendingMessagesAsync(int batchSize);
-        Task MarkMessageAsProcessedAsync(Guid id);
-    }
 }

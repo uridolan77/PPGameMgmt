@@ -22,34 +22,22 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             _logger = logger;
         }
         
-        public async Task<IEnumerable<OutboxMessage>> GetUnprocessedMessagesAsync(int batchSize = 100)
+        // Implementation of IOutboxRepository methods
+        public async Task AddMessageAsync(object message)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation($"Getting unprocessed outbox messages (max {batchSize})");
-                    
-                    return await _context.OutboxMessages
-                        .Where(m => m.ProcessedAt == null)
-                        .OrderBy(m => m.CreatedAt)
-                        .Take(batchSize)
-                        .ToListAsync();
-                },
-                _entityName,
-                $"Error retrieving unprocessed outbox messages",
-                _logger
-            );
-        }
-        
-        public async Task AddAsync(OutboxMessage message)
-        {
+            if (message is not OutboxMessage outboxMessage)
+            {
+                throw new ArgumentException("Message must be of type OutboxMessage", nameof(message));
+            }
+            
             await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
-                    _logger?.LogInformation($"Adding outbox message of type {message.Type}");
+                    _logger?.LogInformation($"Adding outbox message of type {outboxMessage.Type}");
                     
-                    await _context.OutboxMessages.AddAsync(message);
+                    await _context.OutboxMessages.AddAsync(outboxMessage);
                     await _context.SaveChangesAsync();
                     
-                    _logger?.LogInformation($"Added outbox message with ID: {message.Id}");
+                    _logger?.LogInformation($"Added outbox message with ID: {outboxMessage.Id}");
                 },
                 _entityName,
                 $"Error adding outbox message",
@@ -57,7 +45,27 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             );
         }
         
-        public async Task MarkAsProcessedAsync(Guid id)
+        public async Task<IEnumerable<object>> GetPendingMessagesAsync(int batchSize)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting pending outbox messages (max {batchSize})");
+                    
+                    var messages = await _context.OutboxMessages
+                        .Where(m => m.ProcessedAt == null)
+                        .OrderBy(m => m.CreatedAt)
+                        .Take(batchSize)
+                        .ToListAsync();
+                    
+                    return messages.Cast<object>().ToList();
+                },
+                _entityName,
+                $"Error retrieving pending outbox messages",
+                _logger
+            );
+        }
+        
+        public async Task MarkMessageAsProcessedAsync(Guid id)
         {
             await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
@@ -82,6 +90,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             );
         }
         
+        // Additional helper methods (not part of the interface)
         public async Task CleanupProcessedMessagesAsync(DateTime before)
         {
             await RepositoryExceptionHandler.ExecuteAsync(

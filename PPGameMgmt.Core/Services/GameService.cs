@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
@@ -27,12 +28,14 @@ namespace PPGameMgmt.Core.Services
                 throw new ArgumentNullException(nameof(gameId));
             }
             
+            // Call the string version of GetByIdAsync in IGameRepository
             return await _gameRepository.GetByIdAsync(gameId);
         }
 
         public async Task<IEnumerable<Game>> GetAllGamesAsync()
         {
-            return await _gameRepository.GetAllAsync();
+            // Use ListAllAsync instead of GetAllAsync
+            return await _gameRepository.ListAllAsync();
         }
 
         public async Task<IEnumerable<Game>> GetGamesByTypeAsync(GameType type)
@@ -75,7 +78,8 @@ namespace PPGameMgmt.Core.Services
             // Convert search term to lowercase for case-insensitive search
             searchTerm = searchTerm.ToLower();
             
-            var allGames = await _gameRepository.GetAllAsync();
+            // Use ListAllAsync instead of GetAllAsync
+            var allGames = await _gameRepository.ListAllAsync();
             
             // Filter games that match the search term in name, provider, or description
             return allGames.Where(g => 

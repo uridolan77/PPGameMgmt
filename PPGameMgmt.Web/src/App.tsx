@@ -1,40 +1,16 @@
-import { Suspense } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query/devtools';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { Router } from './core/routing';
 import { ErrorBoundary } from './core/error';
-import { Router } from './core/routing/Router';
-import { theme } from './core/theme';
-import { LoadingSpinner } from './shared/components/LoadingSpinner';
+import { Toaster } from "./components/ui/sonner";
 
-// Configure React Query client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import './App.css';
 
-const App = () => {
+function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <Suspense fallback={<LoadingSpinner fullPage />}>
-              <Router />
-            </Suspense>
-          </BrowserRouter>
-          {import.meta.env.DEV && <ReactQueryDevtools />}
-        </QueryClientProvider>
-      </ThemeProvider>
+      <Router />
+      <Toaster position="top-right" richColors closeButton />
     </ErrorBoundary>
   );
-};
+}
 
 export default App;

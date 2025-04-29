@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Specifications;
@@ -38,8 +39,8 @@ namespace PPGameMgmt.Core.CQRS.Queries.Players
             // Create a specification for high-value players
             var highValueSpec = new PlayerSpecifications.HighValuePlayers(query.MinimumDeposit);
 
-            // Get players matching the specification and return them ordered by total deposits
-            var players = await _playerRepository.FindAsync(highValueSpec.ToExpression());
+            // Get players matching the specification using ListAsync instead of FindAsync
+            var players = await _playerRepository.ListAsync(highValueSpec.ToExpression());
 
             // Sort and take the top N players
             return players
