@@ -4,12 +4,14 @@ import { AuthGuard, RoleGuard } from './guards';
 import { MainLayout, AuthLayout } from '../layouts';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 
-// Lazy-loaded components
-const Dashboard = lazy(() => import('../../features/dashboard/pages/Dashboard'));
-const GamesList = lazy(() => import('../../features/games/pages/GamesList'));
-const GameDetail = lazy(() => import('../../features/games/pages/GameDetail'));
-const PlayersList = lazy(() => import('../../features/players/pages/PlayersList'));
-const PlayerDetail = lazy(() => import('../../features/players/pages/PlayerDetail'));
+// Lazy-loaded features using the new module exports
+const DashboardPage = lazy(() => import('../../features/dashboard').then(module => ({ default: module.DashboardPage })));
+const GamesListPage = lazy(() => import('../../features/games').then(module => ({ default: module.GamesListPage })));
+const GameDetailPage = lazy(() => import('../../features/games').then(module => ({ default: module.GameDetailPage })));
+const GameFormPage = lazy(() => import('../../features/games').then(module => ({ default: module.GameFormPage })));
+const PlayersListPage = lazy(() => import('../../features/players').then(module => ({ default: module.PlayersListPage })));
+const PlayerDetailPage = lazy(() => import('../../features/players').then(module => ({ default: module.PlayerDetailPage })));
+const PlayerFormPage = lazy(() => import('../../features/players').then(module => ({ default: module.PlayerFormPage })));
 const BonusesList = lazy(() => import('../../features/bonuses/pages/BonusesList'));
 const BonusDetail = lazy(() => import('../../features/bonuses/pages/BonusDetail'));
 const Recommendations = lazy(() => import('../../features/recommendations/pages/Recommendations'));
@@ -47,7 +49,7 @@ export const routes: AppRouteObject[] = [
         index: true,
         element: (
           <AuthGuard>
-            {suspensedRoute(Dashboard)}
+            {suspensedRoute(DashboardPage)}
           </AuthGuard>
         )
       },
@@ -58,7 +60,15 @@ export const routes: AppRouteObject[] = [
             index: true,
             element: (
               <AuthGuard>
-                {suspensedRoute(GamesList)}
+                {suspensedRoute(GamesListPage)}
+              </AuthGuard>
+            )
+          },
+          {
+            path: 'new',
+            element: (
+              <AuthGuard>
+                {suspensedRoute(GameFormPage)}
               </AuthGuard>
             )
           },
@@ -66,7 +76,15 @@ export const routes: AppRouteObject[] = [
             path: ':id',
             element: (
               <AuthGuard>
-                {suspensedRoute(GameDetail)}
+                {suspensedRoute(GameDetailPage)}
+              </AuthGuard>
+            )
+          },
+          {
+            path: ':id/edit',
+            element: (
+              <AuthGuard>
+                {suspensedRoute(GameFormPage)}
               </AuthGuard>
             )
           }
@@ -79,7 +97,15 @@ export const routes: AppRouteObject[] = [
             index: true,
             element: (
               <AuthGuard>
-                {suspensedRoute(PlayersList)}
+                {suspensedRoute(PlayersListPage)}
+              </AuthGuard>
+            )
+          },
+          {
+            path: 'new',
+            element: (
+              <AuthGuard>
+                {suspensedRoute(PlayerFormPage)}
               </AuthGuard>
             )
           },
@@ -87,7 +113,15 @@ export const routes: AppRouteObject[] = [
             path: ':id',
             element: (
               <AuthGuard>
-                {suspensedRoute(PlayerDetail)}
+                {suspensedRoute(PlayerDetailPage)}
+              </AuthGuard>
+            )
+          },
+          {
+            path: ':id/edit',
+            element: (
+              <AuthGuard>
+                {suspensedRoute(PlayerFormPage)}
               </AuthGuard>
             )
           }

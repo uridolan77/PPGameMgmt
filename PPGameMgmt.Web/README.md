@@ -1,80 +1,115 @@
-# PP Game Management Frontend
+# PPGameMgmt Web Application
 
-This is the frontend application for the PP Game Management system. It's built with React, Vite, and uses a combination of Material UI and Tailwind CSS for styling.
+## Project Overview
 
-## Project Structure
+PPGameMgmt is a comprehensive platform for managing gaming operations, including game inventory, player management, and bonus campaigns.
 
-The project follows a modern React application structure:
+## Architecture and Structure
 
-```plaintext
+This project follows a feature-based structure with clean separation of concerns:
+
+```
 src/
-├── assets/         # Static assets like images
-├── components/     # Reusable UI components
-├── context/        # React context providers
-├── hooks/          # Custom React hooks
-├── pages/          # Page components
-├── services/       # API services
-├── stores/         # Zustand state stores
-├── styles/         # Global styles
-└── utils/          # Utility functions
+├── assets/         # Static assets like images and icons
+├── core/           # Core application services and utilities
+│   ├── api/        # API client and communication layer
+│   ├── error/      # Error handling and boundaries
+│   ├── i18n/       # Internationalization
+│   ├── layouts/    # Application layouts
+│   ├── logger/     # Logging services
+│   ├── routing/    # Routing configuration
+│   ├── store/      # Global state management
+│   └── theme/      # Theme configuration
+├── features/       # Feature modules
+│   ├── auth/       # Authentication
+│   ├── dashboard/  # Dashboard
+│   ├── games/      # Games management
+│   ├── players/    # Player management
+│   └── bonuses/    # Bonus campaigns
+├── shared/         # Shared components, hooks, and utilities
+│   ├── components/ # Shared UI components
+│   ├── hooks/      # Custom hooks
+│   └── utils/      # Utility functions
+└── utils/          # Global utility functions
 ```
 
-## Key Technologies
+## Feature Module Structure
 
-- **React**: UI library
-- **Vite**: Build tool
-- **React Router**: For routing
-- **React Query**: For data fetching and caching
-- **Zustand**: For state management
-- **Material UI**: Component library
-- **Tailwind CSS**: Utility-first CSS framework
-- **Recharts**: For data visualization
+Each feature module follows this consistent structure:
 
-## State Management
+```
+feature/
+├── index.ts        # Public API of the feature
+├── types.ts        # TypeScript types and interfaces
+├── components/     # UI components
+├── hooks/          # Feature-specific hooks
+├── pages/          # Route components
+├── services/       # Feature-specific services
+└── store/          # Feature state management
+```
 
-The application uses a combination of:
+## Key Conventions
 
-1. **React Query** for server state (API data)
-2. **Zustand** for client state, organized into separate stores:
-   - `dashboardStore.js`: Dashboard configuration and widget settings
-   - `preferencesStore.js`: User preferences that persist across sessions
-   - `uiStore.js`: UI-specific state like sidebar open/closed, active tabs, etc.
+### Imports
 
-## Styling Approach
+- Import from feature modules using the public API:
+  ```typescript
+  import { GameCard, useGames } from '@/features/games';
+  ```
+- Avoid importing directly from internal files:
+  ```typescript
+  // Avoid this
+  import { GameCard } from '@/features/games/components/GameCard';
+  ```
 
-The application uses Tailwind CSS as the primary styling approach, with Material UI components for complex UI elements. The styling is organized as follows:
+### API Access
 
-1. **Tailwind CSS**: For utility-based styling (configured in `postcss.config.js`)
-2. **CSS Modules**: For component-specific styles
-3. **Material UI Theme**: For consistent theming of Material UI components (configured in `utils/theme.js`)
+- Use the centralized ApiClient for all API requests
+- The client handles authentication, error handling, and request/response formatting
 
-## Development Guidelines
+### Component Props
 
-### Code Organization
+- Define explicit interfaces for component props
+- Use consistent naming conventions
+- Document props with JSDoc comments for complex components
 
-- Keep components small and focused on a single responsibility
-- Extract complex logic into custom hooks
-- Use the appropriate state management solution for each use case:
-  - Component state for local UI state
-  - React Query for server data
-  - Zustand for shared client state
+### State Management
 
-### Styling Guidelines
+- Use React Query for server state management
+- Use Zustand for UI and local state management
+- Export state hooks from feature modules
 
-- Prefer Tailwind CSS classes for styling
-- Use Material UI's `sx` prop for Material UI component styling
-- Keep CSS modules minimal and only for complex styling that can't be achieved with Tailwind
+## Development Workflow
 
-### TypeScript
+### Getting Started
 
-The project is set up to support TypeScript. When creating new files, consider using `.tsx` and `.ts` extensions to leverage type safety.
+1. Clone the repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Start the development server:
+   ```
+   npm run dev
+   ```
 
-## Available Scripts
+### Building
 
-- `npm run dev`: Start the development server
-- `npm run build`: Build for production
-- `npm run preview`: Preview the production build
-- `npm run test`: Run tests
-- `npm run test:watch`: Run tests in watch mode
-- `npm run test:coverage`: Run tests with coverage report
-- `npm run lint`: Lint the codebase
+```
+npm run build
+```
+
+### Testing
+
+```
+npm run test
+```
+
+## Best Practices
+
+1. **TypeScript**: Use strict typing throughout the application
+2. **Component Organization**: Keep components small and focused
+3. **Error Handling**: Implement proper error boundaries and fallbacks
+4. **Performance**: Use React.memo, useMemo, and useCallback appropriately
+5. **Testing**: Write unit tests for critical functionality
+6. **Accessibility**: Ensure all components meet WCAG standards

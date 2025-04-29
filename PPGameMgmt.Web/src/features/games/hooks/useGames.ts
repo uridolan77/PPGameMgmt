@@ -1,171 +1,81 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import { apiClient } from '../../../core/api';
+import { Game, GameFilter } from '../types';
 
-// Game interfaces
-interface Game {
-  id: string;
-  name: string;
-  provider: string;
-  category: string;
-  type: string;
-  releaseDate: string;
-  popularity: number;
-  status: 'active' | 'inactive' | 'maintenance';
-  description?: string;
-  genre?: string;
-  developer?: string;
-  publisher?: string;
-  features?: string[];
-  rtp?: number;
-  volatility?: string;
-  minBet?: number;
-  maxBet?: number;
-  maxWin?: string;
-  platforms?: string[];
-  languages?: string[];
-}
-
-interface GameSession {
-  id: string;
-  playerId: string;
-  playerName: string;
-  startTime: string;
-  endTime: string | null;
-  duration: number;
-  betAmount: number;
-  winAmount: number;
-}
-
-interface StatPoint {
-  date: string;
-  value: number;
-}
-
-// API functions
-const API_URL = '/api';
-const gameService = {
-  getAllGames: async () => {
-    const response = await axios.get(`${API_URL}/games`);
-    return response.data;
-  },
-  
-  getGameById: async (id: string) => {
-    const response = await axios.get(`${API_URL}/games/${id}`);
-    return response.data;
-  },
-  
-  getGameSessions: async (gameId: string) => {
-    const response = await axios.get(`${API_URL}/games/${gameId}/sessions`);
-    return response.data;
-  },
-  
-  getGamePopularityStats: async (gameId: string) => {
-    const response = await axios.get(`${API_URL}/games/${gameId}/popularity-stats`);
-    return response.data;
-  },
-  
-  getGameRevenueStats: async (gameId: string) => {
-    const response = await axios.get(`${API_URL}/games/${gameId}/revenue-stats`);
-    return response.data;
-  },
-  
-  createGame: async (gameData: Omit<Game, 'id'>) => {
-    const response = await axios.post(`${API_URL}/games`, gameData);
-    return response.data;
-  },
-  
-  updateGame: async (id: string, gameData: Partial<Game>) => {
-    const response = await axios.put(`${API_URL}/games/${id}`, gameData);
-    return response.data;
-  },
-  
-  deleteGame: async (id: string) => {
-    const response = await axios.delete(`${API_URL}/games/${id}`);
-    return response.data;
-  }
-};
-
-// Query keys
-export const gameKeys = {
-  all: ['games'] as const,
-  detail: (id: string) => [...gameKeys.all, 'detail', id] as const,
-  sessions: (id: string) => [...gameKeys.all, 'sessions', id] as const,
-  popularityStats: (id: string) => [...gameKeys.all, 'popularity-stats', id] as const,
-  revenueStats: (id: string) => [...gameKeys.all, 'revenue-stats', id] as const,
-};
-
-// Hooks for fetching games
-export function useGames() {
-  return useQuery<Game[]>({
-    queryKey: gameKeys.all,
-    queryFn: gameService.getAllGames,
-  });
-}
-
-export function useGame(id?: string) {
-  return useQuery<Game>({
-    queryKey: gameKeys.detail(id || ''),
-    queryFn: () => gameService.getGameById(id || ''),
-    enabled: !!id,
-  });
-}
-
-export function useGameSessions(gameId?: string) {
-  return useQuery<GameSession[]>({
-    queryKey: gameKeys.sessions(gameId || ''),
-    queryFn: () => gameService.getGameSessions(gameId || ''),
-    enabled: !!gameId,
-  });
-}
-
-export function useGamePopularityStats(gameId?: string) {
-  return useQuery<StatPoint[]>({
-    queryKey: gameKeys.popularityStats(gameId || ''),
-    queryFn: () => gameService.getGamePopularityStats(gameId || ''),
-    enabled: !!gameId,
-  });
-}
-
-export function useGameRevenueStats(gameId?: string) {
-  return useQuery<StatPoint[]>({
-    queryKey: gameKeys.revenueStats(gameId || ''),
-    queryFn: () => gameService.getGameRevenueStats(gameId || ''),
-    enabled: !!gameId,
-  });
-}
-
-// Mutation hooks for modifying games
-export function useCreateGame() {
+export function useGames(filters?: GameFilter) {
   const queryClient = useQueryClient();
   
-  return useMutation({
-    mutationFn: (gameData: Omit<Game, 'id'>) => gameService.createGame(gameData),
+  // Fetch games list with optional filtering
+  const gamesQuery = useQuery({
+    queryKey: ['games', filters],
+    queryFn: async () => {
+      return apiClient.get<Game[]>('/api/games', filters);
+    }
+  });
+
+  // Fetch a single game by ID
+  const getGame = (id: number) => {
+    return useQuery({
+      queryKey: ['game', id],
+      queryFn: async () => {
+        return apiClient.get<Game>(`/api/games/${id}`);
+      },
+      enabled: !!id
+    });
+  };
+
+  // Create a new game
+  const createGame = useMutation({
+    mutationFn: (newGame: Omit<Game, 'id'>) => {
+      return apiClient.post<Game>('/api/games', newGame);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: gameKeys.all });
-    },
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+    }
   });
-}
 
-export function useUpdateGame() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ id, gameData }: { id: string, gameData: Partial<Game> }) => 
-      gameService.updateGame(id, gameData),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: gameKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: gameKeys.all });
+  // Update an existing game
+  const updateGame = useMutation({
+    mutationFn: (game: Game) => {
+      return apiClient.put<Game>(`/api/games/${game.id}`, game);
     },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game', data.id] });
+    }
   });
-}
 
-export function useDeleteGame() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (id: string) => gameService.deleteGame(id),
+  // Delete a game
+  const deleteGame = useMutation({
+    mutationFn: (id: number) => {
+      return apiClient.delete<void>(`/api/games/${id}`);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: gameKeys.all });
-    },
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+    }
   });
+
+  // Toggle game active status
+  const toggleGameStatus = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => {
+      return apiClient.patch<Game>(`/api/games/${id}/status`, { isActive });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game', data.id] });
+    }
+  });
+  
+  return {
+    games: gamesQuery.data || [],
+    isLoading: gamesQuery.isLoading,
+    isError: gamesQuery.isError,
+    error: gamesQuery.error,
+    getGame,
+    createGame,
+    updateGame,
+    deleteGame,
+    toggleGameStatus,
+    refetch: gamesQuery.refetch
+  };
 }

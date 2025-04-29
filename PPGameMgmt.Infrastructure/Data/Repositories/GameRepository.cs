@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Models;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
@@ -195,6 +196,122 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 },
                 _entityName,
                 $"Error retrieving new releases",
+                _logger
+            );
+        }
+
+        public async Task<PagedResult<Game>> GetGamesByTypePagedAsync(GameType type, PaginationParameters parameters)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting paged games by type: {type}, page {parameters.PageNumber}, size {parameters.PageSize}");
+
+                    var query = _context.Games.Where(g => g.Type == type && g.IsActive);
+                    var totalCount = await query.CountAsync();
+                    var games = await query
+                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                        .Take(parameters.PageSize)
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {games.Count} games of type {type} (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+
+                    return new PagedResult<Game>(games, totalCount, parameters.PageNumber, parameters.PageSize);
+                },
+                _entityName,
+                $"Error retrieving paged games by type: {type}",
+                _logger
+            );
+        }
+
+        public async Task<PagedResult<Game>> GetGamesByCategoryPagedAsync(GameCategory category, PaginationParameters parameters)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting paged games by category: {category}, page {parameters.PageNumber}, size {parameters.PageSize}");
+
+                    var query = _context.Games.Where(g => g.Category == category && g.IsActive);
+                    var totalCount = await query.CountAsync();
+                    var games = await query
+                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                        .Take(parameters.PageSize)
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {games.Count} games of category {category} (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+
+                    return new PagedResult<Game>(games, totalCount, parameters.PageNumber, parameters.PageSize);
+                },
+                _entityName,
+                $"Error retrieving paged games by category: {category}",
+                _logger
+            );
+        }
+
+        public async Task<PagedResult<Game>> GetPopularGamesPagedAsync(PaginationParameters parameters)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting paged popular games, page {parameters.PageNumber}, size {parameters.PageSize}");
+
+                    // Get most played games by aggregating session data
+                    var popularGameIds = await _context.GameSessions
+                        .Where(gs => gs.StartTime >= DateTime.UtcNow.AddDays(-30)) // Last 30 days
+                        .GroupBy(gs => gs.GameId)
+                        .OrderByDescending(g => g.Count())
+                        .Select(g => g.Key)
+                        .ToListAsync();
+
+                    // Get total count for pagination
+                    var totalCount = popularGameIds.Count;
+
+                    // Apply pagination to the IDs
+                    var pagedIds = popularGameIds
+                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                        .Take(parameters.PageSize)
+                        .ToList();
+
+                    // Return the actual game objects in the correct order
+                    var games = await _context.Games
+                        .Where(g => pagedIds.Contains(g.Id) && g.IsActive)
+                        .ToListAsync();
+
+                    // Preserve the order from popularGameIds
+                    var orderedGames = pagedIds
+                        .Select(id => games.FirstOrDefault(g => g.Id == id))
+                        .Where(g => g != null)
+                        .ToList();
+
+                    _logger?.LogInformation($"Retrieved {orderedGames.Count} popular games (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+
+                    return new PagedResult<Game>(orderedGames, totalCount, parameters.PageNumber, parameters.PageSize);
+                },
+                _entityName,
+                $"Error retrieving paged popular games",
+                _logger
+            );
+        }
+
+        public async Task<PagedResult<Game>> GetNewReleasesPagedAsync(PaginationParameters parameters)
+        {
+            return await RepositoryExceptionHandler.ExecuteAsync(
+                async () => {
+                    _logger?.LogInformation($"Getting paged new releases, page {parameters.PageNumber}, size {parameters.PageSize}");
+
+                    var query = _context.Games
+                        .Where(g => g.IsActive)
+                        .OrderByDescending(g => g.ReleaseDate);
+                    
+                    var totalCount = await query.CountAsync();
+                    var games = await query
+                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                        .Take(parameters.PageSize)
+                        .ToListAsync();
+
+                    _logger?.LogInformation($"Retrieved {games.Count} new releases (page {parameters.PageNumber} of {Math.Ceiling((double)totalCount / parameters.PageSize)})");
+
+                    return new PagedResult<Game>(games, totalCount, parameters.PageNumber, parameters.PageSize);
+                },
+                _entityName,
+                $"Error retrieving paged new releases",
                 _logger
             );
         }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import { apiClient } from '../../../core/api';
 
 // TypeScript interface for player form data
 interface PlayerFormInputs {
@@ -33,8 +33,8 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ playerId, onSuccess }) => {
     queryKey: ['player', playerId],
     queryFn: async () => {
       if (!playerId) return undefined;
-      const response = await axios.get(`/api/players/${playerId}`);
-      return response.data;
+      // Use the improved apiClient
+      return apiClient.get<PlayerFormInputs>(`/api/players/${playerId}`);
     },
     enabled: !!playerId,
     onSuccess: (data) => {
@@ -48,9 +48,11 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ playerId, onSuccess }) => {
   const mutation = useMutation({
     mutationFn: async (data: PlayerFormInputs) => {
       if (playerId) {
-        return axios.put(`/api/players/${playerId}`, data);
+        // Use the improved apiClient for PUT request
+        return apiClient.put<PlayerFormInputs>(`/api/players/${playerId}`, data);
       } else {
-        return axios.post('/api/players', data);
+        // Use the improved apiClient for POST request
+        return apiClient.post<PlayerFormInputs>('/api/players', data);
       }
     },
     onSuccess: () => {

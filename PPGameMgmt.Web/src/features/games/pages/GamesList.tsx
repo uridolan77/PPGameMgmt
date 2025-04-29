@@ -1,200 +1,331 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Typography, Button, Box, Chip, Avatar } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import { DataTable, Column } from '../../../shared/components/DataTable';
-import { useStore } from '../../../core/store';
-
-interface Game {
-  id: string;
-  name: string;
-  provider: string;
-  category: string;
-  type: string;
-  releaseDate: string;
-  popularity: number;
-  status: 'active' | 'inactive' | 'maintenance';
-}
-
-// Mock data for demonstration
-const mockGames: Game[] = [
-  { 
-    id: '1', 
-    name: 'Mystic Fortune', 
-    provider: 'PlayWise', 
-    category: 'Slots', 
-    type: 'Video Slot',
-    releaseDate: '2023-05-15',
-    popularity: 4.8,
-    status: 'active'
-  },
-  { 
-    id: '2', 
-    name: 'Royal Blackjack', 
-    provider: 'CardMasters', 
-    category: 'Table Games', 
-    type: 'Card Game',
-    releaseDate: '2023-02-10',
-    popularity: 4.5,
-    status: 'active'
-  },
-  { 
-    id: '3', 
-    name: 'Mega Wheel', 
-    provider: 'SpinTech', 
-    category: 'Live Casino', 
-    type: 'Game Show',
-    releaseDate: '2023-08-22',
-    popularity: 4.2,
-    status: 'active'
-  },
-  { 
-    id: '4', 
-    name: 'Treasure Hunt', 
-    provider: 'PlayWise', 
-    category: 'Slots', 
-    type: 'Adventure Slot',
-    releaseDate: '2022-11-30',
-    popularity: 4.6,
-    status: 'maintenance'
-  },
-  { 
-    id: '5', 
-    name: 'European Roulette', 
-    provider: 'RouletteKings', 
-    category: 'Table Games', 
-    type: 'Roulette',
-    releaseDate: '2022-09-05',
-    popularity: 4.3,
-    status: 'active'
-  },
-  { 
-    id: '6', 
-    name: 'Dragon's Lair', 
-    provider: 'MythicGames', 
-    category: 'Slots', 
-    type: 'Video Slot',
-    releaseDate: '2023-01-15',
-    popularity: 3.9,
-    status: 'inactive'
-  },
-];
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Grid, 
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Card,
+  CardContent,
+  Divider,
+  Chip
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { GameCard } from '../components';
+import { useGames } from '../hooks';
+import { Game, GameFilter } from '../types';
 
 const GamesList: React.FC = () => {
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { preferences } = useStore();
-  const tablePreference = preferences.tablePreferences.games;
-
-  useEffect(() => {
-    // Simulate API call
-    const fetchGames = async () => {
-      setLoading(true);
-      try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setGames(mockGames);
-      } catch (error) {
-        console.error('Error fetching games:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGames();
-  }, []);
-
-  const handleRowClick = (game: Game) => {
+  const [filters, setFilters] = useState<GameFilter>({
+    isActive: undefined,
+    searchTerm: '',
+    category: undefined,
+    provider: undefined,
+    sortBy: 'popularity',
+    sortDirection: 'desc'
+  });
+  
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Use our custom useGames hook to manage game data
+  const { 
+    games, 
+    isLoading, 
+    isError,
+    error,
+    refetch,
+    toggleGameStatus 
+  } = useGames(filters);
+  
+  // Handle game click navigation
+  const handleGameClick = (game: Game) => {
     navigate(`/games/${game.id}`);
   };
-
-  const columns: Column<Game>[] = [
-    {
-      id: 'name',
-      label: 'Game Name',
-      renderCell: (game) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar 
-            variant="rounded"
-            sx={{ 
-              width: 40, 
-              height: 40, 
-              mr: 2,
-              bgcolor: `#${Math.floor(Math.random()*16777215).toString(16)}`
-            }}
-          >
-            {game.name.charAt(0)}
-          </Avatar>
-          <Typography variant="body2" fontWeight="medium">
-            {game.name}
-          </Typography>
-        </Box>
-      ),
-    },
-    { id: 'provider', label: 'Provider' },
-    { id: 'category', label: 'Category' },
-    { id: 'type', label: 'Type' },
-    {
-      id: 'popularity',
-      label: 'Popularity',
-      align: 'right',
-      renderCell: (game) => (
-        <Typography variant="body2">
-          {game.popularity.toFixed(1)}/5.0
-        </Typography>
-      ),
-    },
-    {
-      id: 'status',
-      label: 'Status',
-      renderCell: (game) => {
-        const statusConfig = {
-          active: { color: 'success', label: 'Active' },
-          inactive: { color: 'error', label: 'Inactive' },
-          maintenance: { color: 'warning', label: 'Maintenance' },
-        };
-        
-        const config = statusConfig[game.status];
-        
-        return (
-          <Chip 
-            label={config.label} 
-            size="small"
-            color={config.color as 'success' | 'error' | 'warning'}
-            variant="outlined"
-          />
-        );
-      },
-    },
-  ];
-
+  
+  // Handle adding a new game
+  const handleAddGame = () => {
+    navigate('/games/new');
+  };
+  
+  // Handle status toggle
+  const handleToggleStatus = (game: Game, event: React.MouseEvent) => {
+    event.stopPropagation();
+    toggleGameStatus.mutate({ id: game.id, isActive: !game.isActive });
+  };
+  
+  // Handle filter changes
+  const handleFilterChange = (field: keyof GameFilter, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  // Clear all filters
+  const handleClearFilters = () => {
+    setFilters({
+      isActive: undefined,
+      searchTerm: '',
+      category: undefined,
+      provider: undefined,
+      sortBy: 'popularity',
+      sortDirection: 'desc'
+    });
+  };
+  
+  // Categories and providers (in a real app, these would come from an API)
+  const categories = ['Slots', 'Table Games', 'Live Casino', 'Jackpot', 'Other'];
+  const providers = ['NetEnt', 'Microgaming', 'Playtech', 'Evolution', 'Pragmatic Play'];
+  
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
-          Games Library
+          Games Management
         </Typography>
-        <Button
-          variant="contained"
+        <Button 
+          variant="contained" 
+          color="primary" 
           startIcon={<AddIcon />}
-          onClick={() => navigate('/games/new')}
+          onClick={handleAddGame}
         >
-          Add New Game
+          Add Game
         </Button>
       </Box>
-
-      <DataTable<Game>
-        data={games}
-        columns={columns}
-        keyExtractor={(item) => item.id}
-        onRowClick={handleRowClick}
-        initialSortBy="name"
-        searchable={true}
-        pagination={true}
-        dense={tablePreference?.density === 'compact'}
-        stickyHeader
-      />
+      
+      <Box mb={4}>
+        <Box display="flex" alignItems="center" gap={2} mb={2}>
+          <TextField
+            label="Search games"
+            variant="outlined"
+            size="small"
+            value={filters.searchTerm}
+            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+            sx={{ flex: 1 }}
+            placeholder="Search by title, provider..."
+          />
+          <IconButton onClick={() => setShowFilters(!showFilters)} color="primary">
+            <FilterListIcon />
+          </IconButton>
+          <IconButton onClick={() => refetch()} color="primary">
+            <RefreshIcon />
+          </IconButton>
+        </Box>
+        
+        {showFilters && (
+          <Card variant="outlined" sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Filters
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      value={filters.isActive === undefined ? '' : filters.isActive ? 'active' : 'inactive'}
+                      label="Status"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        handleFilterChange('isActive', value === '' ? undefined : value === 'active');
+                      }}
+                    >
+                      <MenuItem value="">All</MenuItem>
+                      <MenuItem value="active">Active</MenuItem>
+                      <MenuItem value="inactive">Inactive</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Category</InputLabel>
+                    <Select
+                      value={filters.category || ''}
+                      label="Category"
+                      onChange={(e) => handleFilterChange('category', e.target.value || undefined)}
+                    >
+                      <MenuItem value="">All Categories</MenuItem>
+                      {categories.map((category) => (
+                        <MenuItem key={category} value={category}>
+                          {category}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Provider</InputLabel>
+                    <Select
+                      value={filters.provider || ''}
+                      label="Provider"
+                      onChange={(e) => handleFilterChange('provider', e.target.value || undefined)}
+                    >
+                      <MenuItem value="">All Providers</MenuItem>
+                      {providers.map((provider) => (
+                        <MenuItem key={provider} value={provider}>
+                          {provider}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Sort By</InputLabel>
+                    <Select
+                      value={`${filters.sortBy || 'popularity'}_${filters.sortDirection || 'desc'}`}
+                      label="Sort By"
+                      onChange={(e) => {
+                        const [sortBy, sortDirection] = e.target.value.split('_');
+                        handleFilterChange('sortBy', sortBy);
+                        handleFilterChange('sortDirection', sortDirection);
+                      }}
+                    >
+                      <MenuItem value="title_asc">Title (A-Z)</MenuItem>
+                      <MenuItem value="title_desc">Title (Z-A)</MenuItem>
+                      <MenuItem value="releaseDate_desc">Newest First</MenuItem>
+                      <MenuItem value="releaseDate_asc">Oldest First</MenuItem>
+                      <MenuItem value="popularity_desc">Most Popular</MenuItem>
+                      <MenuItem value="popularity_asc">Least Popular</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+              <Box display="flex" justifyContent="flex-end" mt={2}>
+                <Button 
+                  size="small" 
+                  onClick={handleClearFilters}
+                >
+                  Clear Filters
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Active filters display */}
+        {(filters.searchTerm || filters.category || filters.provider || filters.isActive !== undefined) && (
+          <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+            {filters.searchTerm && (
+              <Chip 
+                label={`Search: ${filters.searchTerm}`} 
+                onDelete={() => handleFilterChange('searchTerm', '')} 
+                size="small"
+              />
+            )}
+            {filters.category && (
+              <Chip 
+                label={`Category: ${filters.category}`} 
+                onDelete={() => handleFilterChange('category', undefined)} 
+                size="small"
+              />
+            )}
+            {filters.provider && (
+              <Chip 
+                label={`Provider: ${filters.provider}`} 
+                onDelete={() => handleFilterChange('provider', undefined)} 
+                size="small"
+              />
+            )}
+            {filters.isActive !== undefined && (
+              <Chip 
+                label={`Status: ${filters.isActive ? 'Active' : 'Inactive'}`} 
+                onDelete={() => handleFilterChange('isActive', undefined)} 
+                size="small"
+              />
+            )}
+          </Box>
+        )}
+      </Box>
+      
+      {/* Loading and Error States */}
+      {isLoading && (
+        <Box display="flex" justifyContent="center" my={4}>
+          <Typography>Loading games...</Typography>
+        </Box>
+      )}
+      
+      {isError && (
+        <Box 
+          display="flex" 
+          flexDirection="column" 
+          alignItems="center" 
+          justifyContent="center" 
+          my={4} 
+          p={3} 
+          bgcolor="error.light" 
+          borderRadius={1}
+        >
+          <Typography color="error" gutterBottom>
+            Error loading games
+          </Typography>
+          <Typography variant="body2">
+            {error instanceof Error ? error.message : 'Unknown error occurred'}
+          </Typography>
+          <Button onClick={() => refetch()} sx={{ mt: 2 }}>
+            Try Again
+          </Button>
+        </Box>
+      )}
+      
+      {/* Games List */}
+      {!isLoading && !isError && (
+        <>
+          <Typography variant="subtitle1" mb={2} color="text.secondary">
+            {games.length} games found
+          </Typography>
+          
+          {games.length === 0 ? (
+            <Box 
+              display="flex" 
+              flexDirection="column" 
+              alignItems="center" 
+              justifyContent="center"
+              p={4}
+              bgcolor="background.paper"
+              borderRadius={1}
+              border={1}
+              borderColor="divider"
+            >
+              <Typography variant="h6" gutterBottom>
+                No games found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mb={2}>
+                Try adjusting your filters or add a new game
+              </Typography>
+              <Button 
+                variant="outlined" 
+                startIcon={<AddIcon />}
+                onClick={handleAddGame}
+              >
+                Add Game
+              </Button>
+            </Box>
+          ) : (
+            <Grid container spacing={3}>
+              {games.map((game) => (
+                <Grid item xs={12} sm={6} md={4} key={game.id}>
+                  <GameCard 
+                    game={game} 
+                    onClick={handleGameClick}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </>
+      )}
     </Container>
   );
 };

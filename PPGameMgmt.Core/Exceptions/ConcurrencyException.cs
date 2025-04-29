@@ -53,6 +53,19 @@ namespace PPGameMgmt.Core.Exceptions
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="ConcurrencyException"/> class with entity details and logger info
+        /// </summary>
+        /// <param name="entityName">The name of the entity type involved in the conflict</param>
+        /// <param name="entityId">The identifier of the entity involved in the conflict</param>
+        /// <param name="details">Additional details about the concurrency conflict</param>
+        public ConcurrencyException(string entityName, string entityId, string details) 
+            : base($"A concurrency conflict occurred with {entityName} ID {entityId}. {details}")
+        {
+            EntityName = entityName;
+            EntityId = entityId;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ConcurrencyException"/> class with a specific message and inner exception
         /// </summary>
         /// <param name="message">The message that describes the error</param>

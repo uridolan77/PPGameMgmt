@@ -7,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.CQRS.Events;
+using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Extensions; // Added for OutboxMessageExtensions
 
 namespace PPGameMgmt.Infrastructure.Services
 {
