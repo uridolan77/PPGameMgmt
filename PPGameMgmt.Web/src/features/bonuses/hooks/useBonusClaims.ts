@@ -1,22 +1,9 @@
-import { useApiQuery, useApiMutation } from '../../../core/api';
+import { useApiQuery, useApiMutation, ApiError } from '../../../core/api';
+import { CACHE_KEYS, STALE_TIMES } from '../../../core/api/cacheConfig';
 import { BonusClaim, BonusClaimFilter } from '../types';
 import { bonusApi } from '../services';
-import { handleApiError } from '../../../shared/utils/errorHandling';
+import { handleApiError } from '../../../core/error';
 import { useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../../core/api';
-
-// Cache keys for React Query
-const CACHE_KEYS = {
-  BONUS_CLAIMS: 'bonus-claims',
-  BONUS_CLAIM: 'bonus-claim',
-  PLAYER_BONUS_CLAIMS: 'player-bonus-claims',
-  BONUS_BONUS_CLAIMS: 'bonus-bonus-claims',
-};
-
-// Stale times for caching
-const STALE_TIMES = {
-  STANDARD: 1000 * 60 * 5, // 5 minutes
-};
 
 /**
  * Custom hook for fetching a list of bonus claims with optional filtering
@@ -68,7 +55,7 @@ export function useBonusClaimsByBonus(bonusId?: number | string) {
   const numericId = bonusId ? parseInt(bonusId.toString(), 10) : undefined;
 
   const query = useApiQuery<BonusClaim[]>(
-    [CACHE_KEYS.BONUS_BONUS_CLAIMS, numericId],
+    ['bonus-bonus-claims', numericId],
     () => bonusApi.getClaimsByBonusId(numericId as number),
     {
       enabled: !!numericId,
@@ -119,7 +106,7 @@ export function useCreateBonusClaim() {
       onSuccess: (newClaim) => {
         // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_CLAIMS] });
-        queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_BONUS_CLAIMS, newClaim.bonusId] });
+        queryClient.invalidateQueries({ queryKey: ['bonus-bonus-claims', newClaim.bonusId] });
         queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.PLAYER_BONUS_CLAIMS, newClaim.playerId] });
 
         // Also invalidate the bonus itself as the claim count may have changed
@@ -145,7 +132,7 @@ export function useUpdateBonusClaimStatus() {
       onSuccess: (updatedClaim) => {
         // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_CLAIMS] });
-        queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_BONUS_CLAIMS, updatedClaim.bonusId] });
+        queryClient.invalidateQueries({ queryKey: ['bonus-bonus-claims', updatedClaim.bonusId] });
         queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.PLAYER_BONUS_CLAIMS, updatedClaim.playerId] });
 
         // Update the claim in the cache

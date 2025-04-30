@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-// Use namespace aliases to distinguish between ambiguous types
-using CoreEntities = PPGameMgmt.Core.Entities;
-using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 using PPGameMgmt.Core.Interfaces;
 
 namespace PPGameMgmt.API.Services
@@ -41,7 +40,7 @@ namespace PPGameMgmt.API.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<BonusEntities.Bonus> GetBonusAsync(string bonusId)
+        public async Task<Bonus> GetBonusAsync(string bonusId)
         {
             var cacheKey = string.Format(BONUS_CACHE_KEY, bonusId);
 
@@ -51,7 +50,7 @@ namespace PPGameMgmt.API.Services
                 BONUS_CACHE_DURATION);
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetAllActiveBonusesAsync()
+        public async Task<IEnumerable<Bonus>> GetAllActiveBonusesAsync()
         {
             return await _cacheService.GetOrCreateAsync(
                 BONUSES_ACTIVE_CACHE_KEY,
@@ -59,7 +58,7 @@ namespace PPGameMgmt.API.Services
                 BONUSES_CACHE_DURATION);
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetBonusesByTypeAsync(BonusEntities.BonusType type)
+        public async Task<IEnumerable<Bonus>> GetBonusesByTypeAsync(BonusType type)
         {
             var cacheKey = string.Format(BONUSES_BY_TYPE_CACHE_KEY, type);
 
@@ -69,7 +68,7 @@ namespace PPGameMgmt.API.Services
                 BONUSES_CACHE_DURATION);
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetBonusesForPlayerSegmentAsync(CoreEntities.PlayerSegment segment)
+        public async Task<IEnumerable<Bonus>> GetBonusesForPlayerSegmentAsync(PlayerSegment segment)
         {
             var cacheKey = string.Format(BONUSES_BY_SEGMENT_CACHE_KEY, segment);
 
@@ -79,7 +78,7 @@ namespace PPGameMgmt.API.Services
                 BONUSES_CACHE_DURATION);
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetBonusesForGameAsync(string gameId)
+        public async Task<IEnumerable<Bonus>> GetBonusesForGameAsync(string gameId)
         {
             var cacheKey = string.Format(BONUSES_BY_GAME_CACHE_KEY, gameId);
 
@@ -89,7 +88,7 @@ namespace PPGameMgmt.API.Services
                 BONUSES_CACHE_DURATION);
         }
 
-        public async Task<IEnumerable<BonusEntities.BonusClaim>> GetPlayerBonusClaimsAsync(string playerId)
+        public async Task<IEnumerable<BonusClaim>> GetPlayerBonusClaimsAsync(string playerId)
         {
             var cacheKey = string.Format(PLAYER_BONUS_CLAIMS_CACHE_KEY, playerId);
 
@@ -99,7 +98,7 @@ namespace PPGameMgmt.API.Services
                 BONUS_CLAIMS_CACHE_DURATION);
         }
 
-        public async Task<BonusEntities.BonusClaim> ClaimBonusAsync(string playerId, string bonusId)
+        public async Task<BonusClaim> ClaimBonusAsync(string playerId, string bonusId)
         {
             var result = await _bonusService.ClaimBonusAsync(playerId, bonusId);
 

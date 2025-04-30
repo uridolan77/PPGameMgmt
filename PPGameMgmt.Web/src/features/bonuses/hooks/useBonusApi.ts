@@ -1,26 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery, useApiMutation, ApiError } from '../../../core/api';
+import { CACHE_KEYS, STALE_TIMES } from '../../../core/api/cacheConfig';
 import { bonusApi } from '../services';
 import { Bonus, BonusFilter, BonusClaim, BonusClaimFilter, BonusStats } from '../types';
 import { DataCategory } from '../../../core/api/reactQueryConfig';
-import { handleApiError } from '../../../core/error/globalErrorHandler';
-
-// Constants for query configuration
-const CACHE_KEYS = {
-  BONUSES: 'bonuses',
-  BONUS: 'bonus',
-  BONUS_STATS: 'bonus-stats',
-  BONUS_CLAIMS: 'bonus-claims',
-  BONUS_CLAIM: 'bonus-claim',
-  PLAYER_BONUS_CLAIMS: 'player-bonus-claims',
-  BONUS_BONUS_CLAIMS: 'bonus-bonus-claims',
-};
-
-const STALE_TIMES = {
-  STANDARD: 1000 * 60 * 5, // 5 minutes
-  SHORT: 1000 * 60 * 2,    // 2 minutes
-  LONG: 1000 * 60 * 15     // 15 minutes
-};
+import { handleApiError } from '../../../core/error';
 
 /**
  * A dedicated API hook facade for bonus-related API operations
@@ -28,12 +12,12 @@ const STALE_TIMES = {
  */
 export function useBonusApi() {
   const queryClient = useQueryClient();
-  
+
   return {
     /**
      * Get all bonuses with optional filtering
      */
-    getBonuses: (filters?: BonusFilter) => 
+    getBonuses: (filters?: BonusFilter) =>
       useApiQuery<Bonus[]>(
         [CACHE_KEYS.BONUSES, filters],
         () => bonusApi.getAll(filters),
@@ -42,13 +26,13 @@ export function useBonusApi() {
           category: DataCategory.BONUS
         }
       ),
-    
+
     /**
      * Get a single bonus by ID
      */
     getBonus: (bonusId?: number | string) => {
       const numericId = bonusId ? parseInt(bonusId.toString(), 10) : undefined;
-      
+
       return useApiQuery<Bonus>(
         [CACHE_KEYS.BONUS, numericId],
         () => bonusApi.getById(numericId as number),
@@ -59,13 +43,13 @@ export function useBonusApi() {
         }
       );
     },
-    
+
     /**
      * Get bonus statistics
      */
     getBonusStats: (bonusId?: number | string) => {
       const numericId = bonusId ? parseInt(bonusId.toString(), 10) : undefined;
-      
+
       return useApiQuery<BonusStats>(
         [CACHE_KEYS.BONUS_STATS, numericId],
         () => bonusApi.getStats(numericId as number),
@@ -76,11 +60,11 @@ export function useBonusApi() {
         }
       );
     },
-    
+
     /**
      * Get all bonus claims with optional filtering
      */
-    getBonusClaims: (filters?: BonusClaimFilter) => 
+    getBonusClaims: (filters?: BonusClaimFilter) =>
       useApiQuery<BonusClaim[]>(
         [CACHE_KEYS.BONUS_CLAIMS, filters],
         () => bonusApi.getClaims(filters),
@@ -89,13 +73,13 @@ export function useBonusApi() {
           category: DataCategory.BONUS
         }
       ),
-    
+
     /**
      * Get a single bonus claim by ID
      */
     getBonusClaim: (claimId?: number | string) => {
       const numericId = claimId ? parseInt(claimId.toString(), 10) : undefined;
-      
+
       return useApiQuery<BonusClaim>(
         [CACHE_KEYS.BONUS_CLAIM, numericId],
         () => bonusApi.getClaimById(numericId as number),
@@ -106,13 +90,13 @@ export function useBonusApi() {
         }
       );
     },
-    
+
     /**
      * Get all claims for a specific bonus
      */
     getBonusClaimsByBonus: (bonusId?: number | string) => {
       const numericId = bonusId ? parseInt(bonusId.toString(), 10) : undefined;
-      
+
       return useApiQuery<BonusClaim[]>(
         [CACHE_KEYS.BONUS_BONUS_CLAIMS, numericId],
         () => bonusApi.getClaimsByBonusId(numericId as number),
@@ -123,13 +107,13 @@ export function useBonusApi() {
         }
       );
     },
-    
+
     /**
      * Get all claims for a specific player
      */
     getBonusClaimsByPlayer: (playerId?: number | string) => {
       const numericId = playerId ? parseInt(playerId.toString(), 10) : undefined;
-      
+
       return useApiQuery<BonusClaim[]>(
         [CACHE_KEYS.PLAYER_BONUS_CLAIMS, numericId],
         () => bonusApi.getClaimsByPlayerId(numericId as number),
@@ -140,11 +124,11 @@ export function useBonusApi() {
         }
       );
     },
-    
+
     /**
      * Create a new bonus
      */
-    createBonus: () => 
+    createBonus: () =>
       useApiMutation<Bonus, Omit<Bonus, 'id' | 'currentClaims'>>(
         (bonusData) => bonusApi.create(bonusData),
         {
@@ -155,11 +139,11 @@ export function useBonusApi() {
           onError: (error: ApiError) => handleApiError(error, 'Failed to create bonus')
         }
       ),
-    
+
     /**
      * Update an existing bonus
      */
-    updateBonus: () => 
+    updateBonus: () =>
       useApiMutation<Bonus, { id: number, data: Partial<Bonus> }>(
         ({ id, data }) => bonusApi.update(id, data),
         {
@@ -170,11 +154,11 @@ export function useBonusApi() {
           onError: (error: ApiError) => handleApiError(error, 'Failed to update bonus')
         }
       ),
-    
+
     /**
      * Delete a bonus
      */
-    deleteBonus: () => 
+    deleteBonus: () =>
       useApiMutation<void, number>(
         (id) => bonusApi.remove(id),
         {
@@ -185,11 +169,11 @@ export function useBonusApi() {
           onError: (error: ApiError) => handleApiError(error, 'Failed to delete bonus')
         }
       ),
-    
+
     /**
      * Toggle bonus status (active/inactive)
      */
-    toggleBonusStatus: () => 
+    toggleBonusStatus: () =>
       useApiMutation<Bonus, { id: number; isActive: boolean }>(
         ({ id, isActive }) => bonusApi.updateStatus(id, isActive),
         {
@@ -200,10 +184,10 @@ export function useBonusApi() {
           onMutate: async ({ id, isActive }) => {
             // Cancel any outgoing refetches
             await queryClient.cancelQueries({ queryKey: [CACHE_KEYS.BONUS, id] });
-            
+
             // Snapshot the previous bonus
             const previousBonus = queryClient.getQueryData<Bonus>([CACHE_KEYS.BONUS, id]);
-            
+
             // Optimistically update the cache
             if (previousBonus) {
               queryClient.setQueryData<Bonus>([CACHE_KEYS.BONUS, id], {
@@ -211,7 +195,7 @@ export function useBonusApi() {
                 isActive
               });
             }
-            
+
             return { previousBonus };
           },
           onError: (error: ApiError, { id }, context: any) => {
@@ -223,11 +207,11 @@ export function useBonusApi() {
           }
         }
       ),
-    
+
     /**
      * Create a new bonus claim
      */
-    createBonusClaim: () => 
+    createBonusClaim: () =>
       useApiMutation<BonusClaim, { bonusId: number; playerId: number }>(
         (claimData) => bonusApi.createClaim(claimData),
         {
@@ -236,21 +220,21 @@ export function useBonusApi() {
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_CLAIMS] });
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_BONUS_CLAIMS, newClaim.bonusId] });
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.PLAYER_BONUS_CLAIMS, newClaim.playerId] });
-            
+
             // Also invalidate the bonus itself as the claim count may have changed
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS, newClaim.bonusId] });
-            
+
             // Set the new claim data in the cache
             queryClient.setQueryData([CACHE_KEYS.BONUS_CLAIM, newClaim.id], newClaim);
           },
           onError: (error: ApiError) => handleApiError(error, 'Failed to create bonus claim')
         }
       ),
-    
+
     /**
      * Update a bonus claim status
      */
-    updateBonusClaimStatus: () => 
+    updateBonusClaimStatus: () =>
       useApiMutation<BonusClaim, { id: number; status: string }>(
         ({ id, status }) => bonusApi.updateClaimStatus(id, status),
         {
@@ -259,7 +243,7 @@ export function useBonusApi() {
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_CLAIMS] });
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.BONUS_BONUS_CLAIMS, updatedClaim.bonusId] });
             queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.PLAYER_BONUS_CLAIMS, updatedClaim.playerId] });
-            
+
             // Update the claim in the cache
             queryClient.setQueryData([CACHE_KEYS.BONUS_CLAIM, updatedClaim.id], updatedClaim);
           },

@@ -1,20 +1,9 @@
-import { useApiQuery, useApiMutation } from '../../../core/api';
+import { useApiQuery, useApiMutation, ApiError } from '../../../core/api';
+import { CACHE_KEYS, STALE_TIMES } from '../../../core/api/cacheConfig';
 import { Game, GameFilter } from '../types';
 import { gameApi } from '../services';
-import { handleApiError } from '../../../shared/utils/errorHandling';
+import { handleApiError } from '../../../core/error';
 import { useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../../core/api';
-
-// Cache keys for React Query
-const CACHE_KEYS = {
-  GAMES: 'games',
-  GAME: 'game',
-}
-
-// Stale times for caching
-const STALE_TIMES = {
-  STANDARD: 1000 * 60 * 5, // 5 minutes
-}
 
 /**
  * Custom hook for fetching a list of games with optional filtering

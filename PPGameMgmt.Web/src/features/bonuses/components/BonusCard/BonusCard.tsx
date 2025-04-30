@@ -1,10 +1,10 @@
 import React, { memo } from 'react';
-import { Bonus } from '../types';
+import { Bonus } from '../../types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatDate } from '../../../shared/utils/formatting';
-import { formatBonusValue } from '../utils/bonusUtils';
-import { useRenderTracker } from '../../../shared/hooks';
+import { formatDate } from '../../../../shared/utils/formatting';
+import { formatBonusValue } from '../../utils/bonusUtils';
+import { useRenderTracker } from '../../../../core/dev';
 import { CalendarIcon, UsersIcon } from 'lucide-react';
 
 interface BonusCardProps {
@@ -17,8 +17,8 @@ interface BonusCardProps {
  * A card component for displaying bonus information
  * Memoized to prevent unnecessary re-renders
  */
-export const BonusCard: React.FC<BonusCardProps> = ({ 
-  bonus, 
+export const BonusCard: React.FC<BonusCardProps> = ({
+  bonus,
   onClick,
   variant = 'default'
 }) => {
@@ -52,7 +52,7 @@ export const BonusCard: React.FC<BonusCardProps> = ({
 
   if (variant === 'compact') {
     return (
-      <div 
+      <div
         className="flex items-center p-3 border rounded-md hover:bg-muted cursor-pointer"
         onClick={handleClick}
       >
@@ -68,7 +68,7 @@ export const BonusCard: React.FC<BonusCardProps> = ({
   }
 
   return (
-    <Card 
+    <Card
       className="overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
       onClick={handleClick}
     >
@@ -86,7 +86,7 @@ export const BonusCard: React.FC<BonusCardProps> = ({
           <Badge variant="outline" className="px-3 py-1 text-base">
             {formatBonusValue(bonus)}
           </Badge>
-          
+
           {bonus.targetSegment && (
             <div className="flex items-center text-sm text-muted-foreground">
               <UsersIcon className="h-4 w-4 mr-1" />
@@ -94,18 +94,18 @@ export const BonusCard: React.FC<BonusCardProps> = ({
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center text-sm text-muted-foreground mt-4">
           <CalendarIcon className="h-4 w-4 mr-1" />
           <span>
             {formatDate(bonus.startDate)} - {formatDate(bonus.endDate)}
           </span>
         </div>
-        
+
         <div className="mt-4 text-sm">
           <div className="text-muted-foreground">Claims</div>
           <div>
-            {bonus.currentClaims} 
+            {bonus.currentClaims}
             {bonus.maxClaims ? ` / ${bonus.maxClaims}` : ' (unlimited)'}
           </div>
         </div>

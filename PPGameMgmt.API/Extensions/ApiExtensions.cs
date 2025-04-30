@@ -8,6 +8,7 @@ using PPGameMgmt.API.HealthChecks;
 using PPGameMgmt.API.Swagger;
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace PPGameMgmt.API.Extensions
@@ -35,6 +36,9 @@ namespace PPGameMgmt.API.Extensions
                 options.GroupNameFormat = "'v'VVV";
                 options.SubstituteApiVersionInUrl = true;
             });
+
+            // Create a singleton instance of our custom schema ID selector
+            var customSchemaIdSelector = new CustomSchemaIdSelector();
 
             // Configure Swagger
             services.AddSwaggerGen(c =>
@@ -85,14 +89,21 @@ namespace PPGameMgmt.API.Extensions
                 c.OperationFilter<SwaggerDocumentationFilter>();
                 c.SchemaFilter<SwaggerExampleFilter>();
 
+                // Add schema filters for API Response generic types to fix schema ID conflicts
+                c.SchemaFilter<SwaggerGenericTypeSchemaFilter>();
+                c.SchemaFilter<SwaggerGenericSchemaIdFilter>();
+
                 // Add schema filter for ApiErrorResponse
                 c.SchemaFilter<ApiErrorResponseSchemaFilter>();
 
                 // Add schema filter for Bonus types
                 c.SchemaFilter<BonusSchemaFilter>();
 
-                // Add document filter to ensure unique schema IDs
-                c.DocumentFilter<SwaggerSchemaDocumentFilter>();
+                // Comment out the non-existent document filter
+                // if (c.DocumentFilters.All(filter => filter.GetType() != typeof(SwaggerSchemaDocumentFilter)))
+                // {
+                //     c.DocumentFilter<SwaggerSchemaDocumentFilter>();
+                // }
 
                 // Add exception documentation filter
                 c.OperationFilter<SwaggerExceptionDocumentationFilter>();
@@ -105,28 +116,8 @@ namespace PPGameMgmt.API.Extensions
                     c.IncludeXmlComments(xmlPath);
                 }
 
-                // Use custom schema IDs to handle duplicate type names
-                c.CustomSchemaIds(type =>
-                {
-                    // Special case for Bonus types
-                    if (type.FullName.Contains("PPGameMgmt.Core.Entities.Bonuses.Bonus"))
-                    {
-                        return "CoreBonus";
-                    }
-                    // Special case for BonusType enum
-                    else if (type.FullName.Contains("PPGameMgmt.Core.Entities.Bonuses.BonusType"))
-                    {
-                        return "CoreBonusType";
-                    }
-                    // For API response models
-                    else if (type.FullName.Contains("PPGameMgmt.API.Models.Bonuses"))
-                    {
-                        return "Api" + type.Name;
-                    }
-
-                    // For other types, use the simple name
-                    return type.Name;
-                });
+                // Use our custom schema ID selector to generate consistent schema IDs
+                c.CustomSchemaIds(type => customSchemaIdSelector.GetSchemaId(type));
             });
 
             return services;

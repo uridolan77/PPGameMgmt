@@ -1,24 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery, useApiMutation } from '../../../core/api';
+import { CACHE_KEYS, STALE_TIMES } from '../../../core/api/cacheConfig';
 import { playerApi } from '../services';
 import { Player, PlayerFeature, GameSession, BonusClaim } from '../types';
 import { DataCategory } from '../../../core/api/reactQueryConfig';
-import { handleApiError } from '../../../core/error/globalErrorHandler';
-
-// Constants for query configuration
-const CACHE_KEYS = {
-  ALL_PLAYERS: 'players',
-  PLAYER: 'player',
-  FEATURES: 'player-features',
-  GAME_SESSIONS: 'player-game-sessions',
-  BONUS_CLAIMS: 'player-bonus-claims'
-};
-
-const STALE_TIMES = {
-  STANDARD: 1000 * 60 * 5, // 5 minutes
-  SHORT: 1000 * 60 * 2,    // 2 minutes
-  LONG: 1000 * 60 * 15     // 15 minutes
-};
+import { handleApiError } from '../../../core/error';
 
 /**
  * A dedicated API hook facade for player-related API operations
@@ -26,12 +12,12 @@ const STALE_TIMES = {
  */
 export function usePlayerApi() {
   const queryClient = useQueryClient();
-  
+
   return {
     /**
      * Get all players with optional segment filtering
      */
-    getPlayers: (segment?: string) => 
+    getPlayers: (segment?: string) =>
       useApiQuery(
         [CACHE_KEYS.ALL_PLAYERS, { segment }],
         () => playerApi.getAll(segment),
@@ -40,11 +26,11 @@ export function usePlayerApi() {
           category: DataCategory.PLAYER
         }
       ),
-    
+
     /**
      * Get a single player by ID
      */
-    getPlayer: (playerId?: number) => 
+    getPlayer: (playerId?: number) =>
       useApiQuery(
         [CACHE_KEYS.PLAYER, playerId],
         () => playerApi.getById(playerId as number),
@@ -54,11 +40,11 @@ export function usePlayerApi() {
           category: DataCategory.PLAYER
         }
       ),
-    
+
     /**
      * Get player features
      */
-    getPlayerFeatures: (playerId?: number) => 
+    getPlayerFeatures: (playerId?: number) =>
       useApiQuery(
         [CACHE_KEYS.FEATURES, playerId],
         () => playerApi.getFeatures(playerId as number),
@@ -68,11 +54,11 @@ export function usePlayerApi() {
           category: DataCategory.PLAYER
         }
       ),
-    
+
     /**
      * Get player game sessions
      */
-    getPlayerGameSessions: (playerId?: number) => 
+    getPlayerGameSessions: (playerId?: number) =>
       useApiQuery(
         [CACHE_KEYS.GAME_SESSIONS, playerId],
         () => playerApi.getGameSessions(playerId as number),
@@ -82,11 +68,11 @@ export function usePlayerApi() {
           category: DataCategory.PLAYER
         }
       ),
-    
+
     /**
      * Get player bonus claims
      */
-    getPlayerBonusClaims: (playerId?: number) => 
+    getPlayerBonusClaims: (playerId?: number) =>
       useApiQuery(
         [CACHE_KEYS.BONUS_CLAIMS, playerId],
         () => playerApi.getBonusClaims(playerId as number),
@@ -96,11 +82,11 @@ export function usePlayerApi() {
           category: DataCategory.PLAYER
         }
       ),
-    
+
     /**
      * Create a new player
      */
-    createPlayer: () => 
+    createPlayer: () =>
       useApiMutation<Player, Omit<Player, 'id'>>(
         (playerData) => playerApi.create(playerData),
         {
@@ -111,11 +97,11 @@ export function usePlayerApi() {
           onError: (error) => handleApiError(error, 'Failed to create player')
         }
       ),
-    
+
     /**
      * Update an existing player
      */
-    updatePlayer: () => 
+    updatePlayer: () =>
       useApiMutation<Player, { id: number, data: Partial<Player> }>(
         ({ id, data }) => playerApi.update(id, data),
         {
@@ -126,11 +112,11 @@ export function usePlayerApi() {
           onError: (error) => handleApiError(error, 'Failed to update player')
         }
       ),
-    
+
     /**
      * Delete a player
      */
-    deletePlayer: () => 
+    deletePlayer: () =>
       useApiMutation<void, number>(
         (id) => playerApi.remove(id),
         {

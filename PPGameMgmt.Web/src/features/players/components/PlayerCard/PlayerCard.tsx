@@ -1,10 +1,10 @@
 import React, { memo } from 'react';
-import { Player } from '../types';
+import { Player } from '../../types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDate } from '../../../shared/utils/formatting';
-import { useRenderTracker } from '../../../shared/hooks';
+import { formatDate } from '../../../../shared/utils/formatting';
+import { useRenderTracker } from '../../../../core/dev';
 
 interface PlayerCardProps {
   player: Player;
@@ -16,8 +16,8 @@ interface PlayerCardProps {
  * A card component for displaying player information
  * Memoized to prevent unnecessary re-renders
  */
-export const PlayerCard: React.FC<PlayerCardProps> = ({ 
-  player, 
+export const PlayerCard: React.FC<PlayerCardProps> = ({
+  player,
   onClick,
   variant = 'default'
 }) => {
@@ -54,7 +54,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   if (variant === 'compact') {
     return (
-      <div 
+      <div
         className="flex items-center p-3 border rounded-md hover:bg-muted cursor-pointer"
         onClick={handleClick}
       >
@@ -74,7 +74,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   }
 
   return (
-    <Card 
+    <Card
       className="overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
       onClick={handleClick}
     >

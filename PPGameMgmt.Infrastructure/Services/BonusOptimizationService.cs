@@ -4,12 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities.Recommendations;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Infrastructure.ML.Models;
-// Use namespace aliases to distinguish between ambiguous types
-using CoreEntities = PPGameMgmt.Core.Entities;
-using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
-using RecommendationEntities = PPGameMgmt.Core.Entities.Recommendations;
 
 namespace PPGameMgmt.Infrastructure.Services
 {
@@ -38,7 +36,7 @@ namespace PPGameMgmt.Infrastructure.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<RecommendationEntities.BonusRecommendation> GetOptimalBonusAsync(string playerId)
+        public async Task<BonusRecommendation> GetOptimalBonusAsync(string playerId)
         {
             _logger.LogInformation("Getting optimal bonus for player: {PlayerId}", playerId);
 
@@ -77,7 +75,7 @@ namespace PPGameMgmt.Infrastructure.Services
                     _logger.LogInformation("Found optimal bonus for player: {PlayerId}", playerId);
                     // Convert from Core BonusRecommendation to Recommendations.BonusRecommendation
                     var coreRec = recommendations.First();
-                    return new RecommendationEntities.BonusRecommendation
+                    return new BonusRecommendation
                     {
                         Id = coreRec.Id,
                         BonusId = coreRec.BonusId,
@@ -122,8 +120,8 @@ namespace PPGameMgmt.Infrastructure.Services
                 // Use ML model to score the bonus for this player
                 // For this stub implementation, we'll return true if the player is VIP or if the bonus is welcome type
 
-                bool isAppropriate = playerFeatures.CurrentSegment == CoreEntities.PlayerSegment.VIP ||
-                                    bonus.Type == BonusEntities.BonusType.DepositMatch ||
+                bool isAppropriate = playerFeatures.CurrentSegment == PlayerSegment.VIP ||
+                                    bonus.Type == BonusType.DepositMatch ||
                                     bonus.TargetSegments == null ||
                                     bonus.TargetSegments.Length == 0;
 
@@ -137,7 +135,7 @@ namespace PPGameMgmt.Infrastructure.Services
             }
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> RankBonusesForPlayerAsync(string playerId)
+        public async Task<IEnumerable<Bonus>> RankBonusesForPlayerAsync(string playerId)
         {
             _logger.LogInformation("Ranking bonuses for player: {PlayerId}", playerId);
 
@@ -154,7 +152,7 @@ namespace PPGameMgmt.Infrastructure.Services
                 if (activeBonuses.Count == 0)
                 {
                     _logger.LogWarning("No active bonuses found for ranking");
-                    return Array.Empty<BonusEntities.Bonus>();
+                    return Array.Empty<Bonus>();
                 }
 
                 if (playerFeatures == null)
@@ -186,7 +184,7 @@ namespace PPGameMgmt.Infrastructure.Services
             {
                 // Fix the logging error by using the correct LogError overload
                 _logger.LogError(ex, "Error ranking bonuses for player: {PlayerId}", playerId);
-                return Array.Empty<BonusEntities.Bonus>();
+                return Array.Empty<Bonus>();
             }
         }
 
@@ -214,9 +212,9 @@ namespace PPGameMgmt.Infrastructure.Services
                     PlayerLifetimeValue = new Random().Next(100, 10000),
                     BonusUsageRate = new Random().NextDouble(),
                     TotalBonusesClaimed = new Random().Next(0, 20),
-                    CurrentSegment = CoreEntities.PlayerSegment.Regular,
+                    CurrentSegment = PlayerSegment.Regular,
                     // Use null-coalescing to handle the nullable type correctly
-                    PreferredBonusType = BonusEntities.BonusType.DepositMatch
+                    PreferredBonusType = BonusType.DepositMatch
                 };
             }
             catch (Exception ex)
@@ -226,11 +224,11 @@ namespace PPGameMgmt.Infrastructure.Services
             }
         }
 
-        private RecommendationEntities.BonusRecommendation GenerateDefaultBonusRecommendation(string playerId)
+        private BonusRecommendation GenerateDefaultBonusRecommendation(string playerId)
         {
             _logger.LogInformation("Generating default bonus recommendation for player: {PlayerId}", playerId);
 
-            return new RecommendationEntities.BonusRecommendation
+            return new BonusRecommendation
             {
                 Id = Guid.NewGuid().ToString(),
                 PlayerId = playerId,

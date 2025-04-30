@@ -1,3 +1,8 @@
+/**
+ * Render tracking utilities for development
+ * This replaces the duplicate useRenderTracker implementations
+ */
+
 import { useRef, useEffect, useDebugValue } from 'react';
 
 interface RenderTrackerOptions {
@@ -24,6 +29,7 @@ interface RenderTrackerOptions {
 
 /**
  * A hook to track component renders for performance debugging
+ * Only active in development mode
  * 
  * @example
  * ```tsx
@@ -39,6 +45,11 @@ export function useRenderTracker({
   trackProps = false,
   logEachRender = false,
 }: RenderTrackerOptions = {}) {
+  // Only run in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+  
   const renderCount = useRef(0);
   const prevProps = useRef<any>(null);
   const mountTime = useRef(Date.now());
@@ -98,44 +109,8 @@ export function useRenderTracker({
     };
   }, [name]);
   
-  // Make render count visible in React DevTools
+  // Expose render count in React DevTools
   useDebugValue(`Renders: ${renderCount.current}`);
-  
-  return renderCount.current;
-}
-
-/**
- * A hook that helps identify why a component is re-rendering
- */
-export function useWhyDidYouUpdate(componentName: string, props: Record<string, any>) {
-  // Store previous props
-  const prevProps = useRef<Record<string, any>>({});
-  
-  useEffect(() => {
-    if (prevProps.current) {
-      // Get all keys from current and previous props
-      const allKeys = Object.keys({ ...prevProps.current, ...props });
-      const changesObj: Record<string, { from: any; to: any }> = {};
-      
-      // Find props that changed
-      allKeys.forEach(key => {
-        if (prevProps.current[key] !== props[key]) {
-          changesObj[key] = {
-            from: prevProps.current[key],
-            to: props[key]
-          };
-        }
-      });
-      
-      // Log if there were changes
-      if (Object.keys(changesObj).length) {
-        console.log('[why-did-you-update]', componentName, changesObj);
-      }
-    }
-    
-    // Update previous props
-    prevProps.current = props;
-  });
 }
 
 export default useRenderTracker;

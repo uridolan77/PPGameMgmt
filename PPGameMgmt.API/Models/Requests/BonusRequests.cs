@@ -1,7 +1,6 @@
 using System;
-// Use namespace aliases to distinguish between ambiguous types
-using CoreEntities = PPGameMgmt.Core.Entities;
-using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.API.Models.Requests
 {
@@ -34,7 +33,7 @@ namespace PPGameMgmt.API.Models.Requests
         /// <summary>
         /// Type of the bonus
         /// </summary>
-        public BonusEntities.BonusType Type { get; set; }
+        public BonusType Type { get; set; }
 
         /// <summary>
         /// Value of the bonus
@@ -64,7 +63,7 @@ namespace PPGameMgmt.API.Models.Requests
         /// <summary>
         /// Target segment for the bonus (if not global)
         /// </summary>
-        public CoreEntities.PlayerSegment? TargetSegment { get; set; }
+        public PlayerSegment? TargetSegment { get; set; }
 
         /// <summary>
         /// ID of the game associated with the bonus (if any)

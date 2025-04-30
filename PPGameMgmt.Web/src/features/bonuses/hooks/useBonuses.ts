@@ -1,21 +1,9 @@
-import { useApiQuery, useApiMutation } from '../../../core/api';
+import { useApiQuery, useApiMutation, ApiError } from '../../../core/api';
+import { CACHE_KEYS, STALE_TIMES } from '../../../core/api/cacheConfig';
 import { Bonus, BonusFilter, BonusStats } from '../types';
 import { bonusApi } from '../services';
-import { handleApiError } from '../../../shared/utils/errorHandling';
+import { handleApiError } from '../../../core/error';
 import { useQueryClient } from '@tanstack/react-query';
-import { ApiError } from '../../../core/api';
-
-// Cache keys for React Query
-const CACHE_KEYS = {
-  BONUSES: 'bonuses',
-  BONUS: 'bonus',
-  BONUS_STATS: 'bonusStats',
-};
-
-// Stale times for caching
-const STALE_TIMES = {
-  STANDARD: 1000 * 60 * 5, // 5 minutes
-};
 
 /**
  * Custom hook for fetching a list of bonuses with optional filtering

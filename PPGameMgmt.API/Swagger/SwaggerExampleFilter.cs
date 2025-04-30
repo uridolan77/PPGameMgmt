@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities.Recommendations;
 
 namespace PPGameMgmt.API.Swagger
 {

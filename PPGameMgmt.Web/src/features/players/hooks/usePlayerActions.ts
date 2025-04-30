@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../../core/store';
 import { useDeletePlayer, useUpdatePlayer } from './usePlayers';
 import { Player } from '../types';
+import { handleApiError } from '../../../core/error';
 
 /**
  * Custom hook providing common player-related actions and navigation
@@ -38,7 +39,7 @@ export function usePlayerActions() {
    */
   const togglePlayerStatus = (player: Player) => {
     const newStatus = !player.isActive;
-    
+
     updatePlayer.mutate(
       {
         id: player.id,
@@ -53,11 +54,7 @@ export function usePlayerActions() {
           });
         },
         onError: (error) => {
-          ui.addNotification({
-            type: 'error',
-            message: `Failed to update player status: ${error.message}`,
-            autoClose: true,
-          });
+          handleApiError(error, 'Failed to update player status');
         },
       }
     );
@@ -79,11 +76,7 @@ export function usePlayerActions() {
           goToPlayersList();
         },
         onError: (error) => {
-          ui.addNotification({
-            type: 'error',
-            message: `Failed to delete player: ${error.message}`,
-            autoClose: true,
-          });
+          handleApiError(error, 'Failed to delete player');
         },
       });
     }
