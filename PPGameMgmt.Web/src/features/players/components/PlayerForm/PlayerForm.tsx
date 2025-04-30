@@ -1,16 +1,16 @@
 import React from 'react';
 import { z } from 'zod';
-import { FormWrapper } from '../../../shared/components/FormWrapper';
+import { FormWrapper } from '../../../../shared/components/FormWrapper';
 import { 
   TextField, 
   TextareaField, 
   SelectField, 
   CheckboxField,
   DatePickerField
-} from '../../../shared/components/ui-kit/inputs/FormFields';
+} from '../../../../shared/components/ui-kit/inputs/FormFields';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Player } from '../types';
+import { Player } from '../../types';
 
 // Define form schema with Zod
 const playerFormSchema = z.object({
@@ -31,27 +31,28 @@ const playerFormSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+// Define the form values type based on the schema
 export type PlayerFormValues = z.infer<typeof playerFormSchema>;
 
-interface StandardPlayerFormProps {
-  defaultValues?: Partial<PlayerFormValues>;
-  onSubmit: (data: PlayerFormValues) => Promise<void>;
+interface PlayerFormProps {
+  defaultValues?: Partial<Player>;
+  onSubmit: (data: PlayerFormValues) => void;
   isLoading?: boolean;
   isEditing?: boolean;
   onCancel?: () => void;
 }
 
 /**
- * A standardized form component for creating and editing players
+ * A form component for creating and editing players
  * Uses the FormWrapper component for consistent form handling
  */
-export function StandardPlayerForm({ 
+export function PlayerForm({ 
   defaultValues, 
   onSubmit, 
   isLoading = false,
   isEditing = false,
   onCancel
-}: StandardPlayerFormProps) {
+}: PlayerFormProps) {
   // Player segments
   const segmentOptions = [
     { label: 'VIP', value: 'VIP' },
@@ -143,7 +144,8 @@ export function StandardPlayerForm({
               
               <CheckboxField
                 name="isActive"
-                label="Account is active"
+                label="Active Account"
+                description="Inactive accounts cannot log in or access services"
                 form={form}
               />
             </CardContent>
@@ -196,15 +198,19 @@ export function StandardPlayerForm({
                   />
                 )}
               </div>
-              
-              <Separator className="my-4" />
-              
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent>
               <TextareaField
                 name="notes"
                 label="Notes"
                 placeholder="Enter any additional notes about this player"
                 form={form}
-                rows={4}
               />
             </CardContent>
           </Card>
@@ -213,5 +219,3 @@ export function StandardPlayerForm({
     </FormWrapper>
   );
 }
-
-export default StandardPlayerForm;

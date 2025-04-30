@@ -1,2 +1,2 @@
-export { default as StandardBonusForm } from './StandardBonusForm';
+export { default as BonusForm } from './BonusForm';
 export { default as BonusCard } from './BonusCard';

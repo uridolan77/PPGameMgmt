@@ -16,6 +16,11 @@ This document summarizes the changes made to clean up the PPGameMgmt Web codebas
 - Created a unified error handling system in `core/error/errorUtils.ts`
 - Updated imports to use the new error handling utilities
 - Deprecated the old error handling utilities in `shared/utils/errorHandling.ts`
+- Replaced direct toast calls with the new `handleApiError` function in:
+  - `GamesList` component
+  - `GameForm` component
+  - `FormWrapper` component
+- Updated the `ApiErrorDisplay` component to use the new error handling utilities
 
 ### 3. Unified Theme System
 
@@ -33,6 +38,13 @@ This document summarizes the changes made to clean up the PPGameMgmt Web codebas
   - `PlayerFeaturesTab`
   - `PlayerGamesTab`
   - `PlayerBonusesTab`
+  - `PlayerOverviewTab`
+  - `PlayerDetailTabs`
+  - `PlayerForm` (renamed from StandardPlayerForm)
+  - `GameForm` (renamed from StandardGameForm)
+  - `BonusForm` (renamed from StandardBonusForm)
+  - `GameDetailView`
+  - `ApiErrorDisplay` (moved to shared components)
   - `LoadingIndicator` (moved to shared components)
 - Each component now follows this structure:
 

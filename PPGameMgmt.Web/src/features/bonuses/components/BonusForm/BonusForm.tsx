@@ -1,16 +1,16 @@
 import React from 'react';
 import { z } from 'zod';
-import { FormWrapper } from '../../../shared/components/FormWrapper';
+import { FormWrapper } from '../../../../shared/components/FormWrapper';
 import { 
   TextField, 
   TextareaField, 
   SelectField, 
   CheckboxField,
-  DatePickerField
-} from '../../../shared/components/ui-kit/inputs/FormFields';
+  DatePickerField,
+  NumberField
+} from '../../../../shared/components/ui-kit/inputs/FormFields';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Bonus } from '../types';
 
 // Define form schema with Zod
 const bonusFormSchema = z.object({
@@ -44,7 +44,7 @@ const bonusFormSchema = z.object({
 
 export type BonusFormValues = z.infer<typeof bonusFormSchema>;
 
-interface StandardBonusFormProps {
+interface BonusFormProps {
   defaultValues?: Partial<BonusFormValues>;
   onSubmit: (data: BonusFormValues) => Promise<void>;
   isLoading?: boolean;
@@ -53,16 +53,16 @@ interface StandardBonusFormProps {
 }
 
 /**
- * A standardized form component for creating and editing bonuses
+ * A form component for creating and editing bonuses
  * Uses the FormWrapper component for consistent form handling
  */
-export function StandardBonusForm({ 
+export function BonusForm({ 
   defaultValues, 
   onSubmit, 
   isLoading = false,
   isEditing = false,
   onCancel
-}: StandardBonusFormProps) {
+}: BonusFormProps) {
   // Bonus type options
   const bonusTypeOptions = [
     { label: 'Deposit Bonus', value: 'DEPOSIT' },
@@ -79,13 +79,13 @@ export function StandardBonusForm({
     { label: 'Free Spins', value: 'FREE_SPINS' }
   ];
   
-  // Player segment options
+  // Player segments
   const segmentOptions = [
-    { label: 'All Players', value: '' },
+    { label: 'All Players', value: 'ALL' },
     { label: 'VIP', value: 'VIP' },
-    { label: 'High Roller', value: 'High Roller' },
-    { label: 'Regular', value: 'Regular' },
-    { label: 'New Players', value: 'New' }
+    { label: 'High Roller', value: 'HIGH_ROLLER' },
+    { label: 'Regular', value: 'REGULAR' },
+    { label: 'New Players', value: 'NEW' }
   ];
   
   // Prepare default values with today and a month from now as default dates
@@ -142,16 +142,15 @@ export function StandardBonusForm({
                 placeholder="Enter bonus description"
                 required
                 form={form}
-                rows={3}
               />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectField
                   name="bonusType"
                   label="Bonus Type"
-                  required
                   form={form}
                   options={bonusTypeOptions}
+                  required
                 />
                 
                 <SelectField
@@ -164,7 +163,8 @@ export function StandardBonusForm({
               
               <CheckboxField
                 name="isActive"
-                label="Bonus is active and available to players"
+                label="Active Bonus"
+                description="Inactive bonuses cannot be claimed by players"
                 form={form}
               />
             </CardContent>
@@ -172,15 +172,14 @@ export function StandardBonusForm({
           
           <Card>
             <CardHeader>
-              <CardTitle>Bonus Value & Conditions</CardTitle>
+              <CardTitle>Bonus Value</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TextField
+                <NumberField
                   name="value"
                   label="Value"
                   placeholder="100"
-                  type="number"
                   required
                   form={form}
                 />
@@ -188,62 +187,71 @@ export function StandardBonusForm({
                 <SelectField
                   name="valueType"
                   label="Value Type"
-                  required
                   form={form}
                   options={valueTypeOptions}
+                  required
                 />
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TextField
+                <NumberField
                   name="minDepositAmount"
                   label="Minimum Deposit"
                   placeholder="10"
-                  type="number"
                   form={form}
                 />
                 
-                <TextField
+                <NumberField
                   name="wageringRequirement"
                   label="Wagering Requirement"
                   placeholder="30"
-                  type="number"
                   form={form}
                 />
               </div>
               
-              <TextField
+              <NumberField
                 name="maxClaims"
-                label="Maximum Claims (0 for unlimited)"
+                label="Maximum Claims"
+                description="Set to 0 for unlimited claims"
                 placeholder="0"
-                type="number"
                 form={form}
               />
-              
-              <Separator className="my-4" />
-              
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Validity Period</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <DatePickerField
                   name="startDate"
                   label="Start Date"
-                  required
                   form={form}
+                  required
                 />
                 
                 <DatePickerField
                   name="endDate"
                   label="End Date"
-                  required
                   form={form}
+                  required
                 />
               </div>
-              
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Terms and Conditions</CardTitle>
+            </CardHeader>
+            <CardContent>
               <TextareaField
                 name="termsAndConditions"
                 label="Terms and Conditions"
                 placeholder="Enter terms and conditions for this bonus"
                 form={form}
-                rows={4}
               />
             </CardContent>
           </Card>
@@ -252,5 +260,3 @@ export function StandardBonusForm({
     </FormWrapper>
   );
 }
-
-export default StandardBonusForm;

@@ -3,7 +3,6 @@ export { PlayerOverviewTab } from './PlayerOverviewTab';
 export { PlayerGamesTab } from './PlayerGamesTab';
 export { PlayerBonusesTab } from './PlayerBonusesTab';
 export { PlayerFeaturesTab } from './PlayerFeaturesTab';
-export { ApiErrorDisplay } from './ApiErrorDisplay';
-export { default as StandardPlayerForm } from './StandardPlayerForm';
+export { default as PlayerForm } from './PlayerForm';
 export { default as PlayerDetailTabs } from './PlayerDetailTabs';
 export { default as PlayerCard } from './PlayerCard';

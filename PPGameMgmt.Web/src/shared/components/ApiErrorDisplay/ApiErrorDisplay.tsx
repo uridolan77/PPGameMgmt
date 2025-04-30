@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertCircleIcon, RefreshCwIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { getErrorMessage } from '../../../core/error';
+import { getUserFriendlyMessage, toApiError } from '../../../core/error';
 
 interface ApiErrorDisplayProps {
   error: unknown;
@@ -14,17 +14,16 @@ interface ApiErrorDisplayProps {
 /**
  * A reusable component for displaying API errors with an optional retry button
  */
-export const ApiErrorDisplay: React.FC<ApiErrorDisplayProps> = ({ 
-  error, 
+export const ApiErrorDisplay: React.FC<ApiErrorDisplayProps> = ({
+  error,
   context,
   onRetry,
   className = ''
 }) => {
-  // Get a user-friendly error message
-  const errorMessage = context 
-    ? `${context}: ${getErrorMessage(error)}`
-    : getErrorMessage(error);
-  
+  // Convert to ApiError and get a user-friendly error message
+  const apiError = toApiError(error);
+  const errorMessage = getUserFriendlyMessage(apiError, context);
+
   return (
     <Card className={`border-destructive ${className}`}>
       <CardHeader className="text-destructive">
@@ -38,8 +37,8 @@ export const ApiErrorDisplay: React.FC<ApiErrorDisplayProps> = ({
       </CardContent>
       {onRetry && (
         <CardFooter>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={onRetry}
             className="flex items-center gap-2"
           >

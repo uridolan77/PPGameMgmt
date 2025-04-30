@@ -1,13 +1,13 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlayerTabType, Player, GameSession, PlayerFeature, BonusClaim } from '../types';
+import { PlayerTabType, Player, GameSession, PlayerFeature, BonusClaim } from '../../types';
 import {
   PlayerOverviewTab,
   PlayerGamesTab,
   PlayerBonusesTab,
   PlayerFeaturesTab
-} from './';
-import { ApiErrorDisplay } from '../../../shared/components';
+} from '../';
+import { ApiErrorDisplay } from '../../../../shared/components';
 
 interface PlayerDetailTabsProps {
   player: Player;
@@ -130,5 +130,3 @@ export const PlayerDetailTabs: React.FC<PlayerDetailTabsProps> = ({
     </Tabs>
   );
 };
-
-export default PlayerDetailTabs;

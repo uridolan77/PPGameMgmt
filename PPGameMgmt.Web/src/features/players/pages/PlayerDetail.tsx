@@ -6,9 +6,9 @@ import { PlayerTabType } from '../types';
 import { FeatureErrorBoundary } from '../../../shared/components/FeatureErrorBoundary';
 import {
   PlayerHeader,
-  ApiErrorDisplay,
   PlayerDetailTabs
 } from '../components';
+import { ApiErrorDisplay } from '../../../shared/components';
 
 const PlayerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

@@ -1,6 +1,6 @@
 /**
  * Standardized Form Wrapper Component
- * 
+ *
  * Provides a consistent pattern for form handling using react-hook-form
  * with Zod validation and shadcn/ui Form components.
  */
@@ -10,50 +10,50 @@ import { Button } from '@/components/ui/button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, UseFormReturn, FieldValues, DefaultValues } from 'react-hook-form';
 import { z } from 'zod';
-import { ErrorBoundary } from '@/core/error';
+import { ErrorBoundary, handleApiError, ErrorDomain } from '@/core/error';
 
 // Props for the FormWrapper component
 interface FormWrapperProps<T extends z.ZodType> {
   // Schema for form validation
   schema: T;
-  
+
   // Default values for the form
   defaultValues: DefaultValues<z.infer<T>>;
-  
+
   // Submit handler
   onSubmit: (data: z.infer<T>) => Promise<void> | void;
-  
+
   // Function that renders the form fields using the form methods
   children: (methods: UseFormReturn<z.infer<T>>) => React.ReactNode;
-  
+
   // Optional submit button text
   submitText?: string;
-  
+
   // Optional cancel handler
   onCancel?: () => void;
-  
+
   // Optional cancel button text
   cancelText?: string;
-  
+
   // Whether the form is currently submitting
   isSubmitting?: boolean;
-  
+
   // Whether to show the form footer with submit/cancel buttons
   showFooter?: boolean;
-  
+
   // Optional className for the form
   className?: string;
-  
+
   // Optional form ID
   id?: string;
-  
+
   // Optional reset handler
   onReset?: () => void;
 }
 
 /**
  * Form wrapper component that provides standardized form handling
- * 
+ *
  * @example
  * <FormWrapper
  *   schema={gameSchema}
@@ -75,7 +75,7 @@ interface FormWrapperProps<T extends z.ZodType> {
  *           </FormItem>
  *         )}
  *       />
- *       
+ *
  *       {/* More form fields */}
  *     </>
  *   )}
@@ -100,31 +100,35 @@ export function FormWrapper<T extends z.ZodType>({
     defaultValues,
     mode: 'onChange', // Validate on change for better user experience
   });
-  
+
   const handleSubmit = async (data: z.infer<T>) => {
     try {
       await onSubmit(data);
     } catch (error) {
-      // Log error and show form error
-      console.error('Form submission error:', error);
-      form.setError('root', { 
+      // Use the centralized error handling
+      handleApiError(error as Error, 'Form submission error', {
+        domain: ErrorDomain.GENERAL
+      });
+
+      // Also set form error for inline display
+      form.setError('root', {
         type: 'manual',
         message: error instanceof Error ? error.message : 'An error occurred during form submission'
       });
     }
   };
-  
+
   const resetForm = () => {
     form.reset(defaultValues);
     if (onReset) {
       onReset();
     }
   };
-  
+
   return (
     <ErrorBoundary>
       <Form {...form}>
-        <form 
+        <form
           onSubmit={form.handleSubmit(handleSubmit)}
           className={className}
           id={id}
@@ -136,17 +140,17 @@ export function FormWrapper<T extends z.ZodType>({
               {form.formState.errors.root.message}
             </div>
           )}
-          
+
           {/* Form fields */}
           <div className="space-y-4">
             {children(form)}
           </div>
-          
+
           {/* Form footer */}
           {showFooter && (
             <div className="flex justify-end gap-2 mt-6">
               {onCancel && (
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   onClick={onCancel}
@@ -155,8 +159,8 @@ export function FormWrapper<T extends z.ZodType>({
                   {cancelText}
                 </Button>
               )}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting || !form.formState.isValid}
               >
                 {isSubmitting ? 'Submitting...' : submitText}
@@ -171,7 +175,7 @@ export function FormWrapper<T extends z.ZodType>({
 
 /**
  * A simplified form wrapper for quick forms
- * 
+ *
  * @example
  * <SimpleForm
  *   schema={loginSchema}

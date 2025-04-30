@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Game } from '../types';
 import { toast } from 'sonner';
+import { handleApiError, ErrorDomain } from '../../../core/error';
 
 // Import shadcn/ui components
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
@@ -46,22 +47,23 @@ export function GamesList({ games, isLoading, onDeleteGame }: GamesListProps) {
   // Handle game deletion
   const handleDelete = async () => {
     if (!gameToDelete || !onDeleteGame) return;
-    
+
     try {
       setIsDeleting(true);
-      await onDeleteGame(gameToDelete.id);
+      await onDeleteGame(gameToDelete.id.toString());
       toast.success(`Game "${gameToDelete.title}" deleted successfully`);
       setGameToDelete(null);
     } catch (error) {
-      toast.error('Failed to delete game');
-      console.error(error);
+      handleApiError(error as Error, 'game deletion', {
+        domain: ErrorDomain.GAME
+      });
     } finally {
       setIsDeleting(false);
     }
   };
 
   // Navigate to game detail page
-  const navigateToGame = (id: string) => {
+  const navigateToGame = (id: number | string) => {
     navigate(`/games/${id}`);
   };
 
@@ -117,7 +119,7 @@ export function GamesList({ games, isLoading, onDeleteGame }: GamesListProps) {
         <TableBody>
           {filteredGames.length > 0 ? (
             filteredGames.map(game => (
-              <TableRow 
+              <TableRow
                 key={game.id}
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => navigateToGame(game.id)}
@@ -130,7 +132,7 @@ export function GamesList({ games, isLoading, onDeleteGame }: GamesListProps) {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={game.isActive ? "success" : "destructive"}>
+                  <Badge variant={game.isActive ? "default" : "destructive"}>
                     {game.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
@@ -161,19 +163,19 @@ export function GamesList({ games, isLoading, onDeleteGame }: GamesListProps) {
                         </div>
                       </PopoverContent>
                     </Popover>
-                    
-                    <Button 
-                      variant="outline" 
+
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => navigate(`/games/${game.id}/edit`)}
                     >
                       Edit
                     </Button>
-                    
+
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           size="sm"
                           onClick={() => setGameToDelete(game)}
                         >
@@ -188,15 +190,15 @@ export function GamesList({ games, isLoading, onDeleteGame }: GamesListProps) {
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             onClick={() => setGameToDelete(null)}
                             disabled={isDeleting}
                           >
                             Cancel
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             onClick={handleDelete}
                             disabled={isDeleting}
                           >
