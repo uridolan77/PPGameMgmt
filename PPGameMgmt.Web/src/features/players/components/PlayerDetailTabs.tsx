@@ -5,9 +5,9 @@ import {
   PlayerOverviewTab,
   PlayerGamesTab,
   PlayerBonusesTab,
-  PlayerFeaturesTab,
-  ApiErrorDisplay
+  PlayerFeaturesTab
 } from './';
+import { ApiErrorDisplay } from '../../../shared/components';
 
 interface PlayerDetailTabsProps {
   player: Player;

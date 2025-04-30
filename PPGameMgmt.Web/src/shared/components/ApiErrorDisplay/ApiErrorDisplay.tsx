@@ -2,12 +2,13 @@ import React from 'react';
 import { AlertCircleIcon, RefreshCwIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { getUserFriendlyErrorMessage } from '../utils';
+import { getErrorMessage } from '../../../core/error';
 
 interface ApiErrorDisplayProps {
   error: unknown;
   context?: string;
   onRetry?: () => void;
+  className?: string;
 }
 
 /**
@@ -16,12 +17,16 @@ interface ApiErrorDisplayProps {
 export const ApiErrorDisplay: React.FC<ApiErrorDisplayProps> = ({ 
   error, 
   context,
-  onRetry 
+  onRetry,
+  className = ''
 }) => {
-  const errorMessage = getUserFriendlyErrorMessage(error, context);
+  // Get a user-friendly error message
+  const errorMessage = context 
+    ? `${context}: ${getErrorMessage(error)}`
+    : getErrorMessage(error);
   
   return (
-    <Card className="border-destructive">
+    <Card className={`border-destructive ${className}`}>
       <CardHeader className="text-destructive">
         <CardTitle className="flex items-center gap-2">
           <AlertCircleIcon className="h-5 w-5" />

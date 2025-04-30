@@ -96,12 +96,9 @@ namespace PPGameMgmt.API.Extensions
                 // Add schema filter for ApiErrorResponse
                 c.SchemaFilter<ApiErrorResponseSchemaFilter>();
                 c.SchemaFilter<BonusSchemaFilter>();
-
-                // Comment out the non-existent document filter
-                // if (c.DocumentFilters.All(filter => filter.GetType() != typeof(SwaggerSchemaDocumentFilter)))
-                // {
-                //     c.DocumentFilter<SwaggerSchemaDocumentFilter>();
-                // }
+                
+                // Add document filter to ensure ApiErrorResponse is included in components schemas
+                c.DocumentFilter<ApiErrorResponseDocumentFilter>();
 
                 // Add exception documentation filter
                 c.OperationFilter<SwaggerExceptionDocumentationFilter>();

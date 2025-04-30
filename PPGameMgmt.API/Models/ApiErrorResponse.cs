@@ -35,7 +35,7 @@ namespace PPGameMgmt.API.Models
         /// <summary>
         /// Validation errors with property names
         /// </summary>
-        public Dictionary<string, string[]> ValidationErrors { get; set; }
+        public IDictionary<string, string[]> ValidationErrors { get; set; }
 
         /// <summary>
         /// Technical error message (only included in development environment)

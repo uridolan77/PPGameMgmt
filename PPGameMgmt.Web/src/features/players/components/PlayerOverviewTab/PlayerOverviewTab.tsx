@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Player, GameSession, PlayerFeature, BonusClaim } from '../types';
-import { formatDate } from '../utils';
+import { Player, GameSession, PlayerFeature, BonusClaim } from '../../types';
+import { formatDate } from '../../utils';
 import { CalendarIcon, UserIcon, BadgeCheckIcon, CrownIcon, CoinsIcon } from 'lucide-react';
 
 interface PlayerOverviewTabProps {
