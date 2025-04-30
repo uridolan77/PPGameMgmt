@@ -9,10 +9,10 @@ namespace DBConnectionTest
         static void Main(string[] args)
         {
             Console.WriteLine("Testing MySQL database connection...");
-
+            
             // Updated connection string with port 3306
-            string connectionString = "Server=localhost;Port=3306;Database=pp_recommeder_db;User=root;Password=Dt%g_9W3z0*!I;";
-
+            string connectionString = "Server=localhost;Port=3306;Database=pp_recommender_db;User=root;Password=Dt%g_9W3z0*!I;";
+            
             try
             {
                 using (var connection = new MySqlConnection(connectionString))
@@ -20,14 +20,14 @@ namespace DBConnectionTest
                     Console.WriteLine("Opening connection...");
                     connection.Open();
                     Console.WriteLine("Connection successful!");
-
+                    
                     // Check database version
                     using (var command = new MySqlCommand("SELECT VERSION()", connection))
                     {
                         string version = command.ExecuteScalar().ToString();
                         Console.WriteLine($"MySQL version: {version}");
                     }
-
+                    
                     // Check if the players table exists and get count
                     try
                     {
@@ -41,10 +41,10 @@ namespace DBConnectionTest
                     {
                         Console.WriteLine($"Error querying players table: {ex.Message}");
                         Console.WriteLine("Checking if players table exists...");
-
+                        
                         using (var command = new MySqlCommand(
                             "SELECT COUNT(*) FROM information_schema.tables " +
-                            "WHERE table_schema = 'pp_recommeder_db' AND table_name = 'players'",
+                            "WHERE table_schema = 'pp_recommender_db' AND table_name = 'players'", 
                             connection))
                         {
                             int exists = Convert.ToInt32(command.ExecuteScalar());
@@ -54,12 +54,12 @@ namespace DBConnectionTest
                                 Console.WriteLine("Players table does not exist in the database.");
                         }
                     }
-
+                    
                     // List all tables in the database
                     Console.WriteLine("\nListing all tables in the database:");
                     using (var command = new MySqlCommand(
                         "SELECT table_name FROM information_schema.tables " +
-                        "WHERE table_schema = 'pp_recommeder_db'",
+                        "WHERE table_schema = 'pp_recommender_db'", 
                         connection))
                     {
                         using (var reader = command.ExecuteReader())
@@ -96,7 +96,7 @@ namespace DBConnectionTest
                     Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
                 }
             }
-
+            
             Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
         }

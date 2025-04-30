@@ -6,10 +6,10 @@ class Program
     static void Main(string[] args)
     {
         Console.WriteLine("Testing MySQL connection...");
-
+        
         // The updated connection string with port 3306
-        string connectionString = "Server=localhost;Port=3306;Database=pp_recommeder_db;User=root;Password=Dt%g_9W3z0*!I;";
-
+        string connectionString = "Server=localhost;Port=3306;Database=pp_recommender_db;User=root;Password=Dt%g_9W3z0*!I;";
+        
         try
         {
             using (var connection = new MySqlConnection(connectionString))
@@ -17,14 +17,14 @@ class Program
                 Console.WriteLine("Attempting to connect to MySQL...");
                 connection.Open();
                 Console.WriteLine("Successfully connected to MySQL database!");
-
+                
                 // Run a simple query to test further
-                using (var command = new MySqlCommand("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'pp_recommeder_db'", connection))
+                using (var command = new MySqlCommand("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'pp_recommender_db'", connection))
                 {
                     var result = command.ExecuteScalar();
                     Console.WriteLine($"Number of tables in database: {result}");
                 }
-
+                
                 // Try to query the players table if it exists
                 try {
                     using (var command = new MySqlCommand("SELECT COUNT(*) FROM players", connection))
@@ -47,7 +47,7 @@ class Program
                 Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
             }
         }
-
+        
         Console.WriteLine("\nPress any key to exit...");
         Console.ReadKey();
     }
