@@ -3,64 +3,25 @@ using System.Collections.Generic;
 
 namespace PPGameMgmt.Core.Exceptions
 {
-    /// <summary>
-    /// Exception thrown when domain validation rules are violated
-    /// </summary>
     [Serializable]
-    public class ValidationException : DomainException
+    public class ValidationException : Exception
     {
-        /// <summary>
-        /// Gets the error code associated with this exception
-        /// </summary>
-        public override string ErrorCode => "VALIDATION_FAILED";
+        public string ErrorCode => "VALIDATION_FAILED";
+        public Dictionary<string, string> Errors { get; }
 
-        /// <summary>
-        /// Gets the validation errors associated with this exception
-        /// </summary>
-        public IDictionary<string, string[]> Errors { get; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ValidationException"/> class
-        /// </summary>
-        public ValidationException() 
-            : base("One or more validation failures have occurred.")
+        public ValidationException(string field, string message) : base(message)
         {
-            Errors = new Dictionary<string, string[]>();
+            Errors = new Dictionary<string, string> { { field, message } };
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ValidationException"/> class with a specific message
-        /// </summary>
-        /// <param name="message">The message that describes the error</param>
-        public ValidationException(string message) 
-            : base(message)
+        public ValidationException(Dictionary<string, string> errors) : base("One or more validation errors occurred")
         {
-            Errors = new Dictionary<string, string[]>();
+            Errors = errors;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ValidationException"/> class with a specific message and errors
-        /// </summary>
-        /// <param name="message">The message that describes the error</param>
-        /// <param name="errors">The validation errors</param>
-        public ValidationException(string message, IDictionary<string, string[]> errors) 
-            : base(message)
+        public ValidationException(string message, Exception innerException) : base(message, innerException)
         {
-            Errors = errors ?? new Dictionary<string, string[]>();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ValidationException"/> class with a specific property and error
-        /// </summary>
-        /// <param name="propertyName">The name of the property that failed validation</param>
-        /// <param name="errorMessage">The error message</param>
-        public ValidationException(string propertyName, string errorMessage) 
-            : base($"Validation failed: {propertyName} - {errorMessage}")
-        {
-            Errors = new Dictionary<string, string[]>
-            {
-                { propertyName, new[] { errorMessage } }
-            };
+            Errors = new Dictionary<string, string>();
         }
     }
 }

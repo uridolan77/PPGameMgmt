@@ -27,6 +27,8 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         public DbSet<Core.Entities.Recommendations.GameRecommendation> GameRecommendations { get; set; }
         public DbSet<Core.Entities.Recommendations.BonusRecommendation> BonusRecommendations { get; set; }
         public DbSet<MigrationHistory> MigrationHistories { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -268,6 +270,66 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(m => m.Id).HasColumnName("Id").IsRequired();
                 entity.Property(m => m.Description).HasColumnName("Description").IsRequired();
                 entity.Property(m => m.AppliedAt).HasColumnName("AppliedAt");
+            });
+
+            // User configuration
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(u => u.Id);
+                entity.ToTable("users");
+                
+                entity.Property(u => u.Id).HasColumnName("id").IsRequired();
+                entity.Property(u => u.Username).HasColumnName("username").HasMaxLength(50).IsRequired();
+                entity.Property(u => u.Email).HasColumnName("email").HasMaxLength(100).IsRequired();
+                entity.Property(u => u.PasswordHash).HasColumnName("password_hash").HasMaxLength(255).IsRequired();
+                entity.Property(u => u.PasswordSalt).HasColumnName("password_salt").HasMaxLength(255).IsRequired();
+                entity.Property(u => u.FirstName).HasColumnName("first_name").HasMaxLength(50);
+                entity.Property(u => u.LastName).HasColumnName("last_name").HasMaxLength(50);
+                entity.Property(u => u.IsActive).HasColumnName("is_active").IsRequired();
+                entity.Property(u => u.IsEmailVerified).HasColumnName("is_email_verified").IsRequired();
+                entity.Property(u => u.VerificationToken).HasColumnName("verification_token").HasMaxLength(100);
+                entity.Property(u => u.ResetPasswordToken).HasColumnName("reset_password_token").HasMaxLength(100);
+                entity.Property(u => u.ResetPasswordExpires).HasColumnName("reset_password_expires");
+                entity.Property(u => u.LastLoginDate).HasColumnName("last_login_date");
+                entity.Property(u => u.CreatedAt).HasColumnName("created_at").IsRequired();
+                entity.Property(u => u.UpdatedAt).HasColumnName("updated_at").IsRequired();
+                entity.Property(u => u.Role).HasColumnName("role").HasMaxLength(20).IsRequired();
+                entity.Property(u => u.PlayerId).HasColumnName("player_id");
+                
+                // Indexes
+                entity.HasIndex(u => u.Username).IsUnique();
+                entity.HasIndex(u => u.Email).IsUnique();
+                
+                // Relationships
+                entity.HasOne(u => u.Player)
+                    .WithMany()
+                    .HasForeignKey(u => u.PlayerId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+            
+            // RefreshToken configuration
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(rt => rt.Id);
+                entity.ToTable("refresh_tokens");
+                
+                entity.Property(rt => rt.Id).HasColumnName("id").IsRequired();
+                entity.Property(rt => rt.UserId).HasColumnName("user_id").IsRequired();
+                entity.Property(rt => rt.Token).HasColumnName("token").HasMaxLength(255).IsRequired();
+                entity.Property(rt => rt.Expires).HasColumnName("expires").IsRequired();
+                entity.Property(rt => rt.CreatedAt).HasColumnName("created_at").IsRequired();
+                entity.Property(rt => rt.Revoked).HasColumnName("revoked").IsRequired();
+                entity.Property(rt => rt.ReplacedByToken).HasColumnName("replaced_by_token").HasMaxLength(255);
+                
+                // Indexes
+                entity.HasIndex(rt => rt.Token);
+                entity.HasIndex(rt => rt.UserId);
+                
+                // Relationships
+                entity.HasOne(rt => rt.User)
+                    .WithMany()
+                    .HasForeignKey(rt => rt.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

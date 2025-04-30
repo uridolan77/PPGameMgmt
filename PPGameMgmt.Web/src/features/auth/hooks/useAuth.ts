@@ -1,18 +1,58 @@
 import { LoginCredentials, User } from '../types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import mockAuthService from '../services/mockAuthService';
+
+// Local storage keys
+const USER_KEY = 'auth_user';
+const ACCESS_TOKEN_KEY = 'auth_access_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 
 /**
  * Hook for accessing authentication state and methods
  * This version uses a mock implementation since the store auth functions are not available
  */
 export const useAuth = () => {
-  // Local state for auth
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  // Initialize state from localStorage if available
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem(USER_KEY);
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  });
+
+  const [refreshToken, setRefreshToken] = useState<string | null>(() => {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Persist auth state to localStorage when it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (accessToken) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    } else {
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } else {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
+  }, [refreshToken]);
 
   // Return mock auth implementation
   return {

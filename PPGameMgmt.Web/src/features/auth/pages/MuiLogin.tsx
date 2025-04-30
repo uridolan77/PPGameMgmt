@@ -1,28 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LoginCredentials } from '../types';
 import useAuth from '../hooks/useAuth';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CircularProgress,
-  Container,
-  FormControl,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  OutlinedInput,
-  TextField,
-  Typography,
-  Alert,
-  Paper,
-  Avatar
-} from '@mui/material';
-import { Visibility, VisibilityOff, Login as LoginIcon, SportsEsports as GamepadIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+
+// Lazy load MUI components to improve performance
+const Box = lazy(() => import('@mui/material/Box'));
+const Button = lazy(() => import('@mui/material/Button'));
+const Card = lazy(() => import('@mui/material/Card'));
+const CardContent = lazy(() => import('@mui/material/CardContent'));
+const CardHeader = lazy(() => import('@mui/material/CardHeader'));
+const CircularProgress = lazy(() => import('@mui/material/CircularProgress'));
+const FormControl = lazy(() => import('@mui/material/FormControl'));
+const IconButton = lazy(() => import('@mui/material/IconButton'));
+const InputAdornment = lazy(() => import('@mui/material/InputAdornment'));
+const InputLabel = lazy(() => import('@mui/material/InputLabel'));
+const OutlinedInput = lazy(() => import('@mui/material/OutlinedInput'));
+const TextField = lazy(() => import('@mui/material/TextField'));
+const Typography = lazy(() => import('@mui/material/Typography'));
+const Alert = lazy(() => import('@mui/material/Alert'));
+const Avatar = lazy(() => import('@mui/material/Avatar'));
+
+// Lazy load icons
+const Visibility = lazy(() => import('@mui/icons-material/Visibility').then(module => ({ default: module.default })));
+const VisibilityOff = lazy(() => import('@mui/icons-material/VisibilityOff').then(module => ({ default: module.default })));
+const LoginIcon = lazy(() => import('@mui/icons-material/Login').then(module => ({ default: module.default })));
+const GamepadIcon = lazy(() => import('@mui/icons-material/SportsEsports').then(module => ({ default: module.default })));
 
 interface LocationState {
   from?: {
@@ -121,150 +124,173 @@ const MuiLogin: React.FC = () => {
 
     if (!username || !password) return;
 
-    // Debug: Log auth object to see what's available
-    console.log('Auth object:', auth);
-    console.log('Auth login function:', auth.login);
-
     try {
       // Create credentials object
       const credentials: LoginCredentials = { username, password };
 
-      // Call the login function from the auth slice
-      if (typeof auth.login === 'function') {
-        await auth.login(credentials);
+      // Call the login function
+      await auth.login(credentials);
 
-        if (!auth.error) {
+      // Check if login was successful
+      if (!auth.error) {
+        console.log('Login successful, navigating to:', from);
+
+        // Add a small delay to ensure state is updated
+        setTimeout(() => {
           navigate(from, { replace: true });
-        }
-      } else {
-        console.error('auth.login is not a function!');
-        // Fallback: Try to use a mock login for testing
-        console.log('Using mock login for testing');
-        // Wait for 2 seconds to simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        // Navigate to home page
-        navigate('/', { replace: true });
+        }, 100);
       }
     } catch (error) {
       console.error('Login error:', error);
+      // Error is already set in the auth state
     }
   };
 
+  // Simple loading component
+  const LoadingFallback = () => (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      flexDirection: 'column',
+      gap: '1rem'
+    }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        border: '4px solid #f3f3f3',
+        borderTop: '4px solid #3498db',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <div>Loading login form...</div>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+
   return (
-    <LoginContainer>
-      <StyledCard>
-        <LogoContainer>
-          <LogoAvatar>
-            <GamepadIcon fontSize="large" color="primary" />
-          </LogoAvatar>
-        </LogoContainer>
+    <Suspense fallback={<LoadingFallback />}>
+      <LoginContainer>
+        <StyledCard>
+          <LogoContainer>
+            <LogoAvatar>
+              <GamepadIcon fontSize="large" color="primary" />
+            </LogoAvatar>
+          </LogoContainer>
 
-        <CardHeader
-          title={
-            <GradientTypography variant="h4" align="center">
-              Log In
-            </GradientTypography>
-          }
-          subheader={
-            <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 1 }}>
-              Enter your credentials to access your account
-            </Typography>
-          }
-        />
+          <CardHeader
+            title={
+              <GradientTypography variant="h4" align="center">
+                Log In
+              </GradientTypography>
+            }
+            subheader={
+              <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 1 }}>
+                Enter your credentials to access your account
+              </Typography>
+            }
+          />
 
-        <CardContent>
-          <form onSubmit={handleLogin}>
-            {auth.error && (
-              <Alert
-                severity="error"
-                sx={{
-                  mb: 3,
-                  animation: 'shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both',
-                  '@keyframes shake': {
-                    '0%, 100%': { transform: 'translateX(0)' },
-                    '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
-                    '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' }
-                  }
-                }}
-              >
-                {auth.error}
-              </Alert>
-            )}
-
-            <FormContainer>
-              <TextField
-                id="username"
-                label="Username"
-                variant="outlined"
-                fullWidth
-                required
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={auth.isLoading}
-                placeholder="Enter your username"
-                InputProps={{
-                  sx: {
-                    height: '48px',
-                    backgroundColor: 'background.default',
-                    '&:hover': {
-                      backgroundColor: 'background.paper'
-                    }
-                  }
-                }}
-              />
-
-              <FormControl variant="outlined" fullWidth>
-                <InputLabel htmlFor="password">Password</InputLabel>
-                <OutlinedInput
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={auth.isLoading}
-                  required
-                  autoComplete="current-password"
-                  placeholder="Enter your password"
+          <CardContent>
+            <form onSubmit={handleLogin}>
+              {auth.error && (
+                <Alert
+                  severity="error"
                   sx={{
-                    height: '48px',
-                    backgroundColor: 'background.default',
-                    '&:hover': {
-                      backgroundColor: 'background.paper'
+                    mb: 3,
+                    animation: 'shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both',
+                    '@keyframes shake': {
+                      '0%, 100%': { transform: 'translateX(0)' },
+                      '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
+                      '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' }
                     }
                   }}
-                  endAdornment={
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  }
-                  label="Password"
-                />
-              </FormControl>
+                >
+                  {auth.error}
+                </Alert>
+              )}
 
-              <SubmitButton
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                disabled={auth.isLoading || !username || !password}
-                startIcon={auth.isLoading ?
-                  <CircularProgress size={20} color="inherit" /> :
-                  <LoginIcon />
-                }
-              >
-                {auth.isLoading ? 'Logging in...' : 'Log In'}
-              </SubmitButton>
-            </FormContainer>
-          </form>
-        </CardContent>
-      </StyledCard>
-    </LoginContainer>
+              <FormContainer>
+                <TextField
+                  id="username"
+                  label="Username"
+                  variant="outlined"
+                  fullWidth
+                  required
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={auth.isLoading}
+                  placeholder="Enter your username"
+                  InputProps={{
+                    sx: {
+                      height: '48px',
+                      backgroundColor: 'background.default',
+                      '&:hover': {
+                        backgroundColor: 'background.paper'
+                      }
+                    }
+                  }}
+                />
+
+                <FormControl variant="outlined" fullWidth>
+                  <InputLabel htmlFor="password">Password</InputLabel>
+                  <OutlinedInput
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={auth.isLoading}
+                    required
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    sx={{
+                      height: '48px',
+                      backgroundColor: 'background.default',
+                      '&:hover': {
+                        backgroundColor: 'background.paper'
+                      }
+                    }}
+                    endAdornment={
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    }
+                    label="Password"
+                  />
+                </FormControl>
+
+                <SubmitButton
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  disabled={auth.isLoading || !username || !password}
+                  startIcon={auth.isLoading ?
+                    <CircularProgress size={20} color="inherit" /> :
+                    <LoginIcon />
+                  }
+                >
+                  {auth.isLoading ? 'Logging in...' : 'Log In'}
+                </SubmitButton>
+              </FormContainer>
+            </form>
+          </CardContent>
+        </StyledCard>
+      </LoginContainer>
+    </Suspense>
   );
 };
 
