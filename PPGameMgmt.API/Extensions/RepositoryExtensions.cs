@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Interfaces.Repositories;
 using PPGameMgmt.Infrastructure.Data;
 using PPGameMgmt.Infrastructure.Data.Repositories;
 
@@ -20,7 +21,7 @@ namespace PPGameMgmt.API.Extensions
             services.AddScoped<IBonusRepository, BonusRepository>();
             services.AddScoped<IGameSessionRepository, GameSessionRepository>();
             services.AddScoped<IRecommendationRepository, RecommendationRepository>();
-            services.AddScoped<IBonusClaimRepository, BonusClaimRepository>();
+            services.AddScoped<PPGameMgmt.Core.Interfaces.Repositories.IBonusClaimRepository, BonusClaimRepository>();
             services.AddScoped<IPlayerFeaturesRepository, PlayerFeaturesRepository>();
             
             // Add Unit of Work

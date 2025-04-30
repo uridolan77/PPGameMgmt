@@ -1,123 +1,95 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useApiQuery, useApiMutation, createApiHelpers } from '../../../core/api';
+import { useApiQuery, useApiMutation } from '../../../core/api';
+import { playerApi } from '../services';
+import { Player } from '../types';
 
-// Player interfaces
-interface Player {
-  id: number;
-  username: string;
-  email: string;
-  playerLevel: number;
-  segment: string | null;
-  lastLogin: string | null;
-  isActive: boolean;
-}
-
-interface PlayerFeature {
-  id: number;
-  playerId: number;
-  name: string;
-  isEnabled: boolean;
-  settings: Record<string, any>;
-}
-
-interface PlayerGameSession {
-  id: number;
-  playerId: number;
-  gameId: number;
-  gameName: string;
-  startTime: string;
-  duration: number; // in seconds
-  betAmount: number;
-  winAmount: number;
-}
-
-interface PlayerBonusClaim {
-  id: number;
-  playerId: number;
-  bonusId: number;
-  bonusName: string;
-  claimDate: string;
-  expiryDate: string;
-  value: number;
-  status: 'Active' | 'Used' | 'Expired';
-}
-
-// Create API helpers for player resources
-const playerApi = {
-  getAll: (segment?: string) => 
-    createApiHelpers.getList<Player>('players')({ segment }),
-  getById: createApiHelpers.getOne<Player>('players'),
-  create: createApiHelpers.create<Player, Omit<Player, 'id'>>('players'),
-  update: createApiHelpers.update<Player, Partial<Player>>('players'),
-  remove: createApiHelpers.remove('players'),
-  getFeatures: (id: number) => 
-    createApiHelpers.getOne<PlayerFeature[]>(`players/${id}/features`)(id),
-  getGameSessions: (id: number) => 
-    createApiHelpers.getOne<PlayerGameSession[]>(`players/${id}/game-sessions`)(id),
-  getBonusClaims: (id: number) => 
-    createApiHelpers.getOne<PlayerBonusClaim[]>(`players/${id}/bonus-claims`)(id)
+// Constants for query configuration
+const CACHE_KEYS = {
+  ALL_PLAYERS: 'players',
+  PLAYER: 'player',
+  FEATURES: 'player-features',
+  GAME_SESSIONS: 'player-game-sessions',
+  BONUS_CLAIMS: 'player-bonus-claims'
 };
 
-// Hook for fetching all players
+const STALE_TIMES = {
+  STANDARD: 1000 * 60 * 5, // 5 minutes
+  SHORT: 1000 * 60 * 2,    // 2 minutes
+  LONG: 1000 * 60 * 15     // 15 minutes
+};
+
+/**
+ * Hook for fetching all players with optional segment filtering
+ */
 export function usePlayers(segment?: string) {
   return useApiQuery(
-    ['players', { segment }],
+    [CACHE_KEYS.ALL_PLAYERS, { segment }],
     () => playerApi.getAll(segment),
     {
-      staleTime: 1000 * 60 * 2, // 2 minutes
+      staleTime: STALE_TIMES.SHORT,
     }
   );
 }
 
-// Hook for fetching a single player
+/**
+ * Hook for fetching a single player by ID
+ */
 export function usePlayer(playerId?: number) {
   return useApiQuery(
-    ['player', playerId],
+    [CACHE_KEYS.PLAYER, playerId],
     () => playerApi.getById(playerId as number),
     {
       enabled: !!playerId,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: STALE_TIMES.STANDARD,
     }
   );
 }
 
-// Hook for fetching player features
+/**
+ * Hook for fetching player features
+ */
 export function usePlayerFeatures(playerId?: number) {
   return useApiQuery(
-    ['player-features', playerId],
+    [CACHE_KEYS.FEATURES, playerId],
     () => playerApi.getFeatures(playerId as number),
     {
       enabled: !!playerId,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: STALE_TIMES.STANDARD,
     }
   );
 }
 
-// Hook for fetching player game sessions
+/**
+ * Hook for fetching player game sessions
+ */
 export function usePlayerGameSessions(playerId?: number) {
   return useApiQuery(
-    ['player-game-sessions', playerId],
+    [CACHE_KEYS.GAME_SESSIONS, playerId],
     () => playerApi.getGameSessions(playerId as number),
     {
       enabled: !!playerId,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: STALE_TIMES.STANDARD,
     }
   );
 }
 
-// Hook for fetching player bonus claims
+/**
+ * Hook for fetching player bonus claims
+ */
 export function usePlayerBonusClaims(playerId?: number) {
   return useApiQuery(
-    ['player-bonus-claims', playerId],
+    [CACHE_KEYS.BONUS_CLAIMS, playerId],
     () => playerApi.getBonusClaims(playerId as number),
     {
       enabled: !!playerId,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: STALE_TIMES.STANDARD,
     }
   );
 }
 
-// Mutation hook for creating a player
+/**
+ * Mutation hook for creating a new player
+ */
 export function useCreatePlayer() {
   const queryClient = useQueryClient();
   
@@ -125,14 +97,16 @@ export function useCreatePlayer() {
     (playerData: Omit<Player, 'id'>) => playerApi.create(playerData),
     {
       onSuccess: (newPlayer) => {
-        queryClient.invalidateQueries({ queryKey: ['players'] });
-        queryClient.setQueryData(['player', newPlayer.id], newPlayer);
+        queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.ALL_PLAYERS] });
+        queryClient.setQueryData([CACHE_KEYS.PLAYER, newPlayer.id], newPlayer);
       }
     }
   );
 }
 
-// Mutation hook for updating a player
+/**
+ * Mutation hook for updating an existing player
+ */
 export function useUpdatePlayer() {
   const queryClient = useQueryClient();
   
@@ -140,20 +114,20 @@ export function useUpdatePlayer() {
     ({ id, data }: { id: number, data: Partial<Player> }) => playerApi.update(id, data),
     {
       onSuccess: (updatedPlayer) => {
-        queryClient.invalidateQueries({ queryKey: ['player', updatedPlayer.id] });
-        queryClient.invalidateQueries({ queryKey: ['players'] });
+        queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.PLAYER, updatedPlayer.id] });
+        queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.ALL_PLAYERS] });
       },
       // Add optimistic updates for better UX
       onMutate: async ({ id, data }) => {
         // Cancel any outgoing refetches
-        await queryClient.cancelQueries({ queryKey: ['player', id] });
+        await queryClient.cancelQueries({ queryKey: [CACHE_KEYS.PLAYER, id] });
         
         // Snapshot the current value
-        const previousPlayer = queryClient.getQueryData(['player', id]);
+        const previousPlayer = queryClient.getQueryData([CACHE_KEYS.PLAYER, id]);
         
         // Optimistically update to the new value
         if (previousPlayer) {
-          queryClient.setQueryData(['player', id], {
+          queryClient.setQueryData([CACHE_KEYS.PLAYER, id], {
             ...previousPlayer,
             ...data
           });
@@ -164,14 +138,16 @@ export function useUpdatePlayer() {
       onError: (_error, { id }, context) => {
         // If the mutation fails, roll back
         if (context?.previousPlayer) {
-          queryClient.setQueryData(['player', id], context.previousPlayer);
+          queryClient.setQueryData([CACHE_KEYS.PLAYER, id], context.previousPlayer);
         }
       }
     }
   );
 }
 
-// Mutation hook for deleting a player
+/**
+ * Mutation hook for deleting a player
+ */
 export function useDeletePlayer() {
   const queryClient = useQueryClient();
   
@@ -179,8 +155,12 @@ export function useDeletePlayer() {
     (id: number) => playerApi.remove(id),
     {
       onSuccess: (_data, id) => {
-        queryClient.invalidateQueries({ queryKey: ['players'] });
-        queryClient.removeQueries({ queryKey: ['player', id] });
+        queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.ALL_PLAYERS] });
+        queryClient.removeQueries({ queryKey: [CACHE_KEYS.PLAYER, id] });
+        // Also clean up related queries when a player is deleted
+        queryClient.removeQueries({ queryKey: [CACHE_KEYS.FEATURES, id] });
+        queryClient.removeQueries({ queryKey: [CACHE_KEYS.GAME_SESSIONS, id] });
+        queryClient.removeQueries({ queryKey: [CACHE_KEYS.BONUS_CLAIMS, id] });
       }
     }
   );

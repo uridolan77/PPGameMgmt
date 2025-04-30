@@ -1,7 +1,12 @@
-// Export pages
-export { default as PlayerDetailPage } from './pages/PlayerDetail';
-export { default as PlayerFormPage } from './pages/PlayerForm';
-export { default as PlayersListPage } from './pages/PlayersList';
+// Export components
+export * from './components';
 
 // Export hooks
 export * from './hooks';
+
+// Export types
+export * from './types';
+
+// Export pages (default exports need to be handled differently)
+import PlayerDetail from './pages/PlayerDetail';
+export { PlayerDetail };

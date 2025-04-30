@@ -5,6 +5,7 @@ using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Services;
 using PPGameMgmt.Infrastructure.ML.Features;
 using PPGameMgmt.Infrastructure.ML.Models;
+using PPGameMgmt.Infrastructure.Services;
 using System.Reflection;
 
 namespace PPGameMgmt.API.Extensions
@@ -20,11 +21,13 @@ namespace PPGameMgmt.API.Extensions
         public static IServiceCollection AddCoreServices(this IServiceCollection services)
         {
             // Register core services
-            services.AddScoped<PlayerService>();
-            services.AddScoped<GameService>();
-            services.AddScoped<BonusService>();
-            services.AddScoped<RecommendationService>();
-            services.AddScoped<IBonusOptimizationService, BonusOptimizationService>();
+            services.AddScoped<IPlayerService, PlayerService>();
+            services.AddScoped<IGameService, GameService>();
+            
+            // Register our custom implementations with fully qualified names
+            services.AddScoped<IBonusService, PPGameMgmt.Infrastructure.Services.BonusService>();
+            services.AddScoped<IRecommendationService, PPGameMgmt.Infrastructure.Services.RecommendationService>();
+            services.AddScoped<IBonusOptimizationService, PPGameMgmt.Infrastructure.Services.BonusOptimizationService>();
             
             return services;
         }
@@ -35,29 +38,16 @@ namespace PPGameMgmt.API.Extensions
         public static IServiceCollection AddCachedServices(this IServiceCollection services)
         {
             // Register cached service decorators
-            services.AddScoped<IPlayerService>(provider =>
-                new CachedPlayerService(
-                    provider.GetRequiredService<PlayerService>(),
-                    provider.GetRequiredService<ICacheService>(),
-                    provider.GetRequiredService<ILogger<CachedPlayerService>>()));
-
-            services.AddScoped<IGameService>(provider =>
-                new CachedGameService(
-                    provider.GetRequiredService<GameService>(),
-                    provider.GetRequiredService<ICacheService>(),
-                    provider.GetRequiredService<ILogger<CachedGameService>>()));
-
-            services.AddScoped<IBonusService>(provider =>
-                new CachedBonusService(
-                    provider.GetRequiredService<BonusService>(),
-                    provider.GetRequiredService<ICacheService>(),
-                    provider.GetRequiredService<ILogger<CachedBonusService>>()));
-
-            services.AddScoped<IRecommendationService>(provider =>
-                new CachedRecommendationService(
-                    provider.GetRequiredService<RecommendationService>(),
-                    provider.GetRequiredService<ICacheService>(),
-                    provider.GetRequiredService<ILogger<CachedRecommendationService>>()));
+            // Note: We're using the Scrutor library's Decorate method which should be working
+            services.AddScoped<CachedPlayerService>();
+            services.AddScoped<CachedGameService>();
+            services.AddScoped<CachedBonusService>();
+            services.AddScoped<CachedRecommendationService>();
+            
+            services.Decorate<IPlayerService, CachedPlayerService>();
+            services.Decorate<IGameService, CachedGameService>();
+            services.Decorate<IBonusService, CachedBonusService>();
+            services.Decorate<IRecommendationService, CachedRecommendationService>();
             
             return services;
         }

@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -11,6 +10,7 @@ import {
   TagIcon
 } from 'lucide-react';
 import { Player } from '../types';
+import { usePlayerActions } from '../hooks';
 
 interface PlayerHeaderProps {
   player: Player;
@@ -18,7 +18,7 @@ interface PlayerHeaderProps {
 }
 
 export const PlayerHeader: React.FC<PlayerHeaderProps> = ({ player, onDeletePlayer }) => {
-  const navigate = useNavigate();
+  const playerActions = usePlayerActions();
 
   // Generate a consistent color from a string for avatar
   const getAvatarColor = (str: string) => {
@@ -35,7 +35,7 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({ player, onDeletePlay
       <Button 
         variant="outline" 
         className="mb-4"
-        onClick={() => navigate('/players')}
+        onClick={() => playerActions.goToPlayersList()}
       >
         <ArrowLeftIcon className="mr-2 h-4 w-4" />
         Back to Players
@@ -63,7 +63,7 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({ player, onDeletePlay
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/players/edit/${player.id}`)}
+            onClick={() => playerActions.goToPlayerEdit(player.id)}
           >
             <PencilIcon className="mr-2 h-4 w-4" />
             Edit
@@ -72,9 +72,10 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({ player, onDeletePlay
             variant="outline"
             className="text-destructive hover:text-destructive"
             onClick={onDeletePlayer}
+            disabled={playerActions.isDeleting}
           >
             <TrashIcon className="mr-2 h-4 w-4" />
-            Delete
+            {playerActions.isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </div>
       </div>

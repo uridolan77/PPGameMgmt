@@ -1,6 +1,8 @@
-using PPGameMgmt.Core.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+// Use namespace aliases to distinguish between ambiguous types
+using CoreEntities = PPGameMgmt.Core.Entities;
+using RecommendationEntities = PPGameMgmt.Core.Entities.Recommendations;
 
 namespace PPGameMgmt.Core.Interfaces
 {
@@ -12,22 +14,22 @@ namespace PPGameMgmt.Core.Interfaces
         /// <summary>
         /// Gets personalized recommendation for a player
         /// </summary>
-        Task<Recommendation> GetPersonalizedRecommendationAsync(string playerId);
+        Task<RecommendationEntities.Recommendation> GetPersonalizedRecommendationAsync(string playerId);
         
         /// <summary>
         /// Gets latest recommendation for a player
         /// </summary>
-        Task<Recommendation> GetLatestRecommendationAsync(string playerId);
+        Task<RecommendationEntities.Recommendation> GetLatestRecommendationAsync(string playerId);
         
         /// <summary>
         /// Gets game recommendations for a player
         /// </summary>
-        Task<IEnumerable<GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5);
+        Task<IEnumerable<RecommendationEntities.GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5);
         
         /// <summary>
         /// Gets bonus recommendation for a player
         /// </summary>
-        Task<BonusRecommendation> GetBonusRecommendationAsync(string playerId);
+        Task<RecommendationEntities.BonusRecommendation> GetBonusRecommendationAsync(string playerId);
         
         /// <summary>
         /// Records that a recommendation was displayed to a player

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { BonusClaim } from '../types';
 import { formatDate } from '../utils/dateUtils';
 import { LoadingIndicator } from './LoadingIndicator';
+import { BONUS_STATUS_VARIANTS } from '../utils/constants';
 
 interface PlayerBonusesTabProps {
   bonusClaims?: BonusClaim[];
@@ -15,15 +16,8 @@ export const PlayerBonusesTab: React.FC<PlayerBonusesTabProps> = ({
   loading 
 }) => {
   const getBadgeVariant = (status: string) => {
-    switch(status) {
-      case 'Completed':
-      case 'Used':
-        return 'default';
-      case 'Active':
-        return 'secondary';
-      default:
-        return 'destructive';
-    }
+    const normalizedStatus = status.toUpperCase() as keyof typeof BONUS_STATUS_VARIANTS;
+    return BONUS_STATUS_VARIANTS[normalizedStatus] || 'destructive';
   };
 
   return (
@@ -45,6 +39,11 @@ export const PlayerBonusesTab: React.FC<PlayerBonusesTabProps> = ({
                       <span className="mx-1">•</span>
                       Value: ${bonus.value.toFixed(2)}
                     </div>
+                    {bonus.expiryDate && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Expires on: {formatDate(bonus.expiryDate)}
+                      </div>
+                    )}
                   </div>
                   <Badge variant={getBadgeVariant(bonus.status)}>
                     {bonus.status}

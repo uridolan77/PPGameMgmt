@@ -83,7 +83,7 @@ namespace PPGameMgmt.API.Middleware
             {
                 errorResponse.DeveloperMessage = exception.Message;
                 errorResponse.ExceptionType = exception.GetType().Name;
-                errorResponse.StackTrace = exception.StackTrace;
+                errorResponse.StackTrace = exception.StackTrace ?? string.Empty;
             }
 
             var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -108,9 +108,8 @@ namespace PPGameMgmt.API.Middleware
                 // Standard exceptions
                 KeyNotFoundException => HttpStatusCode.NotFound,
                 UnauthorizedAccessException => HttpStatusCode.Unauthorized,
-                ArgumentException => HttpStatusCode.BadRequest,
-                ArgumentNullException => HttpStatusCode.BadRequest,
-                ArgumentOutOfRangeException => HttpStatusCode.BadRequest,
+                // Combine all ArgumentException types
+                ArgumentException or ArgumentNullException or ArgumentOutOfRangeException => HttpStatusCode.BadRequest,
                 InvalidOperationException => HttpStatusCode.BadRequest,
                 FormatException => HttpStatusCode.BadRequest,
                 NotImplementedException => HttpStatusCode.NotImplemented,
@@ -144,8 +143,7 @@ namespace PPGameMgmt.API.Middleware
                 HttpStatusCode.ServiceUnavailable => "The service is temporarily unavailable. Please try again later.",
                 HttpStatusCode.GatewayTimeout => "The request timed out. Please try again later.",
                 // Combine NotImplemented and InternalServerError into a single case
-                HttpStatusCode.NotImplemented or HttpStatusCode.InternalServerError => "An unexpected error occurred. Please try again later.",
-                HttpStatusCode.BadGateway => "The server received an invalid response from an upstream server.",
+                HttpStatusCode.NotImplemented or HttpStatusCode.InternalServerError or HttpStatusCode.BadGateway => "An unexpected error occurred. Please try again later.",
                 // Default case
                 _ => "An error occurred while processing your request."
             };

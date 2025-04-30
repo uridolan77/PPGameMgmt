@@ -1,7 +1,9 @@
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System;
 
 namespace PPGameMgmt.API.Swagger
 {
@@ -55,12 +57,38 @@ namespace PPGameMgmt.API.Swagger
 
                 if (parameter.Schema.Default == null && description.DefaultValue != null)
                 {
-                    // REF: https://github.com/Microsoft/aspnet-api-versioning/issues/429#issuecomment-605402330
-                    var json = System.Text.Json.JsonSerializer.Serialize(description.DefaultValue, description.ModelMetadata.ModelType);
-                    parameter.Schema.Default = Microsoft.OpenApi.Any.OpenApiAnyFactory.CreateFromJson(json);
+                    // Instead of using OpenApiAnyFactory, create the appropriate OpenApiAny type directly
+                    parameter.Schema.Default = CreateOpenApiAnyFromDefaultValue(description.DefaultValue);
                 }
 
                 parameter.Required |= description.IsRequired;
+            }
+        }
+
+        private IOpenApiAny CreateOpenApiAnyFromDefaultValue(object defaultValue)
+        {
+            if (defaultValue == null)
+                return new OpenApiNull();  // Return OpenApiNull instead of null
+
+            switch (defaultValue)
+            {
+                case string stringValue:
+                    return new OpenApiString(stringValue);
+                case int intValue:
+                    return new OpenApiInteger(intValue);
+                case long longValue:
+                    return new OpenApiLong(longValue);
+                case double doubleValue:
+                    return new OpenApiDouble(doubleValue);
+                case float floatValue:
+                    return new OpenApiFloat(floatValue);
+                case bool boolValue:
+                    return new OpenApiBoolean(boolValue);
+                case DateTime dateTimeValue:
+                    return new OpenApiDateTime(dateTimeValue);
+                default:
+                    // For complex types, we just use string representation
+                    return new OpenApiString(defaultValue.ToString());
             }
         }
     }

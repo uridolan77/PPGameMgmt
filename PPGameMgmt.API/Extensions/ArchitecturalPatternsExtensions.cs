@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PPGameMgmt.API.Gateways;
 using PPGameMgmt.API.Gateways.Configuration;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Interfaces.Repositories;
 using PPGameMgmt.Infrastructure.CQRS;
 using PPGameMgmt.Infrastructure.Data.Migrations;
 using PPGameMgmt.Infrastructure.Services;
@@ -45,7 +46,7 @@ namespace PPGameMgmt.API.Extensions
         public static IServiceCollection AddOutboxPattern(this IServiceCollection services)
         {
             // Register Outbox repository
-            services.AddScoped<IOutboxRepository, OutboxRepository>();
+            services.AddScoped<PPGameMgmt.Core.Interfaces.Repositories.IOutboxRepository, OutboxRepository>();
             
             // Register the background service for processing outbox messages
             services.AddHostedService<OutboxProcessor>();

@@ -8,3 +8,5 @@ export {
   useUpdatePlayer,
   useDeletePlayer
 } from './usePlayers';
+
+export { usePlayerActions } from './usePlayerActions';

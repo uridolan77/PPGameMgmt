@@ -94,7 +94,7 @@ namespace PPGameMgmt.API.Services
             }
         }
 
-        public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpiration = null) where T : class
+        public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpiration = null)
         {
             var cachedItem = await GetAsync<T>(key);
 

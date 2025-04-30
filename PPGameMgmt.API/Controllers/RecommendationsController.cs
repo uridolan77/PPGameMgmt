@@ -84,12 +84,14 @@ namespace PPGameMgmt.API.Controllers
                         RecommendedBonus = new RecommendationEntities.BonusRecommendation
                         {
                             BonusId = "B001",
-                            BonusName = "Test Bonus",
-                            BonusType = BonusEntities.BonusType.DepositMatch,
-                            Amount = 100,
-                            PercentageMatch = 100,
+                            // Replace incorrect property names with ones that actually exist in BonusRecommendation
+                            Reason = "Test recommendation for a deposit match bonus",
                             Score = 0.9,
-                            RecommendationReason = "Test recommendation"
+                            PlayerId = playerId,
+                            Id = Guid.NewGuid().ToString(),
+                            RecommendationDate = DateTime.UtcNow,
+                            IsShown = false,
+                            IsClaimed = false
                         }
                     };
 
