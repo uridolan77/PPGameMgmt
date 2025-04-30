@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { VirtualizedList } from '../../../../shared/components/VirtualizedList/VirtualizedList';
 import { Player } from '../../types';
+import { Card } from '@/components/ui/card';
 
 interface PlayerListTableProps {
   players: Player[];
@@ -35,17 +36,17 @@ export const PlayerListTable: React.FC<PlayerListTableProps> = ({
   };
 
   return (
-    <div className="rounded-md border">
+    <Card className="mui-style-card data-table fade-in overflow-hidden border-none shadow-md">
       <div className="bg-background">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-slate-50/80 dark:bg-slate-800/80">
             <TableRow>
-              <TableHead>Username</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="text-center">Level</TableHead>
-              <TableHead>Segment</TableHead>
-              <TableHead>Last Login</TableHead>
-              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400 py-4">Username</TableHead>
+              <TableHead className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400 py-4">Email</TableHead>
+              <TableHead className="text-center text-xs font-medium uppercase text-slate-500 dark:text-slate-400 py-4">Level</TableHead>
+              <TableHead className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400 py-4">Segment</TableHead>
+              <TableHead className="text-xs font-medium uppercase text-slate-500 dark:text-slate-400 py-4">Last Login</TableHead>
+              <TableHead className="text-center text-xs font-medium uppercase text-slate-500 dark:text-slate-400 py-4">Status</TableHead>
             </TableRow>
           </TableHeader>
         </Table>
@@ -57,53 +58,65 @@ export const PlayerListTable: React.FC<PlayerListTableProps> = ({
           isLoading={isLoading}
           isEmpty={players.length === 0}
           loadingComponent={
-            <div className="h-24 flex items-center justify-center">
-              Loading player data...
+            <div className="h-32 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+                <p className="text-sm text-slate-500">Loading player data...</p>
+              </div>
             </div>
           }
           emptyComponent={
-            <div className="h-24 flex items-center justify-center">
+            <div className="h-32 flex items-center justify-center">
               {isError ? (
-                <span className="text-red-500">Error loading player data</span>
+                <div className="text-red-500 flex flex-col items-center">
+                  <span className="text-lg mb-1">⚠️</span>
+                  <span className="text-sm">Error loading player data</span>
+                </div>
               ) : (
-                <span>No players found</span>
+                <div className="text-slate-500 flex flex-col items-center">
+                  <span className="text-lg mb-1">📋</span>
+                  <span className="text-sm">No players found</span>
+                </div>
               )}
             </div>
           }
-          renderItem={(player) => (
+          renderItem={(player: Player) => (
             <div
               onClick={() => onRowClick(player)}
-              className="cursor-pointer hover:bg-muted/50 border-b"
+              className="mui-style-table-row cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700 transition-all duration-150"
             >
-              <div className="grid grid-cols-6 py-3">
+              <div className="grid grid-cols-6 py-2.5">
                 <div className="px-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-7 w-7 border border-slate-200 dark:border-slate-700">
                       <AvatarFallback style={{ backgroundColor: getAvatarColor(player.username) }}>
                         {player.username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{player.username}</span>
+                    <span className="font-medium text-sm text-slate-800 dark:text-slate-200">{player.username}</span>
                   </div>
                 </div>
-                <div className="px-4">{player.email}</div>
-                <div className="px-4 text-center">
-                  <Badge variant="outline">
+                <div className="px-4 flex items-center text-sm text-slate-600 dark:text-slate-400">{player.email}</div>
+                <div className="px-4 text-center flex items-center justify-center">
+                  <Badge variant="outline" className="mui-style-badge text-xs bg-slate-50/50 dark:bg-slate-800/50 font-normal">
                     Level {player.playerLevel}
                   </Badge>
                 </div>
-                <div className="px-4">
+                <div className="px-4 flex items-center">
                   {player.segment ? (
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="mui-style-badge text-xs font-normal">
                       {player.segment}
                     </Badge>
                   ) : (
-                    <span className="text-muted-foreground">None</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">None</span>
                   )}
                 </div>
-                <div className="px-4">{formatDate(player.lastLogin)}</div>
-                <div className="px-4 text-center">
-                  <Badge variant={player.isActive ? "default" : "destructive"}>
+                <div className="px-4 flex items-center text-sm text-slate-600 dark:text-slate-400">{formatDate(player.lastLogin)}</div>
+                <div className="px-4 text-center flex items-center justify-center">
+                  <Badge
+                    variant={player.isActive ? "default" : "destructive"}
+                    className="mui-style-badge text-xs font-normal"
+                  >
                     {player.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
@@ -112,7 +125,7 @@ export const PlayerListTable: React.FC<PlayerListTableProps> = ({
           )}
         />
       </div>
-    </div>
+    </Card>
   );
 };
 

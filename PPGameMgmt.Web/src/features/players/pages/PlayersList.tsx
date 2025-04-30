@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePlayersQueryV3 } from '../hooks';
+import { useMockPlayers } from '../hooks/useMockPlayers';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -16,7 +16,7 @@ const PlayersList: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: players, isLoading, isError } = usePlayersQueryV3();
+  const { data: players, isLoading, isError } = useMockPlayers();
 
   // Stats for the overview tab
   const playerStats = useMemo(() => {
@@ -28,8 +28,8 @@ const PlayersList: React.FC = () => {
     };
 
     const totalPlayers = players.length;
-    const activePlayers = players.filter(p => p.isActive).length;
-    const vipPlayers = players.filter(p => p.segment === 'VIP').length;
+    const activePlayers = players.filter((p: Player) => p.isActive).length;
+    const vipPlayers = players.filter((p: Player) => p.segment === 'VIP').length;
 
     // Assume new players are those who registered in the last 30 days
     const thirtyDaysAgo = new Date();
@@ -71,7 +71,7 @@ const PlayersList: React.FC = () => {
   const filteredPlayers = useMemo(() => {
     if (!players) return [];
 
-    return players.filter(player =>
+    return players.filter((player: Player) =>
       player.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       player.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (player.segment && player.segment.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -79,8 +79,8 @@ const PlayersList: React.FC = () => {
   }, [players, searchQuery]);
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex flex-col gap-5">
+    <div className="container mx-auto py-4">
+      <div className="flex flex-col gap-4">
         {/* Page Header */}
         <PlayerListHeader />
 
@@ -93,21 +93,41 @@ const PlayersList: React.FC = () => {
         />
 
         {/* Main Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Player Reports</CardTitle>
-            <CardDescription>
+        <Card className="mui-style-card fade-in border-none shadow-md overflow-hidden">
+          <CardHeader className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
+            <CardTitle className="text-base font-medium text-slate-800 dark:text-white">Player Reports</CardTitle>
+            <CardDescription className="text-slate-500 dark:text-slate-400 text-xs">
               A comprehensive view of all player data across your platform
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {/* Tabs for different views */}
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="active">Active Players</TabsTrigger>
-                <TabsTrigger value="inactive">Inactive Players</TabsTrigger>
-                <TabsTrigger value="vip">VIP Players</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mui-style-tabs">
+              <TabsList className="mb-4 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md">
+                <TabsTrigger
+                  value="overview"
+                  className="mui-style-tab data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm px-3 py-1.5 text-xs transition-all"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="active"
+                  className="mui-style-tab data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm px-3 py-1.5 text-xs transition-all"
+                >
+                  Active Players
+                </TabsTrigger>
+                <TabsTrigger
+                  value="inactive"
+                  className="mui-style-tab data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm px-3 py-1.5 text-xs transition-all"
+                >
+                  Inactive Players
+                </TabsTrigger>
+                <TabsTrigger
+                  value="vip"
+                  className="mui-style-tab data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm px-3 py-1.5 text-xs transition-all"
+                >
+                  VIP Players
+                </TabsTrigger>
               </TabsList>
 
               {/* Search and Filters */}
@@ -118,7 +138,7 @@ const PlayersList: React.FC = () => {
               />
 
               {/* Player List Table */}
-              <TabsContent value="overview">
+              <TabsContent value="overview" className="animate-tabContent mt-2">
                 <PlayerListTable
                   players={filteredPlayers}
                   isLoading={isLoading}
@@ -127,27 +147,27 @@ const PlayersList: React.FC = () => {
                 />
               </TabsContent>
 
-              <TabsContent value="active">
+              <TabsContent value="active" className="animate-tabContent mt-2">
                 <PlayerListTable
-                  players={filteredPlayers.filter(p => p.isActive)}
+                  players={filteredPlayers.filter((p: Player) => p.isActive)}
                   isLoading={isLoading}
                   isError={isError}
                   onRowClick={handleRowClick}
                 />
               </TabsContent>
 
-              <TabsContent value="inactive">
+              <TabsContent value="inactive" className="animate-tabContent mt-2">
                 <PlayerListTable
-                  players={filteredPlayers.filter(p => !p.isActive)}
+                  players={filteredPlayers.filter((p: Player) => !p.isActive)}
                   isLoading={isLoading}
                   isError={isError}
                   onRowClick={handleRowClick}
                 />
               </TabsContent>
 
-              <TabsContent value="vip">
+              <TabsContent value="vip" className="animate-tabContent mt-2">
                 <PlayerListTable
-                  players={filteredPlayers.filter(p => p.segment === 'VIP')}
+                  players={filteredPlayers.filter((p: Player) => p.segment === 'VIP')}
                   isLoading={isLoading}
                   isError={isError}
                   onRowClick={handleRowClick}

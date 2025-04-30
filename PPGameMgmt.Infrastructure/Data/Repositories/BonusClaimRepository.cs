@@ -8,148 +8,49 @@ using PPGameMgmt.Core.Entities.Bonuses;
 using PPGameMgmt.Core.Exceptions;
 using PPGameMgmt.Core.Interfaces.Repositories;
 using PPGameMgmt.Core.Models;
+using PPGameMgmt.Core.Specifications.BonusClaimSpecs;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
 {
     public class BonusClaimRepository : Repository<BonusClaim>, IBonusClaimRepository
     {
-        private new readonly CasinoDbContext _context;
-        private new readonly ILogger<BonusClaimRepository>? _logger;
-        private const string _entityName = "BonusClaim";
-
         public BonusClaimRepository(CasinoDbContext context, ILogger<BonusClaimRepository>? logger = null)
             : base(context, logger)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _logger = logger;
         }
 
-        public override async Task<BonusClaim> GetByIdAsync(string id)
-        {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Getting bonus claim with ID: {Id}", id);
-
-                    var claim = await _context.BonusClaims
-                        .Where(bc => bc.Id == id)
-                        .FirstOrDefaultAsync();
-
-                    if (claim == null)
-                    {
-                        throw new EntityNotFoundException(_entityName, id);
-                    }
-
-                    return claim;
-                },
-                _entityName,
-                $"Error retrieving bonus claim with ID: {id}",
-                _logger
-            );
-        }
+        // No need to override GetByIdAsync - the base implementation with exception handling will handle this
 
         public async Task<IEnumerable<BonusClaim>> GetActiveClaimsByPlayerIdAsync(string playerId)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Getting active bonus claims for player: {PlayerId}", playerId);
-
-                    var claims = await _context.BonusClaims
-                        .Where(bc => bc.PlayerId == playerId && bc.Status == BonusClaimStatus.Active)
-                        .ToListAsync();
-
-                    _logger?.LogInformation("Retrieved {Count} active bonus claims for player: {PlayerId}", claims.Count, playerId);
-
-                    return claims;
-                },
-                _entityName,
-                $"Error retrieving active bonus claims for player: {playerId}",
-                _logger
-            );
+            var specification = new ActiveBonusClaimsByPlayerSpecification(playerId);
+            return await FindWithSpecificationAsync(specification);
         }
 
         public async Task<IEnumerable<BonusClaim>> GetClaimsByBonusIdAsync(string bonusId)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Getting claims for bonus: {BonusId}", bonusId);
-
-                    var claims = await _context.BonusClaims
-                        .Where(bc => bc.BonusId == bonusId)
-                        .ToListAsync();
-
-                    _logger?.LogInformation("Retrieved {Count} claims for bonus: {BonusId}", claims.Count, bonusId);
-
-                    return claims;
-                },
-                _entityName,
-                $"Error retrieving claims for bonus: {bonusId}",
-                _logger
-            );
+            var specification = new BonusClaimsByBonusIdSpecification(bonusId);
+            return await FindWithSpecificationAsync(specification);
         }
 
         public async Task<PagedResult<BonusClaim>> GetClaimsByPlayerIdPagedAsync(string playerId, PaginationParameters parameters)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Getting paged bonus claims for player: {PlayerId}, page: {PageNumber}, size: {PageSize}",
-                        playerId, parameters.PageNumber, parameters.PageSize);
-
-                    var query = _context.BonusClaims
-                        .Where(bc => bc.PlayerId == playerId)
-                        .OrderByDescending(bc => bc.ClaimDate);
-
-                    var totalCount = await query.CountAsync();
-
-                    var claims = await query
-                        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                        .Take(parameters.PageSize)
-                        .ToListAsync();
-
-                    var totalPages = (int)Math.Ceiling(totalCount / (double)parameters.PageSize);
-                    _logger?.LogInformation("Retrieved {Count} bonus claims for player: {PlayerId} (page {PageNumber} of {TotalPages})",
-                        claims.Count, playerId, parameters.PageNumber, totalPages);
-
-                    return new PagedResult<BonusClaim>(
-                        claims,
-                        totalCount,
-                        parameters.PageNumber,
-                        parameters.PageSize
-                    );
-                },
-                _entityName,
-                $"Error retrieving paged bonus claims for player: {playerId}",
-                _logger
-            );
+            var specification = new BonusClaimsByPlayerIdSpecification(playerId);
+            return await FindPagedWithSpecificationAsync(specification, parameters);
         }
 
         public async Task<IEnumerable<BonusClaim>> GetClaimsByStatusAsync(BonusClaimStatus status)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Getting bonus claims with status: {Status}", status);
-
-                    var claims = await _context.BonusClaims
-                        .Where(bc => bc.Status == status)
-                        .ToListAsync();
-
-                    _logger?.LogInformation("Retrieved {Count} bonus claims with status: {Status}", claims.Count, status);
-
-                    return claims;
-                },
-                _entityName,
-                $"Error retrieving bonus claims with status: {status}",
-                _logger
-            );
+            var specification = new BonusClaimsByStatusSpecification(status);
+            return await FindWithSpecificationAsync(specification);
         }
 
         public async Task UpdateWageringProgressAsync(string claimId, decimal newProgress)
         {
-            await RepositoryExceptionHandler.ExecuteAsync(
+            await ExecuteRepositoryOperationAsync(
                 async () => {
-                    _logger?.LogInformation("Updating wagering progress for bonus claim: {ClaimId} to {NewProgress}", claimId, newProgress);
-
-                    var claim = await _context.BonusClaims.FindAsync(claimId);
+                    var claim = await _dbSet.FindAsync(claimId);
                     if (claim == null)
                     {
                         throw new EntityNotFoundException(_entityName, claimId);
@@ -161,111 +62,44 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                     if (claim.WageringProgress >= claim.WageringRequirement && claim.Status == BonusClaimStatus.Active)
                     {
                         claim.Status = BonusClaimStatus.Completed;
-                        _logger?.LogInformation("Bonus claim {ClaimId} marked as completed as wagering requirement has been met", claimId);
                     }
 
+                    _context.Entry(claim).State = EntityState.Modified;
                     await _context.SaveChangesAsync();
-
-                    _logger?.LogInformation("Updated wagering progress for bonus claim: {ClaimId}", claimId);
+                    return true;
                 },
-                _entityName,
-                $"Error updating wagering progress for bonus claim: {claimId}",
-                _logger
+                $"Error updating wagering progress for bonus claim: {claimId}"
             );
         }
 
         public async Task<IEnumerable<BonusClaim>> GetRecentClaimsByPlayerIdAsync(string playerId, int daysToLookBack = 30)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    var cutoffDate = DateTime.UtcNow.AddDays(-daysToLookBack);
-
-                    _logger?.LogInformation("Getting recent bonus claims for player: {PlayerId} since {CutoffDate:yyyy-MM-dd}", playerId, cutoffDate);
-
-                    var claims = await _context.BonusClaims
-                        .Where(bc => bc.PlayerId == playerId && bc.ClaimDate >= cutoffDate)
-                        .OrderByDescending(bc => bc.ClaimDate)
-                        .ToListAsync();
-
-                    _logger?.LogInformation("Retrieved {Count} recent bonus claims for player: {PlayerId}", claims.Count, playerId);
-
-                    return claims;
-                },
-                _entityName,
-                $"Error retrieving recent bonus claims for player: {playerId}",
-                _logger
-            );
+            var specification = new RecentBonusClaimsByPlayerIdSpecification(playerId, daysToLookBack);
+            return await FindWithSpecificationAsync(specification);
         }
 
         public async Task UpdateStatusAsync(string claimId, BonusClaimStatus status)
         {
-            await RepositoryExceptionHandler.ExecuteAsync(
+            await ExecuteRepositoryOperationAsync(
                 async () => {
-                    _logger?.LogInformation("Updating status for bonus claim: {ClaimId} to {Status}", claimId, status);
-
-                    var claim = await _context.BonusClaims.FindAsync(claimId);
+                    var claim = await _dbSet.FindAsync(claimId);
                     if (claim == null)
                     {
                         throw new EntityNotFoundException(_entityName, claimId);
                     }
 
                     claim.Status = status;
+                    _context.Entry(claim).State = EntityState.Modified;
                     await _context.SaveChangesAsync();
-
-                    _logger?.LogInformation("Updated status for bonus claim: {ClaimId} to {Status}", claimId, status);
+                    return true;
                 },
-                _entityName,
-                $"Error updating status for bonus claim: {claimId}",
-                _logger
+                $"Error updating status for bonus claim: {claimId}"
             );
         }
 
         public async Task<bool> ClaimExistsAsync(string claimId)
         {
-            return await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Checking if bonus claim exists: {ClaimId}", claimId);
-
-                    var exists = await _context.BonusClaims
-                        .AnyAsync(bc => bc.Id == claimId);
-
-                    _logger?.LogInformation("Bonus claim {ClaimId} exists: {Exists}", claimId, exists);
-
-                    return exists;
-                },
-                _entityName,
-                $"Error checking if bonus claim exists: {claimId}",
-                _logger
-            );
-        }
-
-        public override async Task<bool> ExistsAsync(string id)
-        {
-            return await ClaimExistsAsync(id);
-        }
-
-        public override async Task DeleteAsync(string id)
-        {
-            await RepositoryExceptionHandler.ExecuteAsync(
-                async () => {
-                    _logger?.LogInformation("Deleting bonus claim with ID: {Id}", id);
-
-                    var claim = await _context.BonusClaims.FindAsync(id);
-                    if (claim == null)
-                    {
-                        throw new EntityNotFoundException(_entityName, id);
-                    }
-
-                    _context.BonusClaims.Remove(claim);
-                    await _context.SaveChangesAsync();
-
-                    _logger?.LogInformation("Deleted bonus claim with ID: {Id}", id);
-                    return true;
-                },
-                _entityName,
-                $"Error deleting bonus claim with ID: {id}",
-                _logger
-            );
+            return await ExistsAsync(claimId);
         }
     }
 }

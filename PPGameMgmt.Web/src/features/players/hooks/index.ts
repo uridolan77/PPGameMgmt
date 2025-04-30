@@ -41,3 +41,6 @@ export {
   useDeletePlayerMutationV3,
   useTogglePlayerStatusV3
 } from './usePlayerApiV3';
+
+// Export the mock data hooks
+export { useMockPlayers } from './useMockPlayers';

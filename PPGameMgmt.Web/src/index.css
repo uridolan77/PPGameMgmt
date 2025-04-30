@@ -1,5 +1,8 @@
-@tailwind base;
+/* Import shared styles */
+@import './styles/shared.css';
+@import './styles/mui-style.css';
 
+@tailwind base;
 @custom-variant dark (&:is(.dark *));
 @tailwind components;
 @tailwind utilities;
