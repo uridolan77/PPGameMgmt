@@ -16,7 +16,7 @@ const createLazyComponent = <T extends React.ComponentType<any>>(
 };
 
 // Lazy-loaded features with registration for preloading
-const DashboardPage = createLazyComponent('dashboard', 
+const DashboardPage = createLazyComponent('dashboard',
   () => import('../../features/dashboard').then(module => ({ default: module.DashboardPage }))
 );
 const GamesListPage = createLazyComponent('games-list',
@@ -49,6 +49,12 @@ const Recommendations = createLazyComponent('recommendations',
 const Login = createLazyComponent('login',
   () => import('../../features/auth/pages/Login')
 );
+const TestLogin = createLazyComponent('test-login',
+  () => import('../../features/auth/pages/TestLogin')
+);
+const SimpleLogin = createLazyComponent('simple-login',
+  () => import('../../features/auth/pages/SimpleLogin')
+);
 const NotFound = createLazyComponent('not-found',
   () => import('../../shared/components/NotFound')
 );
@@ -62,7 +68,7 @@ const SuspenseBoundary = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const startTime = performance.now();
-      
+
       return () => {
         const loadTime = performance.now() - startTime;
         if (loadTime > 500) {  // 500ms threshold
@@ -71,7 +77,7 @@ const SuspenseBoundary = ({ children }: { children: ReactNode }) => {
       };
     }
   }, []);
-  
+
   return <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>;
 };
 
@@ -92,6 +98,14 @@ export const routes: AppRouteObject[] = [
         element: suspensedRoute(Login)
       }
     ]
+  },
+  {
+    path: '/test-login',
+    element: suspensedRoute(TestLogin)
+  },
+  {
+    path: '/simple-login',
+    element: suspensedRoute(SimpleLogin)
   },
   {
     path: '/unauthorized',

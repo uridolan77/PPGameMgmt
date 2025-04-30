@@ -26,6 +26,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         public DbSet<Core.Entities.Bonuses.Bonus> Bonuses { get; set; }
         public DbSet<Core.Entities.Recommendations.GameRecommendation> GameRecommendations { get; set; }
         public DbSet<Core.Entities.Recommendations.BonusRecommendation> BonusRecommendations { get; set; }
+        public DbSet<MigrationHistory> MigrationHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -256,6 +257,17 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.HasOne<Core.Entities.Bonuses.Bonus>()
                       .WithMany()
                       .HasForeignKey(br => br.BonusId);
+            });
+
+            // Configure MigrationHistory entity
+            modelBuilder.Entity<MigrationHistory>(entity =>
+            {
+                entity.HasKey(m => m.Id);
+                entity.ToTable("MigrationHistory");
+
+                entity.Property(m => m.Id).HasColumnName("Id").IsRequired();
+                entity.Property(m => m.Description).HasColumnName("Description").IsRequired();
+                entity.Property(m => m.AppliedAt).HasColumnName("AppliedAt");
             });
         }
     }

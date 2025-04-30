@@ -94,11 +94,36 @@ try
 
         // Add repositories, services, and ML components
         .AddRepositories()
+        .RegisterOutboxRepository() // Fix for OutboxRepository registration
         .AddCoreServices()
         .AddCachedServices()
+        .DisableRedisCache() // Use in-memory cache instead of Redis
         .AddMLServices();
 
-    var app = builder.Build();
+    WebApplication app;
+    try
+    {
+        app = builder.Build();
+        Log.Information("Successfully built the application");
+    }
+    catch (AggregateException aggEx)
+    {
+        Log.Fatal(aggEx, "Failed to build the application due to dependency injection errors");
+
+        // Log details of each inner exception
+        foreach (var innerEx in aggEx.InnerExceptions)
+        {
+            Log.Fatal(innerEx, "Inner exception details");
+
+            // If it's a dependency injection exception, try to get more details
+            if (innerEx is InvalidOperationException ioe && ioe.Message.Contains("service"))
+            {
+                Log.Fatal("Dependency injection error: {Message}", ioe.Message);
+            }
+        }
+
+        throw; // Re-throw to terminate the application
+    }
 
     // Configure the HTTP request pipeline using our extension methods
     app.ConfigureMiddleware(builder.Configuration)

@@ -15,7 +15,7 @@ interface LocationState {
   };
 }
 
-const Login: React.FC = () => {
+const ModernLogin: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -164,4 +164,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default ModernLogin;
