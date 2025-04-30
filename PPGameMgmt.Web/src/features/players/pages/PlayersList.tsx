@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlayers } from '../hooks';
-import { useStore } from '../../../core/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { PlusIcon, SearchIcon, DownloadIcon, FilterIcon } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { VirtualizedList } from '../../../shared/components/VirtualizedList/VirtualizedList';
 
 interface Player {
   id: number;
@@ -29,7 +29,6 @@ interface Player {
 const PlayersList: React.FC = () => {
   const navigate = useNavigate();
   const { data: players, isLoading, isError } = usePlayers();
-  const { auth } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleRowClick = (player: Player) => {
@@ -51,11 +50,15 @@ const PlayersList: React.FC = () => {
     return `#${color.padStart(6, '0')}`;
   };
 
-  const filteredPlayers = players?.filter(player => 
-    player.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    player.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (player.segment && player.segment.toLowerCase().includes(searchQuery.toLowerCase()))
-  ) || [];
+  // Memoize filtered players to avoid unnecessary re-filtering
+  const filteredPlayers = useMemo(() =>
+    players?.filter(player =>
+      player.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      player.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (player.segment && player.segment.toLowerCase().includes(searchQuery.toLowerCase()))
+    ) || [],
+    [players, searchQuery]
+  );
 
   return (
     <div className="container mx-auto py-6">
@@ -113,44 +116,47 @@ const PlayersList: React.FC = () => {
             </div>
 
             <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-center">Level</TableHead>
-                    <TableHead>Segment</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
+              <div className="bg-background">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        Loading player data...
-                      </TableCell>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-center">Level</TableHead>
+                      <TableHead>Segment</TableHead>
+                      <TableHead>Last Login</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
                     </TableRow>
-                  ) : isError ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-red-500">
-                        Error loading player data
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredPlayers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        No players found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredPlayers.map((player) => (
-                      <TableRow 
-                        key={player.id} 
-                        onClick={() => handleRowClick(player)}
-                        className="cursor-pointer hover:bg-muted/50"
-                      >
-                        <TableCell>
+                  </TableHeader>
+                </Table>
+
+                <VirtualizedList
+                  items={filteredPlayers}
+                  height={500}
+                  estimateSize={60}
+                  isLoading={isLoading}
+                  isEmpty={filteredPlayers.length === 0}
+                  loadingComponent={
+                    <div className="h-24 flex items-center justify-center">
+                      Loading player data...
+                    </div>
+                  }
+                  emptyComponent={
+                    <div className="h-24 flex items-center justify-center">
+                      {isError ? (
+                        <span className="text-red-500">Error loading player data</span>
+                      ) : (
+                        <span>No players found</span>
+                      )}
+                    </div>
+                  }
+                  renderItem={(player) => (
+                    <div
+                      onClick={() => handleRowClick(player)}
+                      className="cursor-pointer hover:bg-muted/50 border-b"
+                    >
+                      <div className="grid grid-cols-6 py-3">
+                        <div className="px-4">
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarFallback style={{ backgroundColor: getAvatarColor(player.username) }}>
@@ -159,14 +165,14 @@ const PlayersList: React.FC = () => {
                             </Avatar>
                             <span className="font-medium">{player.username}</span>
                           </div>
-                        </TableCell>
-                        <TableCell>{player.email}</TableCell>
-                        <TableCell className="text-center">
+                        </div>
+                        <div className="px-4">{player.email}</div>
+                        <div className="px-4 text-center">
                           <Badge variant="outline">
                             Level {player.playerLevel}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                        <div className="px-4">
                           {player.segment ? (
                             <Badge variant="secondary">
                               {player.segment}
@@ -174,20 +180,20 @@ const PlayersList: React.FC = () => {
                           ) : (
                             <span className="text-muted-foreground">None</span>
                           )}
-                        </TableCell>
-                        <TableCell>{formatDate(player.lastLogin)}</TableCell>
-                        <TableCell className="text-center">
+                        </div>
+                        <div className="px-4">{formatDate(player.lastLogin)}</div>
+                        <div className="px-4 text-center">
                           <Badge variant={player.isActive ? "default" : "destructive"}>
                             {player.isActive ? 'Active' : 'Inactive'}
                           </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </TableBody>
-              </Table>
+                />
+              </div>
             </div>
-            
+
             <div className="flex items-center justify-end space-x-2 py-4">
               <div className="flex-1 text-sm text-muted-foreground">
                 {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} found

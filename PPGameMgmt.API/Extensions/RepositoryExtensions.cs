@@ -3,7 +3,6 @@ using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Interfaces.Repositories;
 using PPGameMgmt.Infrastructure.Data;
 using PPGameMgmt.Infrastructure.Data.Repositories;
-using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.API.Extensions
 {
@@ -25,17 +24,18 @@ namespace PPGameMgmt.API.Extensions
             services.AddScoped<IRecommendationRepository, RecommendationRepository>();
             services.AddScoped<IPlayerFeaturesRepository, PlayerFeaturesRepository>();
 
-            // Register BonusClaim repository implementation
-            services.AddScoped<Core.Interfaces.Repositories.IBonusClaimRepository, BonusClaimRepository>();
+            // Register BonusClaim repository implementation with fully qualified name
+            services.AddScoped<PPGameMgmt.Core.Interfaces.Repositories.IBonusClaimRepository, BonusClaimRepository>();
 
             // Register it as a generic repository too for classes that need IRepository<BonusClaim>
-            services.AddScoped<Core.Interfaces.Repositories.IRepository<BonusClaim>>(sp =>
-                sp.GetRequiredService<Core.Interfaces.Repositories.IBonusClaimRepository>());
+            // Use fully qualified name for the repository interface
+            services.AddScoped<PPGameMgmt.Core.Interfaces.Repositories.IRepository<Core.Entities.Bonuses.BonusClaim>>(sp =>
+                sp.GetRequiredService<PPGameMgmt.Core.Interfaces.Repositories.IBonusClaimRepository>());
 
-            // Add Unit of Work
+            // Add Unit of Work - ensure it's properly scoped
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-            // Add Transaction Manager
+            
+            // Add Transaction Manager - ensure it's properly scoped
             services.AddScoped<ITransactionManager, TransactionManager>();
 
             return services;

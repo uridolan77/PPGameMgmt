@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PPGameMgmt.Core.Entities.Bonuses
@@ -47,6 +48,9 @@ namespace PPGameMgmt.Core.Entities.Bonuses
 
         [Column("target_segments")]
         public PlayerSegment[]? TargetSegments { get; set; }
+        
+        // Navigation property - Add BonusClaims collection
+        public virtual ICollection<BonusClaim> BonusClaims { get; set; } = new List<BonusClaim>();
     }
 
     public enum BonusType

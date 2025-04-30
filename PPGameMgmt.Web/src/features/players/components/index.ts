@@ -5,3 +5,6 @@ export { PlayerBonusesTab } from './PlayerBonusesTab';
 export { PlayerFeaturesTab } from './PlayerFeaturesTab';
 export { LoadingIndicator } from './LoadingIndicator';
 export { ApiErrorDisplay } from './ApiErrorDisplay';
+export { default as StandardPlayerForm } from './StandardPlayerForm';
+export { default as PlayerDetailTabs } from './PlayerDetailTabs';
+export { default as PlayerCard } from './PlayerCard';

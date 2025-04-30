@@ -1,6 +1,7 @@
 using AutoMapper;
 using PPGameMgmt.API.Models.DTOs;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 using System;
 
 namespace PPGameMgmt.API.Models.Mapping

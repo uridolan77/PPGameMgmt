@@ -10,9 +10,12 @@ using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.API.Services;
 using Serilog;
 using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using FluentValidation.AspNetCore;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -102,72 +105,7 @@ try
        .ConfigureEndpoints();
 
     // Test database connection at startup and initialize ML models
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        try
-        {
-            var context = services.GetRequiredService<CasinoDbContext>();
-
-            Console.WriteLine("Testing database connection...");
-            if (context.Database.CanConnect())
-            {
-                Console.WriteLine("Successfully connected to MySQL database!");
-                
-                // Run pending migrations if any
-                try
-                {
-                    var migrationRunner = services.GetRequiredService<PPGameMgmt.Infrastructure.Data.Migrations.MigrationRunner>();
-                    var pendingMigrations = await migrationRunner.GetPendingMigrationsAsync();
-                    
-                    if (pendingMigrations.Any())
-                    {
-                        Console.WriteLine($"Applying {pendingMigrations.Count} database migrations...");
-                        await migrationRunner.ApplyPendingMigrationsAsync();
-                        Console.WriteLine("Database migrations applied successfully.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("No pending database migrations.");
-                    }
-                }
-                catch (Exception migEx)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(migEx, "An error occurred while running database migrations.");
-                    Console.WriteLine($"Migration error: {migEx.Message}");
-                }
-            }
-            else
-            {
-                Console.WriteLine("Failed to connect to the database.");
-            }
-
-            // Initialize ML models - wrap in try-catch to prevent startup failure
-            try
-            {
-                var mlService = services.GetRequiredService<IMLModelService>();
-                mlService.InitializeModelsAsync().Wait();
-                Console.WriteLine("ML models initialized successfully.");
-            }
-            catch (Exception mlEx)
-            {
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogWarning(mlEx, "ML model initialization failed but API will continue to start");
-                Console.WriteLine($"ML model initialization warning: {mlEx.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while connecting to the database or initializing ML models.");
-            Console.WriteLine($"Error: {ex.Message}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-            }
-        }
-    }
+    await InitializeDatabaseAndModels(app);
 
     app.Run();
 }
@@ -178,4 +116,76 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// Move the initialization logic to a separate method for better organization
+async Task InitializeDatabaseAndModels(WebApplication app)
+{
+    // Create a scope for database initialization
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        try
+        {
+            logger.LogInformation("Testing database connection...");
+            var context = services.GetRequiredService<CasinoDbContext>();
+            
+            // Test database connection using CanConnect() which doesn't keep the connection open
+            if (await context.Database.CanConnectAsync())
+            {
+                logger.LogInformation("Successfully connected to database!");
+                
+                // Run pending migrations if any
+                try
+                {
+                    var migrationRunner = services.GetRequiredService<PPGameMgmt.Infrastructure.Data.Migrations.MigrationRunner>();
+                    var pendingMigrations = await migrationRunner.GetPendingMigrationsAsync();
+                    
+                    if (pendingMigrations.Any())
+                    {
+                        logger.LogInformation($"Applying {pendingMigrations.Count} database migrations...");
+                        await migrationRunner.ApplyPendingMigrationsAsync();
+                        logger.LogInformation("Database migrations applied successfully.");
+                    }
+                    else
+                    {
+                        logger.LogInformation("No pending database migrations.");
+                    }
+                }
+                catch (Exception migEx)
+                {
+                    logger.LogError(migEx, "An error occurred while running database migrations.");
+                }
+            }
+            else
+            {
+                logger.LogError("Failed to connect to the database.");
+            }
+
+            // Initialize ML models in a separate try-catch to prevent startup failure
+            try
+            {
+                logger.LogInformation("Initializing ML models...");
+                var mlService = services.GetRequiredService<IMLModelService>();
+                await mlService.InitializeModelsAsync();
+                logger.LogInformation("ML models initialized successfully.");
+            }
+            catch (Exception mlEx)
+            {
+                logger.LogWarning(mlEx, "ML model initialization failed but API will continue to start");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred during application initialization.");
+            
+            // Log inner exception details to help with debugging
+            if (ex.InnerException != null)
+            {
+                logger.LogError(ex.InnerException, "Inner exception details");
+            }
+        }
+    }
 }

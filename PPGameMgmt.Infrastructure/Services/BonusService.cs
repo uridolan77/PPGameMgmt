@@ -4,9 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
-// Use namespace aliases to distinguish between ambiguous types
-using CoreEntities = PPGameMgmt.Core.Entities;
-using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.Infrastructure.Services
 {
@@ -29,49 +28,49 @@ namespace PPGameMgmt.Infrastructure.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<BonusEntities.Bonus> GetBonusAsync(string bonusId)
+        public async Task<Bonus> GetBonusAsync(string bonusId)
         {
             _logger.LogInformation("Getting bonus with ID: {BonusId}", bonusId);
 
             // This is a stub implementation that would typically interact with the repository
             // In a real implementation, we'd convert from repository model to domain entity
             var result = await _bonusRepository.GetByIdAsync(bonusId);
-            return result as BonusEntities.Bonus;
+            return result as Bonus;
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetAllActiveBonusesAsync()
+        public async Task<IEnumerable<Bonus>> GetAllActiveBonusesAsync()
         {
             _logger.LogInformation("Getting all active bonuses");
 
             // In a real implementation, we'd filter for active bonuses
             var bonuses = await _bonusRepository.GetAllAsync();
             return bonuses
-                .Where(b => b is BonusEntities.Bonus)
-                .Cast<BonusEntities.Bonus>()
+                .Where(b => b is Bonus)
+                .Cast<Bonus>()
                 .Where(b => b.IsActive && b.ValidFrom <= DateTime.UtcNow && b.ValidTo >= DateTime.UtcNow);
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetBonusesByTypeAsync(BonusEntities.BonusType type)
+        public async Task<IEnumerable<Bonus>> GetBonusesByTypeAsync(BonusType type)
         {
             _logger.LogInformation("Getting bonuses of type: {Type}", type);
 
             // In a real implementation, we'd have a proper filter for bonus types
             var bonuses = await _bonusRepository.GetAllAsync();
             return bonuses
-                .Where(b => b is BonusEntities.Bonus)
-                .Cast<BonusEntities.Bonus>()
+                .Where(b => b is Bonus)
+                .Cast<Bonus>()
                 .Where(b => b.Type == type && b.IsActive);
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetBonusesForPlayerSegmentAsync(CoreEntities.PlayerSegment segment)
+        public async Task<IEnumerable<Bonus>> GetBonusesForPlayerSegmentAsync(PlayerSegment segment)
         {
             _logger.LogInformation("Getting bonuses for player segment: {Segment}", segment);
 
             // In a real implementation, we'd have a proper filter for player segments
             var bonuses = await _bonusRepository.GetAllAsync();
             return bonuses
-                .Where(b => b is BonusEntities.Bonus)
-                .Cast<BonusEntities.Bonus>()
+                .Where(b => b is Bonus)
+                .Cast<Bonus>()
                 .Where(b => b.IsActive && (
                     // Check if any of the target segments includes the specified segment
                     b.TargetSegments == null ||
@@ -80,15 +79,15 @@ namespace PPGameMgmt.Infrastructure.Services
                 ));
         }
 
-        public async Task<IEnumerable<BonusEntities.Bonus>> GetBonusesForGameAsync(string gameId)
+        public async Task<IEnumerable<Bonus>> GetBonusesForGameAsync(string gameId)
         {
             _logger.LogInformation("Getting bonuses for game: {GameId}", gameId);
 
             // In a real implementation, we'd have a proper filter for game bonuses
             var bonuses = await _bonusRepository.GetAllAsync();
             return bonuses
-                .Where(b => b is BonusEntities.Bonus)
-                .Cast<BonusEntities.Bonus>()
+                .Where(b => b is Bonus)
+                .Cast<Bonus>()
                 .Where(b => b.IsActive && (
                     // Check if any of the applicable game IDs includes the specified game
                     b.ApplicableGameIds == null ||
@@ -97,7 +96,7 @@ namespace PPGameMgmt.Infrastructure.Services
                 ));
         }
 
-        public async Task<IEnumerable<BonusEntities.BonusClaim>> GetPlayerBonusClaimsAsync(string playerId)
+        public async Task<IEnumerable<BonusClaim>> GetPlayerBonusClaimsAsync(string playerId)
         {
             _logger.LogInformation("Getting bonus claims for player: {PlayerId}", playerId);
 
@@ -108,11 +107,11 @@ namespace PPGameMgmt.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving bonus claims for player: {PlayerId}", playerId);
-                return Array.Empty<BonusEntities.BonusClaim>();
+                return Array.Empty<BonusClaim>();
             }
         }
 
-        public async Task<BonusEntities.BonusClaim> ClaimBonusAsync(string playerId, string bonusId)
+        public async Task<BonusClaim> ClaimBonusAsync(string playerId, string bonusId)
         {
             _logger.LogInformation("Player {PlayerId} claiming bonus: {BonusId}", playerId, bonusId);
 
@@ -133,14 +132,14 @@ namespace PPGameMgmt.Infrastructure.Services
                 }
 
                 // Create a new bonus claim
-                var claim = new BonusEntities.BonusClaim
+                var claim = new BonusClaim
                 {
                     Id = Guid.NewGuid().ToString(),
                     PlayerId = playerId,
                     BonusId = bonusId,
                     ClaimDate = DateTime.UtcNow,
                     ExpiryDate = DateTime.UtcNow.AddDays(7), // Typically configurable
-                    Status = BonusEntities.BonusClaimStatus.Active,
+                    Status = BonusClaimStatus.Active,
                     WageringRequirement = 30, // Example value, would be based on the bonus
                     WageringProgress = 0,
                     // Initialize required navigation properties with null! since we don't have them yet

@@ -17,6 +17,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         {
         }
 
+        // Use only the Bonus entity from the Bonuses namespace - do not expose the legacy entity types
         public DbSet<Player> Players { get; set; }
         public DbSet<Game> Games { get; set; }
         public DbSet<PlayerFeatures> PlayerFeatures { get; set; }
@@ -29,6 +30,9 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Ignore the compatibility classes entirely to avoid inheritance issues
+            modelBuilder.Ignore<Core.Entities.Bonuses.Bonus>();
 
             // Player configuration
             modelBuilder.Entity<Player>(entity =>
@@ -115,11 +119,13 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                         v => string.IsNullOrEmpty(v) ? null : (GameType?)Enum.Parse(typeof(GameType), v)
                     );
 
+                // Handle BonusType enum conversion
                 entity.Property(e => e.PreferredBonusType)
                     .HasColumnName("preferred_bonus_type")
                     .HasConversion(
                         v => v.HasValue ? v.ToString() : null,
-                        v => string.IsNullOrEmpty(v) ? null : (Core.Entities.BonusType?)Enum.Parse(typeof(Core.Entities.BonusType), v)
+                        v => string.IsNullOrEmpty(v) ? null : 
+                            (Core.Entities.Bonuses.BonusType?)Enum.Parse(typeof(Core.Entities.Bonuses.BonusType), v)
                     );
 
                 entity.Property(e => e.CurrentSegment)
@@ -156,7 +162,104 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                         )
                     );
             });
+            
+            // Configure Bonus entity (from Bonuses namespace)
+            modelBuilder.Entity<Core.Entities.Bonuses.Bonus>(entity => 
+            {
+                entity.HasKey(b => b.Id);
+                entity.ToTable("bonuses"); // Specify table name explicitly
+                
+                // Configure properties
+                entity.Property(b => b.Id).HasColumnName("id");
+                entity.Property(b => b.Name).HasColumnName("name").IsRequired();
+                entity.Property(b => b.Description).HasColumnName("description").IsRequired();
+                entity.Property(b => b.Value).HasColumnName("value").HasPrecision(18, 2);
+                entity.Property(b => b.WageringRequirement).HasColumnName("wagering_requirement").HasPrecision(18, 2);
+                entity.Property(b => b.ValidFrom).HasColumnName("valid_from");
+                entity.Property(b => b.ValidTo).HasColumnName("valid_to");
+                entity.Property(b => b.IsActive).HasColumnName("is_active");
+                entity.Property(b => b.TermsAndConditions).HasColumnName("terms_and_conditions");
+                entity.Property(b => b.MaxConversion).HasColumnName("max_conversion").HasPrecision(18, 2);
+                entity.Property(b => b.MinDeposit).HasColumnName("min_deposit").HasPrecision(18, 2);
 
+                // Configure enum conversion for BonusType
+                entity.Property(b => b.Type)
+                    .HasColumnName("bonus_type")
+                    .HasConversion(
+                        v => v.ToString(),
+                        v => (Core.Entities.Bonuses.BonusType)Enum.Parse(typeof(Core.Entities.Bonuses.BonusType), v)
+                    );
+                
+                // Configure relationship with BonusClaim
+                entity.HasMany(b => b.BonusClaims)
+                      .WithOne(bc => bc.Bonus)
+                      .HasForeignKey(bc => bc.BonusId);
+            });
+            
+            // Configure BonusClaim entity
+            modelBuilder.Entity<Core.Entities.Bonuses.BonusClaim>(entity => 
+            {
+                entity.HasKey(bc => bc.Id);
+                entity.ToTable("bonus_claims"); // Specify table name explicitly
+                
+                // Configure properties
+                entity.Property(bc => bc.Id).HasColumnName("id");
+                entity.Property(bc => bc.PlayerId).HasColumnName("player_id");
+                entity.Property(bc => bc.BonusId).HasColumnName("bonus_id");
+                entity.Property(bc => bc.ClaimDate).HasColumnName("claim_date");
+                entity.Property(bc => bc.ExpiryDate).HasColumnName("expiry_date");
+                entity.Property(bc => bc.WageringRequirement).HasColumnName("wagering_requirement").HasPrecision(18, 2);
+                entity.Property(bc => bc.WageringProgress).HasColumnName("wagering_progress").HasPrecision(18, 2);
+                entity.Property(bc => bc.AmountConverted).HasColumnName("amount_converted").HasPrecision(18, 2);
+                entity.Property(bc => bc.ConversionDate).HasColumnName("conversion_date");
+                entity.Property(bc => bc.CompletionDate).HasColumnName("completion_date");
+                
+                // Configure enum conversion for BonusClaimStatus
+                entity.Property(bc => bc.Status)
+                    .HasColumnName("status")
+                    .HasConversion(
+                        v => v.ToString(),
+                        v => (Core.Entities.Bonuses.BonusClaimStatus)Enum.Parse(typeof(Core.Entities.Bonuses.BonusClaimStatus), v)
+                    );
+                
+                // Configure relationships
+                entity.HasOne(bc => bc.Player)
+                      .WithMany(p => p.BonusClaims)
+                      .HasForeignKey(bc => bc.PlayerId);
+                
+                entity.HasOne(bc => bc.Bonus)
+                      .WithMany(b => b.BonusClaims)
+                      .HasForeignKey(bc => bc.BonusId);
+            });
+            
+            // Configure BonusRecommendation entity
+            modelBuilder.Entity<Core.Entities.Recommendations.BonusRecommendation>(entity =>
+            {
+                entity.HasKey(br => br.Id);
+                entity.ToTable("bonus_recommendations"); // Specify table name explicitly
+                
+                // Configure properties
+                entity.Property(br => br.Id).HasColumnName("id");
+                entity.Property(br => br.PlayerId).HasColumnName("player_id");
+                entity.Property(br => br.BonusId).HasColumnName("bonus_id");
+                entity.Property(br => br.Score).HasColumnName("score");
+                entity.Property(br => br.RecommendationDate).HasColumnName("recommendation_date");
+                entity.Property(br => br.Reason).HasColumnName("reason");
+                entity.Property(br => br.IsShown).HasColumnName("is_shown");
+                entity.Property(br => br.IsClaimed).HasColumnName("is_claimed");
+                entity.Property(br => br.ShownDate).HasColumnName("shown_date");
+                entity.Property(br => br.ClaimedDate).HasColumnName("claimed_date");
+                
+                // Configure relationships
+                entity.HasOne<Player>()
+                      .WithMany()
+                      .HasForeignKey(br => br.PlayerId);
+                
+                // Use string-based foreign key configuration instead of navigation property
+                entity.HasOne<Core.Entities.Bonuses.Bonus>()
+                      .WithMany()
+                      .HasForeignKey(br => br.BonusId);
+            });
         }
     }
 }

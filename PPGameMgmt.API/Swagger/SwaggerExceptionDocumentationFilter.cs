@@ -28,7 +28,7 @@ namespace PPGameMgmt.API.Swagger
         {
             // Get the API action's attributes
             var attributes = context.MethodInfo.GetCustomAttributes(true);
-            
+
             // Get all ProducesResponseType attributes
             var responsesAttributes = attributes
                 .OfType<ProducesResponseTypeAttribute>()
@@ -56,22 +56,26 @@ namespace PPGameMgmt.API.Swagger
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.Schema,
-                            Id = nameof(ApiErrorResponse)
+                            Id = "ApiErrorResponse"
                         }
                     }
                 };
 
-                // Add the response
-                operation.Responses.Add(statusCode.ToString(), new OpenApiResponse
+                // Add the response if it doesn't already exist
+                var statusCodeStr = statusCode.ToString();
+                if (!operation.Responses.ContainsKey(statusCodeStr))
                 {
-                    Description = description,
-                    Content = new Dictionary<string, OpenApiMediaType>
+                    operation.Responses.Add(statusCodeStr, new OpenApiResponse
                     {
-                        { "application/json", errorResponseRef }
-                    }
-                });
+                        Description = description,
+                        Content = new Dictionary<string, OpenApiMediaType>
+                        {
+                            { "application/json", errorResponseRef }
+                        }
+                    });
+                }
             }
-            
+
             // Always add 500 Internal Server Error if not already present
             if (!existingResponseCodes.Contains(500))
             {
@@ -83,20 +87,23 @@ namespace PPGameMgmt.API.Swagger
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.Schema,
-                            Id = nameof(ApiErrorResponse)
+                            Id = "ApiErrorResponse"
                         }
                     }
                 };
 
-                // Add the response
-                operation.Responses.Add("500", new OpenApiResponse
+                // Add the response if it doesn't already exist
+                if (!operation.Responses.ContainsKey("500"))
                 {
-                    Description = "Internal server error",
-                    Content = new Dictionary<string, OpenApiMediaType>
+                    operation.Responses.Add("500", new OpenApiResponse
                     {
-                        { "application/json", errorResponseRef }
-                    }
-                });
+                        Description = "Internal server error",
+                        Content = new Dictionary<string, OpenApiMediaType>
+                        {
+                            { "application/json", errorResponseRef }
+                        }
+                    });
+                }
             }
         }
     }

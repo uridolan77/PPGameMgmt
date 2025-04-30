@@ -3,6 +3,7 @@ using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.API.Swagger
 {
@@ -15,7 +16,7 @@ namespace PPGameMgmt.API.Swagger
         {
             if (context.Type == null)
                 return;
-            
+
             // Add examples based on type
             if (context.Type == typeof(Player))
             {
@@ -48,7 +49,7 @@ namespace PPGameMgmt.API.Swagger
                     ["isActive"] = new OpenApiBoolean(true)
                 };
             }
-            else if (context.Type == typeof(Bonus))
+            else if (context.Type == typeof(Core.Entities.Bonuses.Bonus))
             {
                 schema.Example = new OpenApiObject
                 {
@@ -64,7 +65,7 @@ namespace PPGameMgmt.API.Swagger
                     ["targetSegment"] = new OpenApiString("NewPlayer")
                 };
             }
-            else if (context.Type == typeof(BonusClaim))
+            else if (context.Type == typeof(Core.Entities.Bonuses.BonusClaim))
             {
                 schema.Example = new OpenApiObject
                 {

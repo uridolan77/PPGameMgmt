@@ -1,56 +1,44 @@
-import { apiClient } from '../../../core/api';
+import { createApiHelpers } from '../../../core/api';
+import { DataCategory } from '../../../core/api/reactQueryConfig';
 import { Game, GameFilter } from '../types';
-
-const GAMES_ENDPOINT = '/games';
 
 /**
  * Game API service with methods to interact with the backend
+ * Uses standardized createApiHelpers pattern for consistent API access
  */
-export const gameService = {
+export const gameApi = {
   /**
    * Get a list of games with optional filtering
    */
-  getGames: async (filters?: GameFilter): Promise<Game[]> => {
-    const response = await apiClient.get(GAMES_ENDPOINT, { params: filters });
-    return response.data;
-  },
+  getAll: (filters?: GameFilter) =>
+    createApiHelpers.getList<Game>('games', DataCategory.GAME)(filters),
 
   /**
    * Get a single game by ID
    */
-  getGame: async (id: number): Promise<Game> => {
-    const response = await apiClient.get(`${GAMES_ENDPOINT}/${id}`);
-    return response.data;
-  },
+  getById: createApiHelpers.getOne<Game>('games', DataCategory.GAME),
 
   /**
    * Create a new game
    */
-  createGame: async (gameData: Omit<Game, 'id'>): Promise<Game> => {
-    const response = await apiClient.post(GAMES_ENDPOINT, gameData);
-    return response.data;
-  },
+  create: createApiHelpers.create<Game, Omit<Game, 'id'>>('games'),
 
   /**
    * Update an existing game
    */
-  updateGame: async (id: number, gameData: Partial<Game>): Promise<Game> => {
-    const response = await apiClient.put(`${GAMES_ENDPOINT}/${id}`, gameData);
-    return response.data;
-  },
-
-  /**
-   * Update game status (active/inactive)
-   */
-  updateGameStatus: async (id: number, isActive: boolean): Promise<Game> => {
-    const response = await apiClient.patch(`${GAMES_ENDPOINT}/${id}/status`, { isActive });
-    return response.data;
-  },
+  update: createApiHelpers.update<Game, Partial<Game>>('games'),
 
   /**
    * Delete a game
    */
-  deleteGame: async (id: number): Promise<void> => {
-    await apiClient.delete(`${GAMES_ENDPOINT}/${id}`);
-  }
+  remove: createApiHelpers.remove('games'),
+
+  /**
+   * Update game status (active/inactive)
+   */
+  updateStatus: (id: number, isActive: boolean) =>
+    createApiHelpers.patch<Game>('games')(`${id}/status`, { isActive })
 };
+
+// For backward compatibility
+export const gameService = gameApi;

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data
@@ -19,7 +20,7 @@ namespace PPGameMgmt.Infrastructure.Data
         public IGameRepository Games { get; }
         public IBonusRepository Bonuses { get; }
         public IGameSessionRepository GameSessions { get; }
-        public IRepository<BonusClaim> BonusClaims { get; }
+        public Core.Interfaces.Repositories.IRepository<Core.Entities.Bonuses.BonusClaim> BonusClaims { get; }
         public IPlayerFeaturesRepository PlayerFeatures { get; }
         public IRecommendationRepository Recommendations { get; }
 
@@ -29,7 +30,7 @@ namespace PPGameMgmt.Infrastructure.Data
             IGameRepository gameRepository,
             IBonusRepository bonusRepository,
             IGameSessionRepository gameSessionRepository,
-            IRepository<BonusClaim> bonusClaimRepository,
+            Core.Interfaces.Repositories.IRepository<Core.Entities.Bonuses.BonusClaim> bonusClaimRepository,
             IPlayerFeaturesRepository playerFeaturesRepository,
             IRecommendationRepository recommendationRepository,
             ILogger<UnitOfWork> logger = null)
@@ -50,6 +51,17 @@ namespace PPGameMgmt.Infrastructure.Data
         {
             try
             {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(UnitOfWork), "Cannot save changes on a disposed UnitOfWork");
+                }
+                
+                // Validate context state before saving changes
+                if (_context == null)
+                {
+                    throw new InvalidOperationException("DbContext is null when attempting to save changes");
+                }
+                
                 return await _context.SaveChangesAsync();
             }
             catch (Exception ex)
@@ -63,6 +75,18 @@ namespace PPGameMgmt.Infrastructure.Data
         {
             try
             {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(UnitOfWork), "Cannot begin transaction on a disposed UnitOfWork");
+                }
+                
+                // Check for existing transaction
+                if (_transaction != null)
+                {
+                    _logger?.LogWarning("Attempted to begin a transaction when one is already in progress");
+                    return;
+                }
+                
                 _transaction = await _context.Database.BeginTransactionAsync();
                 _logger?.LogInformation("Transaction begun");
             }
@@ -77,6 +101,17 @@ namespace PPGameMgmt.Infrastructure.Data
         {
             try
             {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(UnitOfWork), "Cannot commit transaction on a disposed UnitOfWork");
+                }
+                
+                if (_transaction == null)
+                {
+                    _logger?.LogWarning("Attempted to commit a transaction, but no transaction exists");
+                    return;
+                }
+                
                 await _transaction.CommitAsync();
                 _logger?.LogInformation("Transaction committed");
             }
@@ -87,8 +122,11 @@ namespace PPGameMgmt.Infrastructure.Data
             }
             finally
             {
-                await _transaction.DisposeAsync();
-                _transaction = null;
+                if (_transaction != null)
+                {
+                    await _transaction.DisposeAsync();
+                    _transaction = null;
+                }
             }
         }
 
@@ -96,6 +134,17 @@ namespace PPGameMgmt.Infrastructure.Data
         {
             try
             {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(UnitOfWork), "Cannot rollback transaction on a disposed UnitOfWork");
+                }
+                
+                if (_transaction == null)
+                {
+                    _logger?.LogWarning("Attempted to rollback a transaction, but no transaction exists");
+                    return;
+                }
+                
                 await _transaction.RollbackAsync();
                 _logger?.LogInformation("Transaction rolled back");
             }
@@ -106,8 +155,11 @@ namespace PPGameMgmt.Infrastructure.Data
             }
             finally
             {
-                await _transaction.DisposeAsync();
-                _transaction = null;
+                if (_transaction != null)
+                {
+                    await _transaction.DisposeAsync();
+                    _transaction = null;
+                }
             }
         }
 
@@ -123,8 +175,15 @@ namespace PPGameMgmt.Infrastructure.Data
             {
                 if (disposing)
                 {
-                    _transaction?.Dispose();
-                    _context.Dispose();
+                    if (_transaction != null)
+                    {
+                        _transaction.Dispose();
+                        _transaction = null;
+                    }
+                    
+                    // Do not dispose the context as it may be managed by DI container
+                    // The repositories may still need to access it after the UnitOfWork is disposed
+                    // _context.Dispose();
                 }
 
                 _disposed = true;

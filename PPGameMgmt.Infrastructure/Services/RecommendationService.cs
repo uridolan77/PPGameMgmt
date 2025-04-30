@@ -5,10 +5,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Infrastructure.ML.Models;
-// Use namespace aliases to distinguish between ambiguous types
-using CoreEntities = PPGameMgmt.Core.Entities;
-using RecommendationEntities = PPGameMgmt.Core.Entities.Recommendations;
-using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Recommendations;
+using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.Infrastructure.Services
 {
@@ -37,7 +36,7 @@ namespace PPGameMgmt.Infrastructure.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<RecommendationEntities.Recommendation> GetPersonalizedRecommendationAsync(string playerId)
+        public async Task<Recommendation> GetPersonalizedRecommendationAsync(string playerId)
         {
             _logger.LogInformation("Getting personalized recommendation for player: {PlayerId}", playerId);
             
@@ -49,7 +48,7 @@ namespace PPGameMgmt.Infrastructure.Services
                 var gameRecommendations = await GetGameRecommendationsAsync(playerId, 3);
                 var bonusRecommendation = await GetBonusRecommendationAsync(playerId);
                 
-                var recommendation = new RecommendationEntities.Recommendation
+                var recommendation = new Recommendation
                 {
                     Id = Guid.NewGuid().ToString(),
                     PlayerId = playerId,
@@ -73,7 +72,7 @@ namespace PPGameMgmt.Infrastructure.Services
             }
         }
 
-        public async Task<RecommendationEntities.Recommendation> GetLatestRecommendationAsync(string playerId)
+        public async Task<Recommendation> GetLatestRecommendationAsync(string playerId)
         {
             _logger.LogInformation("Getting latest recommendation for player: {PlayerId}", playerId);
             
@@ -92,7 +91,7 @@ namespace PPGameMgmt.Infrastructure.Services
             }
         }
 
-        public async Task<IEnumerable<RecommendationEntities.GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5)
+        public async Task<IEnumerable<GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5)
         {
             _logger.LogInformation("Getting {Count} game recommendations for player: {PlayerId}", count, playerId);
             
@@ -100,11 +99,11 @@ namespace PPGameMgmt.Infrastructure.Services
             {
                 // In a real implementation, we'd use game recommendations from an ML model
                 // For this stub implementation, we'll just return some mock data
-                var recommendations = new List<RecommendationEntities.GameRecommendation>();
+                var recommendations = new List<GameRecommendation>();
                 
                 for (int i = 1; i <= count; i++)
                 {
-                    recommendations.Add(new RecommendationEntities.GameRecommendation
+                    recommendations.Add(new GameRecommendation
                     {
                         Id = Guid.NewGuid().ToString(),
                         GameId = $"G{i:000}",
@@ -119,11 +118,11 @@ namespace PPGameMgmt.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error generating game recommendations for player: {PlayerId}", playerId);
-                return new List<RecommendationEntities.GameRecommendation>();
+                return new List<GameRecommendation>();
             }
         }
 
-        public async Task<RecommendationEntities.BonusRecommendation> GetBonusRecommendationAsync(string playerId)
+        public async Task<BonusRecommendation> GetBonusRecommendationAsync(string playerId)
         {
             _logger.LogInformation("Getting bonus recommendation for player: {PlayerId}", playerId);
             
@@ -138,7 +137,7 @@ namespace PPGameMgmt.Infrastructure.Services
                 _logger.LogError(ex, "Error retrieving bonus recommendation for player: {PlayerId}", playerId);
                 
                 // Fallback to a default recommendation
-                return new RecommendationEntities.BonusRecommendation
+                return new BonusRecommendation
                 {
                     Id = Guid.NewGuid().ToString(),
                     PlayerId = playerId,

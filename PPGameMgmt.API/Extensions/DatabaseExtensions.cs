@@ -3,8 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 using System;
-using PPGameMgmt.Core.Interfaces; // Add missing namespace for ICacheService
-using PPGameMgmt.Infrastructure.Services; // Add namespace for RedisCacheService
+using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Infrastructure.Services;
+using Microsoft.Extensions.Logging;
 
 namespace PPGameMgmt.API.Extensions
 {
@@ -35,31 +36,65 @@ namespace PPGameMgmt.API.Extensions
             
             Console.WriteLine($"Using {dbProvider} database with connection string: {connectionString}");
             
+            // Configure pooling and resilience options
+            Action<DbContextOptionsBuilder> dbContextOptions = null;
+            
             switch (dbProvider)
             {
                 case "mysql":
-                    services.AddDbContext<CasinoDbContext>(options =>
+                    dbContextOptions = options =>
+                    {
                         options.UseMySql(
                             connectionString, 
                             ServerVersion.AutoDetect(connectionString),
-                            mySqlOptions => mySqlOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
+                            mySqlOptions => 
+                            {
+                                mySqlOptions.MigrationsAssembly("PPGameMgmt.Infrastructure");
+                                mySqlOptions.EnableRetryOnFailure(
+                                    maxRetryCount: 10,
+                                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                                    errorNumbersToAdd: null);
+                            })
+                        .LogTo(Console.WriteLine, LogLevel.Information)
+                        .EnableSensitiveDataLogging(false)
+                        .EnableDetailedErrors();
+                    };
                     break;
                     
                 case "sqlserver":
-                    services.AddDbContext<CasinoDbContext>(options =>
+                    dbContextOptions = options =>
+                    {
                         options.UseSqlServer(
                             connectionString,
-                            sqlServerOptions => sqlServerOptions.MigrationsAssembly("PPGameMgmt.Infrastructure")));
+                            sqlServerOptions => 
+                            {
+                                sqlServerOptions.MigrationsAssembly("PPGameMgmt.Infrastructure");
+                                sqlServerOptions.EnableRetryOnFailure(
+                                    maxRetryCount: 10,
+                                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                                    errorNumbersToAdd: null);
+                            })
+                        .LogTo(Console.WriteLine, LogLevel.Information)
+                        .EnableSensitiveDataLogging(false)
+                        .EnableDetailedErrors();
+                    };
                     break;
                     
                 case "inmemory":
-                    services.AddDbContext<CasinoDbContext>(options =>
-                        options.UseInMemoryDatabase("PPGameMgmtDb"));
+                    dbContextOptions = options =>
+                    {
+                        options.UseInMemoryDatabase("PPGameMgmtDb")
+                        .LogTo(Console.WriteLine, LogLevel.Information)
+                        .EnableSensitiveDataLogging(true);
+                    };
                     break;
                     
                 default:
                     throw new NotSupportedException($"Database provider '{dbProvider}' is not supported.");
             }
+            
+            // Register the DbContext as scoped so it's created once per request
+            services.AddDbContext<CasinoDbContext>(dbContextOptions, ServiceLifetime.Scoped);
             
             return services;
         }

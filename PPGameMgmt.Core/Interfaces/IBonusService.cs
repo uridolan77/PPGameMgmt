@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-// Use namespace aliases to distinguish between ambiguous types
-using CoreEntities = PPGameMgmt.Core.Entities;
-using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.Core.Interfaces
 {
@@ -14,36 +13,36 @@ namespace PPGameMgmt.Core.Interfaces
         /// <summary>
         /// Gets a bonus by ID
         /// </summary>
-        Task<BonusEntities.Bonus> GetBonusAsync(string bonusId);
+        Task<Bonus> GetBonusAsync(string bonusId);
         
         /// <summary>
         /// Gets all active bonuses
         /// </summary>
-        Task<IEnumerable<BonusEntities.Bonus>> GetAllActiveBonusesAsync();
+        Task<IEnumerable<Bonus>> GetAllActiveBonusesAsync();
         
         /// <summary>
         /// Gets bonuses by type
         /// </summary>
-        Task<IEnumerable<BonusEntities.Bonus>> GetBonusesByTypeAsync(BonusEntities.BonusType type);
+        Task<IEnumerable<Bonus>> GetBonusesByTypeAsync(BonusType type);
         
         /// <summary>
         /// Gets bonuses for a player segment
         /// </summary>
-        Task<IEnumerable<BonusEntities.Bonus>> GetBonusesForPlayerSegmentAsync(CoreEntities.PlayerSegment segment);
+        Task<IEnumerable<Bonus>> GetBonusesForPlayerSegmentAsync(PlayerSegment segment);
         
         /// <summary>
         /// Gets bonuses for a game
         /// </summary>
-        Task<IEnumerable<BonusEntities.Bonus>> GetBonusesForGameAsync(string gameId);
+        Task<IEnumerable<Bonus>> GetBonusesForGameAsync(string gameId);
         
         /// <summary>
         /// Gets bonus claims for a player
         /// </summary>
-        Task<IEnumerable<BonusEntities.BonusClaim>> GetPlayerBonusClaimsAsync(string playerId);
+        Task<IEnumerable<BonusClaim>> GetPlayerBonusClaimsAsync(string playerId);
         
         /// <summary>
         /// Claims a bonus for a player
         /// </summary>
-        Task<BonusEntities.BonusClaim> ClaimBonusAsync(string playerId, string bonusId);
+        Task<BonusClaim> ClaimBonusAsync(string playerId, string bonusId);
     }
 }

@@ -84,7 +84,16 @@ namespace PPGameMgmt.API.Extensions
                 // Add documentation filters
                 c.OperationFilter<SwaggerDocumentationFilter>();
                 c.SchemaFilter<SwaggerExampleFilter>();
-                
+
+                // Add schema filter for ApiErrorResponse
+                c.SchemaFilter<ApiErrorResponseSchemaFilter>();
+
+                // Add schema filter for Bonus types
+                c.SchemaFilter<BonusSchemaFilter>();
+
+                // Add document filter to ensure unique schema IDs
+                c.DocumentFilter<SwaggerSchemaDocumentFilter>();
+
                 // Add exception documentation filter
                 c.OperationFilter<SwaggerExceptionDocumentationFilter>();
 
@@ -95,6 +104,29 @@ namespace PPGameMgmt.API.Extensions
                 {
                     c.IncludeXmlComments(xmlPath);
                 }
+
+                // Use custom schema IDs to handle duplicate type names
+                c.CustomSchemaIds(type =>
+                {
+                    // Special case for Bonus types
+                    if (type.FullName.Contains("PPGameMgmt.Core.Entities.Bonuses.Bonus"))
+                    {
+                        return "CoreBonus";
+                    }
+                    // Special case for BonusType enum
+                    else if (type.FullName.Contains("PPGameMgmt.Core.Entities.Bonuses.BonusType"))
+                    {
+                        return "CoreBonusType";
+                    }
+                    // For API response models
+                    else if (type.FullName.Contains("PPGameMgmt.API.Models.Bonuses"))
+                    {
+                        return "Api" + type.Name;
+                    }
+
+                    // For other types, use the simple name
+                    return type.Name;
+                });
             });
 
             return services;
@@ -119,7 +151,7 @@ namespace PPGameMgmt.API.Extensions
         public static IServiceCollection AddApiControllers(this IServiceCollection services)
         {
             services.AddResponseCaching();
-            
+
             services.AddControllers(options =>
             {
                 options.CacheProfiles.Add("Default30",
@@ -132,7 +164,7 @@ namespace PPGameMgmt.API.Extensions
                     {
                         Duration = 60
                     });
-                
+
                 // Add the global StandardApiResponseFilter
                 options.Filters.Add<StandardApiResponseFilter>();
             });
@@ -146,7 +178,7 @@ namespace PPGameMgmt.API.Extensions
         public static IServiceCollection AddCorsPolicy(this IServiceCollection services, IConfiguration configuration)
         {
             // Get allowed origins from configuration or use defaults
-            var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? 
+            var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
                 new[] {
                     "http://localhost:55824",
                     "https://localhost:55824",

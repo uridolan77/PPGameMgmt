@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
 using PPGameMgmt.Core.Exceptions;
 using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.Models;

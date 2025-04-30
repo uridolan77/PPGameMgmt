@@ -9,4 +9,5 @@ export * from './types';
 
 // Export pages (default exports need to be handled differently)
 import PlayerDetail from './pages/PlayerDetail';
-export { PlayerDetail };
+import PlayersList from './pages/PlayersList';
+export { PlayerDetail, PlayersList as PlayersListPage };

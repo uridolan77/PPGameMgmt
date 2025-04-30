@@ -9,6 +9,7 @@ using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Core.CQRS.Events;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Extensions; // Added for OutboxMessageExtensions
+using IOutboxRepositoryInterface = PPGameMgmt.Core.Interfaces.Repositories.IOutboxRepository;
 
 namespace PPGameMgmt.Infrastructure.Services
 {
@@ -62,7 +63,7 @@ namespace PPGameMgmt.Infrastructure.Services
         private async Task ProcessOutboxMessagesAsync()
         {
             using var scope = _serviceProvider.CreateScope();
-            var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+            var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepositoryInterface>();
             var eventDispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
 
             var messages = await outboxRepository.GetUnprocessedMessagesAsync(100);
@@ -110,13 +111,13 @@ namespace PPGameMgmt.Infrastructure.Services
                 {
                     // Use try-catch here to safely get the ID
                     string errorId = "unknown";
-                    try 
+                    try
                     {
                         dynamic msg = messageObj;
                         errorId = msg.Id;
                     }
                     catch {}
-                    
+
                     _logger.LogError(ex, $"Error processing outbox message {errorId}");
                 }
             }
@@ -145,13 +146,14 @@ namespace PPGameMgmt.Infrastructure.Services
         private async Task CleanupOldMessagesAsync()
         {
             using var scope = _serviceProvider.CreateScope();
-            var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+            var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepositoryInterface>();
 
             // Remove messages older than 7 days
             var cutoff = DateTime.UtcNow.AddDays(-7);
 
             _logger.LogInformation($"Cleaning up processed outbox messages before {cutoff:yyyy-MM-dd}");
-            await outboxRepository.CleanupProcessedMessagesAsync(cutoff);
+            var timeSpan = DateTime.UtcNow - cutoff;
+            await outboxRepository.CleanupProcessedMessagesAsync(timeSpan);
         }
     }
 }

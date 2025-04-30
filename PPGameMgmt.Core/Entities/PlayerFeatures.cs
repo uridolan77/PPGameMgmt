@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using PPGameMgmt.Core.Entities.Bonuses; // Add this import for BonusType
 
 namespace PPGameMgmt.Core.Entities
 {

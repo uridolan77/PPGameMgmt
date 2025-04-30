@@ -1,53 +1,50 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { usePlayer, usePlayerGameSessions, usePlayerFeatures, usePlayerBonusClaims, usePlayerActions } from '../hooks';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlayerTabType } from '../types';
+import { FeatureErrorBoundary } from '../../../shared/components/FeatureErrorBoundary';
 import {
   PlayerHeader,
-  PlayerOverviewTab,
-  PlayerGamesTab,
-  PlayerBonusesTab,
-  PlayerFeaturesTab,
-  ApiErrorDisplay
+  ApiErrorDisplay,
+  PlayerDetailTabs
 } from '../components';
 
 const PlayerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<PlayerTabType>('overview');
-  
+
   // Use our custom hook for player actions
   const playerActions = usePlayerActions();
-  
+
   // Convert id to number for API calls
   const playerId = id ? parseInt(id, 10) : undefined;
 
   // Fetch player data with proper error handling
-  const { 
-    data: player, 
+  const {
+    data: player,
     isLoading: playerLoading,
     error: playerError,
     refetch: refetchPlayer
   } = usePlayer(playerId);
-  
+
   // Fetch related player data with dependency on player existence
-  const { 
-    data: gameSessions, 
+  const {
+    data: gameSessions,
     isLoading: sessionsLoading,
     error: sessionsError,
     refetch: refetchSessions
   } = usePlayerGameSessions(playerId);
-  
-  const { 
-    data: features, 
+
+  const {
+    data: features,
     isLoading: featuresLoading,
     error: featuresError,
     refetch: refetchFeatures
   } = usePlayerFeatures(playerId);
-  
-  const { 
-    data: bonusClaims, 
+
+  const {
+    data: bonusClaims,
     isLoading: bonusesLoading,
     error: bonusesError,
     refetch: refetchBonuses
@@ -87,7 +84,7 @@ const PlayerDetail: React.FC = () => {
   if (playerError || !player) {
     return (
       <div className="container mx-auto py-6 max-w-md">
-        <ApiErrorDisplay 
+        <ApiErrorDisplay
           error={playerError || new Error('Player not found')}
           context="player"
           onRetry={refetchPlayer}
@@ -96,91 +93,36 @@ const PlayerDetail: React.FC = () => {
     );
   }
 
-  // Function to get the appropriate error display for each tab
-  const getTabErrorDisplay = (tabId: PlayerTabType) => {
-    switch (tabId) {
-      case 'games':
-        return sessionsError ? 
-          <ApiErrorDisplay 
-            error={sessionsError} 
-            context="game sessions" 
-            onRetry={refetchSessions}
-          /> : null;
-      case 'features':
-        return featuresError ? 
-          <ApiErrorDisplay 
-            error={featuresError} 
-            context="player features" 
-            onRetry={refetchFeatures}
-          /> : null;
-      case 'bonuses':
-        return bonusesError ? 
-          <ApiErrorDisplay 
-            error={bonusesError} 
-            context="bonus claims" 
-            onRetry={refetchBonuses}
-          /> : null;
-      default:
-        return null;
-    }
-  };
+
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex flex-col gap-6">
-        {/* Player header with back button, avatar and actions */}
-        <PlayerHeader player={player} onDeletePlayer={handleDeletePlayer} />
+    <FeatureErrorBoundary featureName="Player Details">
+      <div className="container mx-auto py-6">
+        <div className="flex flex-col gap-6">
+          {/* Player header with back button, avatar and actions */}
+          <PlayerHeader player={player} onDeletePlayer={handleDeletePlayer} />
 
-        {/* Tabs for player details */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="games">Game History</TabsTrigger>
-            <TabsTrigger value="bonuses">Bonuses</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview">
-            <PlayerOverviewTab
-              player={player}
-              gameSessions={gameSessions}
-              features={features}
-              bonusClaims={bonusClaims}
-              sessionsLoading={sessionsLoading}
-              featuresLoading={featuresLoading}
-              bonusesLoading={bonusesLoading}
-            />
-          </TabsContent>
-          
-          <TabsContent value="games">
-            {getTabErrorDisplay('games') || 
-              <PlayerGamesTab 
-                gameSessions={gameSessions} 
-                loading={sessionsLoading} 
-              />
-            }
-          </TabsContent>
-          
-          <TabsContent value="bonuses">
-            {getTabErrorDisplay('bonuses') || 
-              <PlayerBonusesTab 
-                bonusClaims={bonusClaims} 
-                loading={bonusesLoading} 
-              />
-            }
-          </TabsContent>
-          
-          <TabsContent value="features">
-            {getTabErrorDisplay('features') || 
-              <PlayerFeaturesTab 
-                features={features} 
-                loading={featuresLoading} 
-              />
-            }
-          </TabsContent>
-        </Tabs>
+          {/* Player detail tabs */}
+          <PlayerDetailTabs
+            player={player}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            gameSessions={gameSessions}
+            features={features}
+            bonusClaims={bonusClaims}
+            sessionsLoading={sessionsLoading}
+            featuresLoading={featuresLoading}
+            bonusesLoading={bonusesLoading}
+            sessionsError={sessionsError}
+            featuresError={featuresError}
+            bonusesError={bonusesError}
+            refetchSessions={refetchSessions}
+            refetchFeatures={refetchFeatures}
+            refetchBonuses={refetchBonuses}
+          />
+        </div>
       </div>
-    </div>
+    </FeatureErrorBoundary>
   );
 };
 

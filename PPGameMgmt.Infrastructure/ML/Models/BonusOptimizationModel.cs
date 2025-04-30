@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities.Recommendations;
 
 namespace PPGameMgmt.Infrastructure.ML.Models
 {

@@ -216,7 +216,7 @@ namespace PPGameMgmt.Infrastructure.Services
                     TotalBonusesClaimed = new Random().Next(0, 20),
                     CurrentSegment = CoreEntities.PlayerSegment.Regular,
                     // Use null-coalescing to handle the nullable type correctly
-                    PreferredBonusType = CoreEntities.BonusType.Deposit
+                    PreferredBonusType = BonusEntities.BonusType.DepositMatch
                 };
             }
             catch (Exception ex)

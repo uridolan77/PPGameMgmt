@@ -25,7 +25,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             _logger = logger;
         }
 
-        public new async Task<BonusClaim> GetByIdAsync(string id)
+        public override async Task<BonusClaim> GetByIdAsync(string id)
         {
             return await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
@@ -239,12 +239,12 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             );
         }
 
-        public async Task<bool> ExistsAsync(string id)
+        public override async Task<bool> ExistsAsync(string id)
         {
             return await ClaimExistsAsync(id);
         }
 
-        public async Task DeleteAsync(string id)
+        public override async Task DeleteAsync(string id)
         {
             await RepositoryExceptionHandler.ExecuteAsync(
                 async () => {
