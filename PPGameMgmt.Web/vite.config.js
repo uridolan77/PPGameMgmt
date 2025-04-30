@@ -6,17 +6,34 @@ import autoprefixer from 'autoprefixer';
 import { resolve } from 'path';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { VitePWA } from 'vite-plugin-pwa';
-import imagemin from 'unplugin-imagemin/vite';
+// Comment out the imagemin import since it has compatibility issues
+// import imagemin from 'unplugin-imagemin/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env file based on mode
   const env = loadEnv(mode, process.cwd(), '');
   const isProd = mode === 'production';
-  
+
   return {
     plugins: [
-      react(),
+      react({
+        // Ensure JSX is properly parsed
+        include: '**/*.{jsx,tsx}',
+        jsxRuntime: 'automatic',
+        babel: {
+          plugins: [
+            // Add any babel plugins if needed
+          ],
+          presets: [
+            ['@babel/preset-typescript', {
+              isTSX: true,
+              allExtensions: true,
+              allowDeclareFields: true,
+            }]
+          ]
+        }
+      }),
       // Bundle size analyzer with more detailed configuration
       visualizer({
         filename: 'stats.html',
@@ -25,8 +42,8 @@ export default defineConfig(({ mode }) => {
         brotliSize: true,
         template: 'treemap', // or 'sunburst', 'network'
       }),
-      // Image optimization
-      imagemin({
+      // Image optimization - commented out due to Node.js version incompatibility
+      /* imagemin({
         // Only apply to production builds
         disable: !isProd,
         webp: {
@@ -38,13 +55,13 @@ export default defineConfig(({ mode }) => {
         jpeg: {
           quality: 80,
         },
-      }),
+      }), */
       // HTML transformation for critical CSS (production only)
       createHtmlPlugin({
         minify: isProd,
         inject: {
           data: {
-            injectScript: isProd 
+            injectScript: isProd
               ? `<link rel="preload" href="/assets/index.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
                  <noscript><link rel="stylesheet" href="/assets/index.css"></noscript>`
               : '',
@@ -107,16 +124,13 @@ export default defineConfig(({ mode }) => {
         '@': resolve(__dirname, './src'),
         // Add explicit alias for problematic packages
         'recharts': resolve(__dirname, 'node_modules/recharts'),
-        'date-fns': resolve(__dirname, 'node_modules/date-fns')
+        'date-fns': resolve(__dirname, 'node_modules/date-fns'),
+        // Handle MUI component resolution
+        '@mui/x-react-checkbox': resolve(__dirname, './src/components/ui/checkbox.tsx')
       }
     },
-    esbuild: {
-      loader: 'jsx',
-      include: /src\/.*\.jsx?$/,
-      exclude: []
-    },
     build: {
-      target: 'es2015',
+      target: 'es2020', // Updated to match optimizeDeps target
       outDir: 'dist',
       assetsDir: 'assets',
       // Enable source maps only for development or when explicitly requested
@@ -124,41 +138,46 @@ export default defineConfig(({ mode }) => {
       // Minification options
       minify: isProd ? 'esbuild' : false,
       cssMinify: isProd,
+      // Add esbuild options for JSX handling
+      esbuildOptions: {
+        jsxFactory: 'React.createElement',
+        jsxFragment: 'React.Fragment',
+      },
       rollupOptions: {
         output: {
           // Enhanced chunk splitting strategy
           manualChunks: (id) => {
             // Core React libraries
-            if (id.includes('node_modules/react') || 
-                id.includes('node_modules/react-dom') || 
+            if (id.includes('node_modules/react') ||
+                id.includes('node_modules/react-dom') ||
                 id.includes('node_modules/react-router')) {
               return 'react-core';
             }
-            
+
             // UI libraries
             if (id.includes('node_modules/@mui')) {
               return 'ui-library';
             }
-            
+
             // State management
-            if (id.includes('node_modules/zustand') || 
+            if (id.includes('node_modules/zustand') ||
                 id.includes('node_modules/@tanstack/react-query')) {
               return 'state-management';
             }
-            
+
             // Charts and visualization
-            if (id.includes('node_modules/recharts') || 
+            if (id.includes('node_modules/recharts') ||
                 id.includes('node_modules/d3')) {
               return 'charts';
             }
-            
+
             // Utilities
-            if (id.includes('node_modules/date-fns') || 
+            if (id.includes('node_modules/date-fns') ||
                 id.includes('node_modules/lodash') ||
                 id.includes('node_modules/uuid')) {
               return 'utilities';
             }
-            
+
             // Feature-specific chunks based on directory structure
             if (id.includes('/features/games/')) {
               return 'feature-games';
@@ -202,10 +221,19 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       esbuildOptions: {
         loader: {
-          '.js': 'jsx'
-        }
+          '.js': 'jsx',
+          '.ts': 'tsx',
+          '.jsx': 'jsx',
+          '.tsx': 'tsx'
+        },
+        // Add JSX factory and fragment to help esbuild parse TypeScript with JSX correctly
+        jsxFactory: 'React.createElement',
+        jsxFragment: 'React.Fragment',
+        // This helps with TypeScript generics in arrow functions
+        target: 'es2020'
       },
-      include: ['recharts', 'date-fns'] // Explicitly include these dependencies
+      include: ['recharts', 'date-fns'], // Explicitly include these dependencies
+      exclude: ['@mui/x-react-checkbox'] // Exclude the aliased module
     },
     preview: {
       port: 8080,

@@ -21,6 +21,7 @@ namespace PPGameMgmt.API.Extensions
             // Configure environment-specific middleware
             if (app.Environment.IsDevelopment())
             {
+                app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(options =>
                 {
@@ -34,6 +35,7 @@ namespace PPGameMgmt.API.Extensions
             }
 
             // Global middleware pipeline
+            app.UseRequestExecutionTime(); // Add this first to accurately measure full request time
             app.UseGlobalExceptionHandling();
             app.UseRequestLogging();
             app.UseApiManagement();
@@ -91,7 +93,7 @@ namespace PPGameMgmt.API.Extensions
         {
             // Map SignalR hub
             app.MapHub<NotificationHub>("/hubs/notifications");
-            
+
             // Map API controllers
             app.MapControllers();
 

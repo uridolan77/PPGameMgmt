@@ -5,3 +5,4 @@
 
 export * from './theme';
 export { default as themeConfig } from './theme';
+export { ThemeProvider } from './ThemeProvider';

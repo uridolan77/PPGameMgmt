@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using PPGameMgmt.API.Models;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace PPGameMgmt.API.Filters
 {
@@ -28,10 +32,29 @@ namespace PPGameMgmt.API.Filters
                 return;
             }
 
+            // Get execution time from HttpContext if available
+            long executionTimeMs = 0;
+            if (context.HttpContext.Items.TryGetValue("RequestStopwatch", out var stopwatchObj) &&
+                stopwatchObj is Stopwatch stopwatch)
+            {
+                executionTimeMs = stopwatch.ElapsedMilliseconds;
+            }
+
             // Skip if the result is already a standard ApiResponse
             // For example, when a controller action returns OkResponse(), BadRequestResponse(), etc.
             if (IsApiResponseResult(context.Result))
             {
+                // If it's already an ApiResponse, we still want to add the execution time
+                if (context.Result is ObjectResult objectResult && objectResult.Value != null)
+                {
+                    var valueType = objectResult.Value.GetType();
+                    if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(ApiResponse<>))
+                    {
+                        // Set the execution time using reflection
+                        var executionTimeProperty = valueType.GetProperty("ExecutionTimeMs");
+                        executionTimeProperty?.SetValue(objectResult.Value, executionTimeMs);
+                    }
+                }
                 return;
             }
 
@@ -42,20 +65,32 @@ namespace PPGameMgmt.API.Filters
                 case ObjectResult objectResult:
                     // Create standard response
                     var statusCode = objectResult.StatusCode ?? 200;
-                    var responseType = objectResult.Value?.GetType();
 
-                    // Skip void and primitive types
-                    if (responseType != null && !responseType.IsPrimitive && responseType != typeof(string))
-                    {
-                        var responseObj = objectResult.Value;
-                        objectResult.Value = CreateApiResponse(responseObj, statusCode);
-                    }
+                    // Process all response types, including null, primitive types, and strings
+                    var responseObj = objectResult.Value;
+                    var apiResponse = CreateApiResponse(responseObj, statusCode);
+
+                    // Set execution time using reflection
+                    var apiResponseType = apiResponse.GetType();
+                    var executionTimeProperty = apiResponseType.GetProperty("ExecutionTimeMs");
+                    executionTimeProperty?.SetValue(apiResponse, executionTimeMs);
+
+                    objectResult.Value = apiResponse;
                     break;
 
                 // Handle StatusCodeResult (including OkResult, NotFoundResult, etc.)
                 case StatusCodeResult statusCodeResult:
-                    var message = GetDefaultMessageForStatusCode(statusCodeResult.StatusCode);
-                    context.Result = new ObjectResult(ApiResponse<object>.Success(null, message))
+                    var statusMessage = GetDefaultMessageForStatusCode(statusCodeResult.StatusCode);
+                    // Create a response with null data
+                    var emptyApiResponse = new ApiResponse<object>
+                    {
+                        IsSuccess = statusCodeResult.StatusCode >= 200 && statusCodeResult.StatusCode < 400,
+                        Message = statusMessage,
+                        Data = null,
+                        ExecutionTimeMs = executionTimeMs
+                    };
+
+                    context.Result = new ObjectResult(emptyApiResponse)
                     {
                         StatusCode = statusCodeResult.StatusCode
                     };
@@ -66,24 +101,64 @@ namespace PPGameMgmt.API.Filters
         /// <summary>
         /// Creates an ApiResponse object based on the status code and content
         /// </summary>
-        private static object CreateApiResponse(object content, int statusCode)
+        private static object CreateApiResponse(object? content, int statusCode)
         {
             // Create a properly typed ApiResponse using reflection
             var contentType = content?.GetType() ?? typeof(object);
             var message = GetDefaultMessageForStatusCode(statusCode);
-            
+
+            // Create a generic ApiResponse type based on the content type
             var apiResponseType = typeof(ApiResponse<>).MakeGenericType(contentType);
-            
-            if (statusCode >= 200 && statusCode < 400)
+
+            // Create a new instance of the ApiResponse
+            var response = Activator.CreateInstance(apiResponseType);
+            if (response == null)
             {
-                // Success response
-                return Activator.CreateInstance(apiResponseType, true, message, content, null)!;
+                // Fallback to object if we can't create the specific type
+                var fallbackResponse = new ApiResponse<object>
+                {
+                    IsSuccess = statusCode >= 200 && statusCode < 400,
+                    Message = message,
+                    Data = content
+                };
+
+                if (statusCode >= 400)
+                {
+                    fallbackResponse.Errors.Add(message);
+                }
+
+                return fallbackResponse;
+            }
+
+            // Set the properties based on the status code
+            var isSuccessProperty = apiResponseType.GetProperty("IsSuccess");
+            var messageProperty = apiResponseType.GetProperty("Message");
+            var dataProperty = apiResponseType.GetProperty("Data");
+            var errorsProperty = apiResponseType.GetProperty("Errors");
+
+            bool isSuccess = statusCode >= 200 && statusCode < 400;
+            isSuccessProperty?.SetValue(response, isSuccess);
+            messageProperty?.SetValue(response, message);
+
+            if (isSuccess)
+            {
+                // For success responses, set the data
+                dataProperty?.SetValue(response, content);
             }
             else
             {
-                // Error response
-                return Activator.CreateInstance(apiResponseType, false, message, default, new List<string> { message })!;
+                // For error responses, set the errors
+                if (errorsProperty?.GetValue(response) is List<string> errors)
+                {
+                    errors.Add(message);
+                }
+                else
+                {
+                    errorsProperty?.SetValue(response, new List<string> { message });
+                }
             }
+
+            return response;
         }
 
         /// <summary>
@@ -95,7 +170,7 @@ namespace PPGameMgmt.API.Filters
             if (result is ObjectResult objectResult && objectResult.Value != null)
             {
                 var valueType = objectResult.Value.GetType();
-                return valueType.IsGenericType && 
+                return valueType.IsGenericType &&
                        valueType.GetGenericTypeDefinition() == typeof(ApiResponse<>);
             }
 

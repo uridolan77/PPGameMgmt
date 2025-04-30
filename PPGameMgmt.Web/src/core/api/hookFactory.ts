@@ -13,7 +13,7 @@ export const STALE_TIMES = {
 
 /**
  * Creates a set of standardized API hooks for a specific entity type
- * 
+ *
  * @param entityName The name of the entity (e.g., 'player', 'game', 'bonus')
  * @param apiService The API service for the entity
  * @param category The data category for cache optimization
@@ -45,7 +45,7 @@ export function createEntityHooks<
     /**
      * Hook for fetching all entities with optional filtering
      */
-    useGetAll: (params?: any) => 
+    useGetAll: (params?: any) =>
       useApiQuery(
         [CACHE_KEYS.ALL, params],
         () => apiService.getAll(params),
@@ -54,13 +54,13 @@ export function createEntityHooks<
           category
         }
       ),
-    
+
     /**
      * Hook for fetching a single entity by ID
      */
     useGetById: (id?: number | string) => {
       const numericId = id ? Number(id) : undefined;
-      
+
       return useApiQuery(
         [CACHE_KEYS.DETAIL, numericId],
         () => apiService.getById(numericId as number),
@@ -71,13 +71,13 @@ export function createEntityHooks<
         }
       );
     },
-    
+
     /**
      * Hook for creating a new entity
      */
     useCreate: () => {
       const queryClient = useQueryClient();
-      
+
       return useApiMutation<TEntity, TCreateInput>(
         (data) => apiService.create(data),
         {
@@ -88,13 +88,13 @@ export function createEntityHooks<
         }
       );
     },
-    
+
     /**
      * Hook for updating an entity
      */
     useUpdate: () => {
       const queryClient = useQueryClient();
-      
+
       return useApiMutation<TEntity, { id: number; data: TUpdateInput }>(
         ({ id, data }) => apiService.update(id, data),
         {
@@ -105,13 +105,13 @@ export function createEntityHooks<
         }
       );
     },
-    
+
     /**
      * Hook for deleting an entity
      */
     useDelete: () => {
       const queryClient = useQueryClient();
-      
+
       return useApiMutation<void, number>(
         (id) => apiService.remove(id),
         {
@@ -122,15 +122,15 @@ export function createEntityHooks<
         }
       );
     },
-    
+
     /**
      * Create a custom query hook for this entity
      */
-    createCustomQuery: <TData>(
+    createCustomQuery: <TData,>(
       name: string,
       queryFn: (id: number) => Promise<TData>
     ) => {
-      return (id?: number) => 
+      return (id?: number) =>
         useApiQuery(
           [`${entityName}-${name}`, id],
           () => queryFn(id as number),
@@ -141,11 +141,11 @@ export function createEntityHooks<
           }
         );
     },
-    
+
     /**
      * Create a custom mutation hook for this entity
      */
-    createCustomMutation: <TData, TVariables>(
+    createCustomMutation: <TData, TVariables,>(
       mutationFn: (variables: TVariables) => Promise<TData>,
       options?: {
         invalidateQueries?: string[];
@@ -156,7 +156,7 @@ export function createEntityHooks<
       }
     ) => {
       const queryClient = useQueryClient();
-      
+
       return () => useApiMutation<TData, TVariables>(
         mutationFn,
         {
@@ -167,11 +167,11 @@ export function createEntityHooks<
                 queryClient.invalidateQueries({ queryKey: [queryKey] });
               });
             }
-            
+
             // Update specified queries
             if (options?.updateQueries) {
               options.updateQueries.forEach(({ queryKey, updater }) => {
-                queryClient.setQueryData(queryKey, (oldData: any) => 
+                queryClient.setQueryData(queryKey, (oldData: any) =>
                   updater(oldData, data)
                 );
               });

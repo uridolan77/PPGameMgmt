@@ -1,10 +1,16 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom/client';
+import App from './App';
 import './index.css';
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+// Using a simple approach to avoid parsing issues
+const container = document.getElementById('root');
+
+if (container) {
+  const root = ReactDOM.createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}

@@ -1,0 +1,18 @@
+-- Create outbox_messages table for the pp_recommeder_db database
+USE pp_recommeder_db;
+
+-- Create the outbox_messages table
+CREATE TABLE outbox_messages (
+    id VARCHAR(36) PRIMARY KEY,
+    created_at DATETIME NOT NULL,
+    data TEXT NOT NULL,
+    error TEXT NULL,
+    is_processed BOOLEAN NOT NULL DEFAULT FALSE,
+    processed_at DATETIME NULL,
+    processing_attempts INT NOT NULL DEFAULT 0,
+    event_type VARCHAR(100) NOT NULL
+);
+
+-- Create index for faster querying of unprocessed messages
+CREATE INDEX idx_outbox_messages_is_processed ON outbox_messages(is_processed);
+CREATE INDEX idx_outbox_messages_created_at ON outbox_messages(created_at);

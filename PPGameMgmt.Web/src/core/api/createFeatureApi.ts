@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 /**
  * Creates a standardized API hook for a feature
- * 
+ *
  * @param entityName The name of the entity (e.g., 'players', 'games', 'bonuses')
  * @param apiService The API service for the entity
  * @param schemas Optional Zod schemas for validation
@@ -53,7 +53,7 @@ export function createFeatureApi<
   // Return a hook that provides all the API operations
   return function useFeatureApi() {
     const queryClient = useQueryClient();
-    
+
     // Create enhanced versions of the base hooks with better error handling and validation
     return {
       // Query hooks
@@ -66,18 +66,18 @@ export function createFeatureApi<
             console.error('Invalid params:', error);
           }
         }
-        
+
         return entityHooks.useGetAll(params);
       },
-      
+
       getById: (id?: number | string) => {
         return entityHooks.useGetById(id);
       },
-      
+
       // Mutation hooks
       create: () => {
         const mutation = entityHooks.useCreate();
-        
+
         return {
           ...mutation,
           mutateAsync: async (data: TCreateInput) => {
@@ -92,7 +92,7 @@ export function createFeatureApi<
                 throw error;
               }
             }
-            
+
             try {
               const result = await mutation.mutateAsync(data);
               toast.success(`${entityName.slice(0, -1)} created successfully`);
@@ -106,10 +106,10 @@ export function createFeatureApi<
           }
         };
       },
-      
+
       update: () => {
         const mutation = entityHooks.useUpdate();
-        
+
         return {
           ...mutation,
           mutateAsync: async ({ id, data }: { id: number | string; data: TUpdateInput }) => {
@@ -124,7 +124,7 @@ export function createFeatureApi<
                 throw error;
               }
             }
-            
+
             try {
               const result = await mutation.mutateAsync({ id, data });
               toast.success(`${entityName.slice(0, -1)} updated successfully`);
@@ -138,10 +138,10 @@ export function createFeatureApi<
           }
         };
       },
-      
+
       delete: () => {
         const mutation = entityHooks.useDelete();
-        
+
         return {
           ...mutation,
           mutateAsync: async (id: number | string) => {
@@ -158,9 +158,9 @@ export function createFeatureApi<
           }
         };
       },
-      
+
       // Helper for creating custom queries
-      createCustomQuery: <TData>(
+      createCustomQuery: <TData,>(
         name: string,
         queryFn: (id: number | string) => Promise<TData>,
         options?: {
@@ -172,7 +172,7 @@ export function createFeatureApi<
             name,
             queryFn as (id: number) => Promise<TData>
           )(id as number);
-          
+
           // Add validation for the response
           if (options?.validateResponse && query.data) {
             try {
@@ -181,13 +181,13 @@ export function createFeatureApi<
               console.error(`Invalid ${name} response:`, error);
             }
           }
-          
+
           return query;
         };
       },
-      
+
       // Helper for creating custom mutations
-      createCustomMutation: <TData, TVariables>(
+      createCustomMutation: <TData, TVariables,>(
         name: string,
         mutationFn: (variables: TVariables) => Promise<TData>,
         options?: {
@@ -209,7 +209,7 @@ export function createFeatureApi<
             updateQueries: options?.updateQueries
           }
         )();
-        
+
         return {
           ...customMutation,
           mutateAsync: async (variables: TVariables) => {
@@ -224,10 +224,10 @@ export function createFeatureApi<
                 throw error;
               }
             }
-            
+
             try {
               const result = await customMutation.mutateAsync(variables);
-              
+
               // Validate response if schema is provided
               if (options?.validateResponse) {
                 try {
@@ -236,11 +236,11 @@ export function createFeatureApi<
                   console.error(`Invalid ${name} response:`, error);
                 }
               }
-              
+
               if (options?.successMessage) {
                 toast.success(options.successMessage);
               }
-              
+
               return result;
             } catch (error) {
               handleApiError(error as Error, options?.errorMessage || `${name} operation failed`, {

@@ -1,12 +1,11 @@
-import React from 'react';
 import { useQuery, useMutation, QueryKey, UseQueryOptions, UseMutationOptions, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiClient } from './client';
 import { ApiError, PaginatedResponse } from './types';
 import { queryClient, DataCategory, getQueryOptions } from './reactQueryConfig';
 
 // Export the QueryClientProvider with our configured client
-export const ApiProvider = ({ children }: { children: React.ReactNode }) => {
-  return React.createElement(QueryClientProvider, { client: queryClient }, children);
+export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };
 
 // Type definitions for our custom hooks
@@ -30,40 +29,40 @@ export function useApiQuery<TData>(
   queryFn: QueryFn<TData>,
   options?: UseApiQueryOptions<TData>
 ) {
-  const {
-    abortOnUnmount = true,
-    skipRetry,
-    category,
-    ...queryOptions
+  const { 
+    abortOnUnmount = true, 
+    skipRetry, 
+    category, 
+    ...queryOptions 
   } = options || {};
-
+  
   // Get optimal cache settings if category is provided
   const cacheSettings = category ? getQueryOptions(category) : {};
-
+  
   return useQuery<TData, ApiError>({
     queryKey,
     queryFn: async ({ signal }) => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
+        
         // Merge abort signals if both exist
-        const mergedSignal = signal
+        const mergedSignal = signal 
           ? new AbortController().signal
           : controller.signal;
-
+        
         if (signal) {
           // Forward abort from React Query
           signal.addEventListener('abort', () => controller.abort());
         }
-
+        
         // If the query function is a direct API call, pass the abort signal
         if (queryFn.toString().includes('apiClient')) {
           const result = await queryFn();
           clearTimeout(timeoutId);
           return result;
         }
-
+        
         // For regular function
         const result = await queryFn();
         clearTimeout(timeoutId);
@@ -73,7 +72,7 @@ export function useApiQuery<TData>(
         if (error instanceof ApiError) {
           throw error;
         }
-
+        
         throw new ApiError(
           error.message || 'Unknown error',
           0,
@@ -107,7 +106,7 @@ export function useApiMutation<TData, TVariables>(
   options?: UseApiMutationOptions<TData, TVariables>
 ) {
   const { skipRetry, ...mutationOptions } = options || {};
-
+  
   return useMutation<TData, ApiError, TVariables>({
     mutationFn: async (variables) => {
       try {
@@ -117,7 +116,7 @@ export function useApiMutation<TData, TVariables>(
         if (error instanceof ApiError) {
           throw error;
         }
-
+        
         throw new ApiError(
           error.message || 'Unknown error',
           0,
@@ -132,48 +131,48 @@ export function useApiMutation<TData, TVariables>(
 // Helper functions to create common API query patterns with category optimization
 export const createApiHelpers = {
   // Helper for getting a list of resources
-  getList: <T,>(resource: string, category?: DataCategory) => {
-    return (params?: Record<string, any>, options?: { signal?: AbortSignal }) =>
+  getList: <T>(resource: string, category?: DataCategory) => {
+    return (params?: Record<string, any>, options?: { signal?: AbortSignal }) => 
       apiClient.get<T[]>(`/${resource}`, params, options);
   },
-
+  
   // Helper for getting paginated resources
-  getPaginated: <T,>(resource: string, category?: DataCategory) => {
-    return (page: number, pageSize: number, params?: Record<string, any>, options?: { signal?: AbortSignal }) =>
-      apiClient.get<PaginatedResponse<T>>(`/${resource}`, {
-        page,
-        pageSize,
-        ...params
+  getPaginated: <T>(resource: string, category?: DataCategory) => {
+    return (page: number, pageSize: number, params?: Record<string, any>, options?: { signal?: AbortSignal }) => 
+      apiClient.get<PaginatedResponse<T>>(`/${resource}`, { 
+        page, 
+        pageSize, 
+        ...params 
       }, options);
   },
-
+  
   // Helper for getting a single resource
-  getOne: <T,>(resource: string, category?: DataCategory) => {
-    return (id: string | number, options?: { signal?: AbortSignal }) =>
+  getOne: <T>(resource: string, category?: DataCategory) => {
+    return (id: string | number, options?: { signal?: AbortSignal }) => 
       apiClient.get<T>(`/${resource}/${id}`, undefined, options);
   },
-
+  
   // Helper for creating a resource
-  create: <T, D = any,>(resource: string) => {
-    return (data: D, options?: { signal?: AbortSignal }) =>
+  create: <T, D = any>(resource: string) => {
+    return (data: D, options?: { signal?: AbortSignal }) => 
       apiClient.post<T>(`/${resource}`, data, options);
   },
-
+  
   // Helper for updating a resource
-  update: <T, D = any,>(resource: string) => {
-    return (id: string | number, data: D, options?: { signal?: AbortSignal }) =>
+  update: <T, D = any>(resource: string) => {
+    return (id: string | number, data: D, options?: { signal?: AbortSignal }) => 
       apiClient.put<T>(`/${resource}/${id}`, data, options);
   },
-
+  
   // Helper for patching a resource
-  patch: <T, D = any,>(resource: string) => {
-    return (id: string | number, data: D, options?: { signal?: AbortSignal }) =>
+  patch: <T, D = any>(resource: string) => {
+    return (id: string | number, data: D, options?: { signal?: AbortSignal }) => 
       apiClient.patch<T>(`/${resource}/${id}`, data, options);
   },
-
+  
   // Helper for deleting a resource
-  remove: <T = void,>(resource: string) => {
-    return (id: string | number, options?: { signal?: AbortSignal }) =>
+  remove: <T = void>(resource: string) => {
+    return (id: string | number, options?: { signal?: AbortSignal }) => 
       apiClient.delete<T>(`/${resource}/${id}`, options);
   }
 };

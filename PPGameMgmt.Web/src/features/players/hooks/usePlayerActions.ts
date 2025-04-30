@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../../../core,store';
+import { useStore } from '../../../core/store';
 import { useDeletePlayer, useUpdatePlayer } from './usePlayers';
 import { Player } from '../types';
-import { handleApiError } from '../../../core,error';
+import { handleApiError } from '../../../core/error';
 
 /**
  * Custom hook providing common player-related actions and navigation

@@ -12,27 +12,32 @@ namespace PPGameMgmt.API.Models
         /// Indicates if the request was successful
         /// </summary>
         public bool IsSuccess { get; set; }
-        
+
         /// <summary>
         /// Optional message providing additional information about the response
         /// </summary>
         public string? Message { get; set; }
-        
+
         /// <summary>
         /// The data payload of the response
         /// </summary>
         public T? Data { get; set; }
-        
+
         /// <summary>
         /// List of errors that occurred during request processing
         /// </summary>
         public List<string> Errors { get; set; } = new List<string>();
-        
+
         /// <summary>
         /// Pagination metadata if the response is paginated
         /// </summary>
         public PaginationMetadata? Pagination { get; set; }
-        
+
+        /// <summary>
+        /// Request execution time in milliseconds
+        /// </summary>
+        public long ExecutionTimeMs { get; set; }
+
         /// <summary>
         /// Creates a successful response with data
         /// </summary>
@@ -45,7 +50,7 @@ namespace PPGameMgmt.API.Models
                 Data = data
             };
         }
-        
+
         /// <summary>
         /// Creates a successful paginated response with data
         /// </summary>
@@ -59,7 +64,7 @@ namespace PPGameMgmt.API.Models
                 Pagination = pagination
             };
         }
-        
+
         /// <summary>
         /// Creates a failed response with errors
         /// </summary>
@@ -72,7 +77,7 @@ namespace PPGameMgmt.API.Models
                 Errors = errors ?? new List<string>()
             };
         }
-        
+
         /// <summary>
         /// Creates a failed response with a single error
         /// </summary>

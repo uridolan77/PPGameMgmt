@@ -31,24 +31,23 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
         private async Task EnsureMigrationTableExistsAsync()
         {
             _logger?.LogInformation("Ensuring migration history table exists");
-            
+
             // Check if the database exists, if not, create it
             await _dbContext.Database.EnsureCreatedAsync();
-            
+
             // Create migration history table if it doesn't exist
             if (!(await _dbContext.Database.GetPendingMigrationsAsync()).Any())
             {
                 var sql = @"
-                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MigrationHistory' and xtype='U')
-                    CREATE TABLE MigrationHistory (
-                        Id NVARCHAR(255) PRIMARY KEY,
-                        Description NVARCHAR(MAX) NOT NULL,
-                        AppliedAt DATETIME2 NOT NULL
+                    CREATE TABLE IF NOT EXISTS MigrationHistory (
+                        Id VARCHAR(255) PRIMARY KEY,
+                        Description TEXT NOT NULL,
+                        AppliedAt DATETIME NOT NULL
                     )";
-                
+
                 await _dbContext.Database.ExecuteSqlRawAsync(sql);
             }
-            
+
             _logger?.LogInformation("Migration history table exists or was created");
         }
 
@@ -58,7 +57,7 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
         private async Task<List<string>> GetAppliedMigrationIdsAsync()
         {
             _logger?.LogInformation("Retrieving applied migration IDs");
-            
+
             return await _dbContext.Set<MigrationHistory>()
                 .Select(m => m.Id)
                 .ToListAsync();
@@ -70,16 +69,16 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
         public async Task<List<IMigration>> GetPendingMigrationsAsync()
         {
             await EnsureMigrationTableExistsAsync();
-            
+
             var appliedMigrationIds = await GetAppliedMigrationIdsAsync();
-            
+
             var pendingMigrations = _migrations
                 .Where(m => !appliedMigrationIds.Contains(m.Id))
                 .OrderBy(m => m.CreatedAt)
                 .ToList();
-            
+
             _logger?.LogInformation("{Count} pending migrations found", pendingMigrations.Count);
-            
+
             return pendingMigrations;
         }
 
@@ -89,25 +88,25 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
         public async Task ApplyPendingMigrationsAsync()
         {
             var pendingMigrations = await GetPendingMigrationsAsync();
-            
+
             if (!pendingMigrations.Any())
             {
                 _logger?.LogInformation("No pending migrations to apply");
                 return;
             }
-            
+
             _logger?.LogInformation("Applying {Count} migrations", pendingMigrations.Count);
-            
+
             foreach (var migration in pendingMigrations)
             {
                 try
                 {
-                    _logger?.LogInformation("Applying migration: {MigrationId} - {Description}", 
+                    _logger?.LogInformation("Applying migration: {MigrationId} - {Description}",
                         migration.Id, migration.Description);
-                    
+
                     // Apply the migration
                     await migration.ApplyAsync();
-                    
+
                     // Record the migration as applied
                     _dbContext.Set<MigrationHistory>().Add(new MigrationHistory
                     {
@@ -115,9 +114,9 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
                         Description = migration.Description,
                         AppliedAt = DateTime.UtcNow
                     });
-                    
+
                     await _dbContext.SaveChangesAsync();
-                    
+
                     _logger?.LogInformation("Successfully applied migration: {MigrationId}", migration.Id);
                 }
                 catch (Exception ex)
@@ -126,7 +125,7 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
                     throw;
                 }
             }
-            
+
             _logger?.LogInformation("Successfully applied all pending migrations");
         }
 
@@ -136,39 +135,39 @@ namespace PPGameMgmt.Infrastructure.Data.Migrations
         public async Task RevertLastMigrationAsync()
         {
             await EnsureMigrationTableExistsAsync();
-            
+
             // Get the last applied migration from the database
             var lastAppliedMigration = await _dbContext.Set<MigrationHistory>()
                 .OrderByDescending(m => m.AppliedAt)
                 .FirstOrDefaultAsync();
-            
+
             if (lastAppliedMigration == null)
             {
                 _logger?.LogInformation("No migrations to revert");
                 return;
             }
-            
+
             // Find the corresponding migration object
             var migration = _migrations.FirstOrDefault(m => m.Id == lastAppliedMigration.Id);
-            
+
             if (migration == null)
             {
                 _logger?.LogError("Migration with ID {MigrationId} not found in registered migrations", lastAppliedMigration.Id);
                 throw new InvalidOperationException($"Migration with ID {lastAppliedMigration.Id} not found");
             }
-            
+
             try
             {
-                _logger?.LogInformation("Reverting migration: {MigrationId} - {Description}", 
+                _logger?.LogInformation("Reverting migration: {MigrationId} - {Description}",
                     migration.Id, migration.Description);
-                
+
                 // Revert the migration
                 await migration.RevertAsync();
-                
+
                 // Remove the migration from history
                 _dbContext.Set<MigrationHistory>().Remove(lastAppliedMigration);
                 await _dbContext.SaveChangesAsync();
-                
+
                 _logger?.LogInformation("Successfully reverted migration: {MigrationId}", migration.Id);
             }
             catch (Exception ex)

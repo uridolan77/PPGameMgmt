@@ -75,8 +75,8 @@ interface FormWrapperProps<T extends z.ZodType> {
  *           </FormItem>
  *         )}
  *       />
- *
- *       {/* More form fields */}
+ *       
+ *       // Additional fields would go here
  *     </>
  *   )}
  * </FormWrapper>
