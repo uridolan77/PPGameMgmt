@@ -4,13 +4,14 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Models;
+using PPGameMgmt.Core.Interfaces.Repositories;
 
 namespace PPGameMgmt.Core.Interfaces
 {
     /// <summary>
     /// Interface for Player repository operations
     /// </summary>
-    public interface IPlayerRepository : IRepository<Player>
+    public interface IPlayerRepository : Repositories.IRepository<Player>
     {
         /// <summary>
         /// Gets a player by string ID (overload of the Guid version from IRepository)

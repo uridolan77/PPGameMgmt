@@ -24,20 +24,20 @@ namespace PPGameMgmt.API.Extensions
             services.AddScoped<IGameSessionRepository, GameSessionRepository>();
             services.AddScoped<IRecommendationRepository, RecommendationRepository>();
             services.AddScoped<IPlayerFeaturesRepository, PlayerFeaturesRepository>();
-            
+
             // Register BonusClaim repository implementation
-            services.AddScoped<IBonusClaimRepository, BonusClaimRepository>();
-            
+            services.AddScoped<Core.Interfaces.Repositories.IBonusClaimRepository, BonusClaimRepository>();
+
             // Register it as a generic repository too for classes that need IRepository<BonusClaim>
-            services.AddScoped<IRepository<BonusClaim>>(sp => 
-                sp.GetRequiredService<IBonusClaimRepository>());
-            
+            services.AddScoped<Core.Interfaces.Repositories.IRepository<BonusClaim>>(sp =>
+                sp.GetRequiredService<Core.Interfaces.Repositories.IBonusClaimRepository>());
+
             // Add Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            
+
             // Add Transaction Manager
             services.AddScoped<ITransactionManager, TransactionManager>();
-            
+
             return services;
         }
     }

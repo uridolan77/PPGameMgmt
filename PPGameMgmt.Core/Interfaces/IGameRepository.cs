@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Models;
+using PPGameMgmt.Core.Interfaces.Repositories;
 
 namespace PPGameMgmt.Core.Interfaces
 {
     /// <summary>
     /// Interface for Game repository operations
     /// </summary>
-    public interface IGameRepository : IRepository<Game>
+    public interface IGameRepository : Repositories.IRepository<Game>
     {
         /// <summary>
         /// Gets a game by string ID (overload of the Guid version from IRepository)

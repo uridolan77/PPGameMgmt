@@ -1,152 +1,53 @@
 using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Interfaces;
+using BonusEntity = PPGameMgmt.Core.Entities.Bonuses.Bonus;
+using RecommendationEntity = PPGameMgmt.Core.Entities.Recommendations.BonusRecommendation;
+using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
 namespace PPGameMgmt.Infrastructure.Data.Repositories
 {
-    public class BonusRepository : Repository<object>, IBonusRepository
+    /// <summary>
+    /// Repository implementation for Bonus entity
+    /// </summary>
+    public class BonusRepository : Repository<BonusEntity>, IBonusRepository
     {
-        public BonusRepository(CasinoDbContext context, ILogger<BonusRepository> logger = null)
+        public BonusRepository(CasinoDbContext context, ILogger<BonusRepository>? logger = null)
             : base(context, logger)
         {
         }
 
-        public async Task<object> GetByIdAsync(Guid id)
-        {
-            // Implementation to match IRepository<T> interface
-            return await base.GetByIdAsync(id.ToString());
-        }
-
-        public async Task<IReadOnlyList<object>> ListAllAsync()
-        {
-            var results = await base.GetAllAsync();
-            return results.ToList().AsReadOnly();
-        }
-
-        public async Task<IReadOnlyList<object>> ListAsync(Expression<Func<object, bool>> predicate)
-        {
-            var results = await base.FindAsync(predicate);
-            return results.ToList().AsReadOnly();
-        }
-
-        public async Task<object> AddAsync(object entity)
-        {
-            await base.AddAsync(entity);
-            return entity;
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            var entity = await GetByIdAsync(id);
-            if (entity != null)
-            {
-                await base.DeleteAsync(entity);
-            }
-        }
-
-        public async Task<int> CountAsync(Expression<Func<object, bool>> predicate)
-        {
-            var results = await base.FindAsync(predicate);
-            return results.Count();
-        }
+        // No need to implement additional methods as the base Repository<BonusEntity> class
+        // already implements all the methods required by IBonusRepository
     }
 
-
-
-    public class RecommendationRepository : Repository<object>, IRecommendationRepository
+    /// <summary>
+    /// Repository implementation for BonusRecommendation entity
+    /// </summary>
+    public class RecommendationRepository : Repository<RecommendationEntity>, IRecommendationRepository
     {
-        public RecommendationRepository(CasinoDbContext context, ILogger<RecommendationRepository> logger = null)
+        public RecommendationRepository(CasinoDbContext context, ILogger<RecommendationRepository>? logger = null)
             : base(context, logger)
         {
         }
 
-        public async Task<object> GetByIdAsync(Guid id)
-        {
-            return await base.GetByIdAsync(id.ToString());
-        }
-
-        public async Task<IReadOnlyList<object>> ListAllAsync()
-        {
-            var results = await base.GetAllAsync();
-            return results.ToList().AsReadOnly();
-        }
-
-        public async Task<IReadOnlyList<object>> ListAsync(Expression<Func<object, bool>> predicate)
-        {
-            var results = await base.FindAsync(predicate);
-            return results.ToList().AsReadOnly();
-        }
-
-        public async Task<object> AddAsync(object entity)
-        {
-            await base.AddAsync(entity);
-            return entity;
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            var entity = await GetByIdAsync(id);
-            if (entity != null)
-            {
-                await base.DeleteAsync(entity);
-            }
-        }
-
-        public async Task<int> CountAsync(Expression<Func<object, bool>> predicate)
-        {
-            var results = await base.FindAsync(predicate);
-            return results.Count();
-        }
+        // No need to implement additional methods as the base Repository<RecommendationEntity> class
+        // already implements all the methods required by IRecommendationRepository
     }
 
-    public class PlayerFeaturesRepository : Repository<object>, IPlayerFeaturesRepository
+    /// <summary>
+    /// Repository implementation for PlayerFeatures entity
+    /// </summary>
+    public class PlayerFeaturesRepository : Repository<PlayerFeatures>, IPlayerFeaturesRepository
     {
-        public PlayerFeaturesRepository(CasinoDbContext context, ILogger<PlayerFeaturesRepository> logger = null)
+        public PlayerFeaturesRepository(CasinoDbContext context, ILogger<PlayerFeaturesRepository>? logger = null)
             : base(context, logger)
         {
         }
 
-        public async Task<object> GetByIdAsync(Guid id)
-        {
-            return await base.GetByIdAsync(id.ToString());
-        }
-
-        public async Task<IReadOnlyList<object>> ListAllAsync()
-        {
-            var results = await base.GetAllAsync();
-            return results.ToList().AsReadOnly();
-        }
-
-        public async Task<IReadOnlyList<object>> ListAsync(Expression<Func<object, bool>> predicate)
-        {
-            var results = await base.FindAsync(predicate);
-            return results.ToList().AsReadOnly();
-        }
-
-        public async Task<object> AddAsync(object entity)
-        {
-            await base.AddAsync(entity);
-            return entity;
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            var entity = await GetByIdAsync(id);
-            if (entity != null)
-            {
-                await base.DeleteAsync(entity);
-            }
-        }
-
-        public async Task<int> CountAsync(Expression<Func<object, bool>> predicate)
-        {
-            var results = await base.FindAsync(predicate);
-            return results.Count();
-        }
+        // No need to implement additional methods as the base Repository<PlayerFeatures> class
+        // already implements all the methods required by IPlayerFeaturesRepository
     }
-
 }

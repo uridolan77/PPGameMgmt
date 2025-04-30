@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Interfaces.Repositories;
 
 namespace PPGameMgmt.Infrastructure.ML.Features
 {
@@ -16,7 +17,7 @@ namespace PPGameMgmt.Infrastructure.ML.Features
         private readonly ILogger<FeatureEngineeringService> _logger;
         private readonly IPlayerRepository _playerRepository;
         private readonly IGameSessionRepository _gameSessionRepository;
-        private readonly IBonusClaimRepository _bonusClaimRepository;
+        private readonly Core.Interfaces.Repositories.IBonusClaimRepository _bonusClaimRepository;
         private readonly BackgroundFeatureProcessor _backgroundProcessor;
 
         // Cache options
@@ -34,7 +35,7 @@ namespace PPGameMgmt.Infrastructure.ML.Features
             ILogger<FeatureEngineeringService> logger,
             IPlayerRepository playerRepository,
             IGameSessionRepository gameSessionRepository,
-            IBonusClaimRepository bonusClaimRepository,
+            Core.Interfaces.Repositories.IBonusClaimRepository bonusClaimRepository,
             BackgroundFeatureProcessor backgroundProcessor)
         {
             _cache = cache;
@@ -83,7 +84,7 @@ namespace PPGameMgmt.Infrastructure.ML.Features
 
             // If not in cache, extract features (this could be computationally expensive)
             _logger.LogInformation("Extracting features for player {PlayerId}", playerId);
-            
+
             var player = await _playerRepository.GetByIdAsync(playerId);
             if (player == null)
             {
@@ -93,14 +94,14 @@ namespace PPGameMgmt.Infrastructure.ML.Features
             // Feature extraction logic - in a real app this would be much more complex
             var recentSessions = await _gameSessionRepository.GetRecentSessionsByPlayerIdAsync(playerId, 30);
             var recentClaims = await _bonusClaimRepository.GetRecentClaimsByPlayerIdAsync(playerId, 30);
-            
+
             // Calculate features
             var features = new PlayerFeatures
             {
                 PlayerId = playerId,
-                AverageSessionDuration = recentSessions.Any() 
+                AverageSessionDuration = recentSessions.Any()
                     ? TimeSpan.FromMinutes(recentSessions.Average(s => s.EndTime.HasValue
-                        ? (s.EndTime.Value - s.StartTime).TotalMinutes 
+                        ? (s.EndTime.Value - s.StartTime).TotalMinutes
                         : 0))
                     : TimeSpan.Zero,
                 PreferredGameGenre = CalculatePreferredGenre(recentSessions),
@@ -108,8 +109,8 @@ namespace PPGameMgmt.Infrastructure.ML.Features
                 TypicalDepositAmount = player.AverageDepositAmount,
                 TotalBonusesClaimed = recentClaims.Count(),
                 PreferredPlayingTimeOfDay = CalculatePreferredPlayingTime(recentSessions),
-                LastActive = recentSessions.Any() 
-                    ? recentSessions.Max(s => s.EndTime ?? s.StartTime) 
+                LastActive = recentSessions.Any()
+                    ? recentSessions.Max(s => s.EndTime ?? s.StartTime)
                     : player.LastLoginDate,
                 TimestampUtc = DateTime.UtcNow
             };
@@ -146,7 +147,7 @@ namespace PPGameMgmt.Infrastructure.ML.Features
             {
                 var cacheKey = $"{CACHE_KEY_PREFIX}{playerId}";
                 var serializedFeatures = JsonSerializer.Serialize(features);
-                
+
                 await _cache.SetStringAsync(cacheKey, serializedFeatures, _cacheOptions);
                 _logger.LogInformation("Updated feature cache for player {PlayerId}", playerId);
             }
@@ -189,17 +190,17 @@ namespace PPGameMgmt.Infrastructure.ML.Features
         {
             // Calculate average sessions per week
             if (!sessions.Any()) return 0;
-            
+
             var firstSession = sessions.Min(s => s.StartTime);
             var lastSession = sessions.Max(s => s.EndTime ?? s.StartTime);
-            
+
             // Check if all sessions have the same timestamp or if we can't determine a proper range
             if (lastSession <= firstSession)
                 return sessions.Count(); // All sessions in same time or invalid data
-                
+
             var timeSpan = lastSession - firstSession;
             var totalWeeks = timeSpan.TotalDays / 7;
-            
+
             return totalWeeks > 0 ? sessions.Count() / totalWeeks : sessions.Count();
         }
 
@@ -209,7 +210,7 @@ namespace PPGameMgmt.Infrastructure.ML.Features
 
             // Categorize by time of day
             var timeCategories = sessions
-                .GroupBy(s => 
+                .GroupBy(s =>
                 {
                     var hour = s.StartTime.Hour;
                     if (hour >= 5 && hour < 12) return "Morning";

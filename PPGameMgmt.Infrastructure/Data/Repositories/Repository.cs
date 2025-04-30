@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PPGameMgmt.Core.Interfaces;
+using PPGameMgmt.Core.Interfaces.Repositories;
 using PPGameMgmt.Core.Models;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 
@@ -15,9 +15,9 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
     {
         protected readonly CasinoDbContext _context;
         protected readonly DbSet<T> _dbSet;
-        protected readonly ILogger _logger;
+        protected readonly ILogger? _logger;
 
-        public Repository(CasinoDbContext context, ILogger logger = null)
+        public Repository(CasinoDbContext context, ILogger? logger = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _dbSet = _context.Set<T>();
@@ -148,7 +148,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
 
         public virtual async Task<IEnumerable<T>> GetAllAsync()
         {
-            return await ListAllAsync() as IEnumerable<T>;
+            return await ListAllAsync();
         }
 
         public virtual async Task<PagedResult<T>> GetPagedAsync(PaginationParameters parameters)
@@ -172,7 +172,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
 
         public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            return await ListAsync(predicate) as IEnumerable<T>;
+            return await ListAsync(predicate);
         }
 
         public virtual async Task<PagedResult<T>> FindPagedAsync(Expression<Func<T, bool>> predicate, PaginationParameters parameters)
@@ -205,6 +205,38 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
             catch (Exception ex)
             {
                 _logger?.LogError(ex, $"Error deleting entity of type {typeof(T).Name}");
+                throw;
+            }
+        }
+
+        public virtual async Task DeleteAsync(string id)
+        {
+            try
+            {
+                var entity = await _dbSet.FindAsync(id);
+                if (entity != null)
+                {
+                    _dbSet.Remove(entity);
+                    // Note: SaveChangesAsync is not called here, it will be called by the UnitOfWork
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error deleting entity of type {typeof(T).Name} with ID: {id}");
+                throw;
+            }
+        }
+
+        public virtual async Task<bool> ExistsAsync(string id)
+        {
+            try
+            {
+                var entity = await _dbSet.FindAsync(id);
+                return entity != null;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Error checking if entity of type {typeof(T).Name} exists with ID: {id}");
                 throw;
             }
         }

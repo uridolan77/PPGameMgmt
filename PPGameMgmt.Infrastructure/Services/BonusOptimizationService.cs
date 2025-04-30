@@ -20,20 +20,20 @@ namespace PPGameMgmt.Infrastructure.Services
     {
         private readonly IBonusRepository _bonusRepository;
         private readonly IPlayerService _playerService;
-        private readonly IMLModelService _mlModelService;
+        // Removed unused field: private readonly IMLModelService _mlModelService;
         private readonly BonusOptimizationModel _optimizationModel;
         private readonly ILogger<BonusOptimizationService> _logger;
 
         public BonusOptimizationService(
             IBonusRepository bonusRepository,
             IPlayerService playerService,
-            IMLModelService mlModelService,
+            IMLModelService mlModelService, // Parameter kept for backward compatibility
             BonusOptimizationModel optimizationModel,
             ILogger<BonusOptimizationService> logger)
         {
             _bonusRepository = bonusRepository ?? throw new ArgumentNullException(nameof(bonusRepository));
             _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
-            _mlModelService = mlModelService ?? throw new ArgumentNullException(nameof(mlModelService));
+            // mlModelService parameter is not used but kept for backward compatibility
             _optimizationModel = optimizationModel ?? throw new ArgumentNullException(nameof(optimizationModel));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -41,7 +41,7 @@ namespace PPGameMgmt.Infrastructure.Services
         public async Task<RecommendationEntities.BonusRecommendation> GetOptimalBonusAsync(string playerId)
         {
             _logger.LogInformation("Getting optimal bonus for player: {PlayerId}", playerId);
-            
+
             try
             {
                 // Get player features for ML input
@@ -53,14 +53,12 @@ namespace PPGameMgmt.Infrastructure.Services
                 }
 
                 // Get all available bonuses
-                var allBonuses = await _bonusRepository.ListAllAsync();
+                var allBonuses = await _bonusRepository.GetAllAsync();
                 var activeBonuses = allBonuses
-                    .Where(b => b is BonusEntities.Bonus)
-                    .Cast<BonusEntities.Bonus>()
                     .Where(b => b.IsActive && b.ValidFrom <= DateTime.UtcNow && b.ValidTo >= DateTime.UtcNow)
                     .ToList<object>();
 
-                if (!activeBonuses.Any())
+                if (activeBonuses.Count == 0)
                 {
                     _logger.LogWarning("No active bonuses found");
                     return GenerateDefaultBonusRecommendation(playerId);
@@ -69,12 +67,12 @@ namespace PPGameMgmt.Infrastructure.Services
                 // Use the ML model to get a bonus recommendation
                 await _optimizationModel.InitializeAsync();
                 var recommendations = await _optimizationModel.GetRecommendationsAsync(
-                    playerId, 
-                    playerFeatures, 
-                    activeBonuses, 
+                    playerId,
+                    playerFeatures,
+                    activeBonuses,
                     1); // Get the top recommendation
 
-                if (recommendations.Any())
+                if (recommendations.Count > 0)
                 {
                     _logger.LogInformation("Found optimal bonus for player: {PlayerId}", playerId);
                     // Convert from Core BonusRecommendation to Recommendations.BonusRecommendation
@@ -108,31 +106,27 @@ namespace PPGameMgmt.Infrastructure.Services
         public async Task<bool> IsBonusAppropriateForPlayerAsync(string playerId, string bonusId)
         {
             _logger.LogInformation("Checking if bonus {BonusId} is appropriate for player: {PlayerId}", bonusId, playerId);
-            
+
             try
             {
                 // Get player and bonus details
                 var playerFeatures = await GetPlayerFeaturesAsync(playerId);
-                var bonus = await _bonusRepository.GetByIdAsync(Guid.Parse(bonusId)); // Convert string to Guid
-                
+                var bonus = await _bonusRepository.GetByIdAsync(bonusId);
+
                 if (playerFeatures == null || bonus == null)
                 {
                     _logger.LogWarning("Player features or bonus not found for player: {PlayerId}, bonus: {BonusId}", playerId, bonusId);
                     return false;
                 }
-                
+
                 // Use ML model to score the bonus for this player
                 // For this stub implementation, we'll return true if the player is VIP or if the bonus is welcome type
-                var typedBonus = bonus as BonusEntities.Bonus;
-                if (typedBonus == null)
-                {
-                    return false;
-                }
-                
+
                 bool isAppropriate = playerFeatures.CurrentSegment == CoreEntities.PlayerSegment.VIP ||
-                                    typedBonus.Type == BonusEntities.BonusType.DepositMatch ||
-                                    (typedBonus.TargetSegments == null || typedBonus.TargetSegments.Length == 0);
-                
+                                    bonus.Type == BonusEntities.BonusType.DepositMatch ||
+                                    bonus.TargetSegments == null ||
+                                    bonus.TargetSegments.Length == 0;
+
                 _logger.LogInformation("Bonus {BonusId} appropriate for player {PlayerId}: {IsAppropriate}", bonusId, playerId, isAppropriate);
                 return isAppropriate;
             }
@@ -146,23 +140,21 @@ namespace PPGameMgmt.Infrastructure.Services
         public async Task<IEnumerable<BonusEntities.Bonus>> RankBonusesForPlayerAsync(string playerId)
         {
             _logger.LogInformation("Ranking bonuses for player: {PlayerId}", playerId);
-            
+
             try
             {
                 // Get player features and all active bonuses
                 var playerFeatures = await GetPlayerFeaturesAsync(playerId);
-                var allBonuses = await _bonusRepository.ListAllAsync();
-                
+                var allBonuses = await _bonusRepository.GetAllAsync();
+
                 var activeBonuses = allBonuses
-                    .Where(b => b is BonusEntities.Bonus)
-                    .Cast<BonusEntities.Bonus>()
                     .Where(b => b.IsActive && b.ValidFrom <= DateTime.UtcNow && b.ValidTo >= DateTime.UtcNow)
                     .ToList();
 
-                if (!activeBonuses.Any())
+                if (activeBonuses.Count == 0)
                 {
                     _logger.LogWarning("No active bonuses found for ranking");
-                    return new List<BonusEntities.Bonus>();
+                    return Array.Empty<BonusEntities.Bonus>();
                 }
 
                 if (playerFeatures == null)
@@ -173,20 +165,20 @@ namespace PPGameMgmt.Infrastructure.Services
 
                 // In a real implementation, we'd score each bonus using the ML model
                 // and sort them by their predicted effectiveness for this player
-                
+
                 // For this stub implementation, we'll sort bonuses by:
                 // 1. Bonuses that match the player's preferred type
                 // 2. Bonuses targeting player's segment
                 // 3. Bonus value
                 var preferredType = playerFeatures.PreferredBonusType;
-                
+
                 var rankedBonuses = activeBonuses
                     .OrderByDescending(b => preferredType.HasValue && b.Type.Equals(preferredType.Value) ? 1 : 0)
-                    .ThenByDescending(b => b.TargetSegments != null && 
+                    .ThenByDescending(b => b.TargetSegments != null &&
                                      b.TargetSegments.Contains(playerFeatures.CurrentSegment) ? 1 : 0)
                     .ThenByDescending(b => b.Value)
                     .ToList();
-                
+
                 _logger.LogInformation("Ranked {Count} bonuses for player: {PlayerId}", rankedBonuses.Count, playerId);
                 return rankedBonuses;
             }
@@ -194,24 +186,24 @@ namespace PPGameMgmt.Infrastructure.Services
             {
                 // Fix the logging error by using the correct LogError overload
                 _logger.LogError(ex, "Error ranking bonuses for player: {PlayerId}", playerId);
-                return new List<BonusEntities.Bonus>();
+                return Array.Empty<BonusEntities.Bonus>();
             }
         }
 
-        private async Task<PlayerFeatures> GetPlayerFeaturesAsync(string playerId)
+        private async Task<PlayerFeatures?> GetPlayerFeaturesAsync(string playerId)
         {
             try
             {
                 // In a real implementation, we'd retrieve actual player features
                 // from a repository or player service
-                
+
                 // For this stub implementation, we'll check if the player exists
                 var player = await _playerService.GetPlayerAsync(playerId);
                 if (player == null)
                 {
                     return null;
                 }
-                
+
                 // Create a mock player features object
                 return new PlayerFeatures
                 {
@@ -224,7 +216,7 @@ namespace PPGameMgmt.Infrastructure.Services
                     TotalBonusesClaimed = new Random().Next(0, 20),
                     CurrentSegment = CoreEntities.PlayerSegment.Regular,
                     // Use null-coalescing to handle the nullable type correctly
-                    PreferredBonusType = (CoreEntities.BonusType?)(int)BonusEntities.BonusType.DepositMatch
+                    PreferredBonusType = CoreEntities.BonusType.Deposit
                 };
             }
             catch (Exception ex)
@@ -237,7 +229,7 @@ namespace PPGameMgmt.Infrastructure.Services
         private RecommendationEntities.BonusRecommendation GenerateDefaultBonusRecommendation(string playerId)
         {
             _logger.LogInformation("Generating default bonus recommendation for player: {PlayerId}", playerId);
-            
+
             return new RecommendationEntities.BonusRecommendation
             {
                 Id = Guid.NewGuid().ToString(),

@@ -39,8 +39,8 @@ namespace PPGameMgmt.Core.CQRS.Queries.Players
             // Create a specification for high-value players
             var highValueSpec = new PlayerSpecifications.HighValuePlayers(query.MinimumDeposit);
 
-            // Get players matching the specification using ListAsync instead of FindAsync
-            var players = await _playerRepository.ListAsync(highValueSpec.ToExpression());
+            // Get players matching the specification using FindAsync
+            var players = await _playerRepository.FindAsync(highValueSpec.ToExpression());
 
             // Sort and take the top N players
             return players

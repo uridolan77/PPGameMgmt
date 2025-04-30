@@ -27,15 +27,15 @@ namespace PPGameMgmt.Core.Services
             {
                 throw new ArgumentNullException(nameof(gameId));
             }
-            
+
             // Call the string version of GetByIdAsync in IGameRepository
             return await _gameRepository.GetByIdAsync(gameId);
         }
 
         public async Task<IEnumerable<Game>> GetAllGamesAsync()
         {
-            // Use ListAllAsync instead of GetAllAsync
-            return await _gameRepository.ListAllAsync();
+            // Use GetAllAsync method
+            return await _gameRepository.GetAllAsync();
         }
 
         public async Task<IEnumerable<Game>> GetGamesByTypeAsync(GameType type)
@@ -54,7 +54,7 @@ namespace PPGameMgmt.Core.Services
             {
                 throw new ArgumentException("Count must be positive", nameof(count));
             }
-            
+
             return await _gameRepository.GetPopularGamesAsync(count);
         }
 
@@ -64,7 +64,7 @@ namespace PPGameMgmt.Core.Services
             {
                 throw new ArgumentException("Count must be positive", nameof(count));
             }
-            
+
             return await _gameRepository.GetNewReleasesAsync(count);
         }
 
@@ -74,17 +74,17 @@ namespace PPGameMgmt.Core.Services
             {
                 throw new ArgumentException("Search term cannot be empty", nameof(searchTerm));
             }
-            
+
             // Convert search term to lowercase for case-insensitive search
             searchTerm = searchTerm.ToLower();
-            
-            // Use ListAllAsync instead of GetAllAsync
-            var allGames = await _gameRepository.ListAllAsync();
-            
+
+            // Use GetAllAsync method
+            var allGames = await _gameRepository.GetAllAsync();
+
             // Filter games that match the search term in name, provider, or description
-            return allGames.Where(g => 
-                (g.Name?.ToLower().Contains(searchTerm) == true) || 
-                (g.Provider?.ToLower().Contains(searchTerm) == true) || 
+            return allGames.Where(g =>
+                (g.Name?.ToLower().Contains(searchTerm) == true) ||
+                (g.Provider?.ToLower().Contains(searchTerm) == true) ||
                 (g.Description?.ToLower().Contains(searchTerm) == true))
                 .ToList();
         }
