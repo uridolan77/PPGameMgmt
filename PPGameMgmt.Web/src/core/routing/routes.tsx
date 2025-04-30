@@ -47,7 +47,7 @@ const Recommendations = createLazyComponent('recommendations',
   () => import('../../features/recommendations/pages/Recommendations')
 );
 const Login = createLazyComponent('login',
-  () => import('../../features/auth/pages/Login')
+  () => import('../../features/auth/pages/MuiLogin')
 );
 const TestLogin = createLazyComponent('test-login',
   () => import('../../features/auth/pages/TestLogin')

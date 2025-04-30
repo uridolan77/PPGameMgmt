@@ -1,10 +1,13 @@
 /**
  * Theme Provider Component
- * 
+ *
  * Provides theme context for application-wide theme management
  * including light/dark mode and accent color customization.
  */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { ThemeProvider as MuiThemeProvider, PaletteMode } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import createAppTheme from './mui-theme';
 
 // Available theme modes
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -78,7 +81,7 @@ interface ThemeProviderProps {
 
 /**
  * Theme Provider Component
- * 
+ *
  * Provides theme context for the application
  */
 export function ThemeProvider({
@@ -91,23 +94,23 @@ export function ThemeProvider({
     const savedTheme = localStorage.getItem('ui-theme') as ThemeMode | null;
     return savedTheme || defaultTheme;
   });
-  
+
   // Get saved accent color from localStorage or use default
   const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
     const savedAccentColor = localStorage.getItem('ui-accent-color') as AccentColor | null;
     return savedAccentColor || defaultAccentColor;
   });
-  
+
   // Determine if the current theme is dark
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  
+
   // Effect to update theme when it changes
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Remove all theme classes
     root.classList.remove('light', 'dark');
-    
+
     // Handle system preference
     if (theme === 'system') {
       const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -118,57 +121,57 @@ export function ThemeProvider({
       root.classList.add(theme);
       setIsDarkMode(theme === 'dark');
     }
-    
+
     // Save to localStorage
     localStorage.setItem('ui-theme', theme);
   }, [theme]);
-  
+
   // Effect to update accent color when it changes
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Apply accent color CSS variables
     Object.entries(accentColorVariables[accentColor]).forEach(([variable, value]) => {
       root.style.setProperty(variable, value);
     });
-    
+
     // Save to localStorage
     localStorage.setItem('ui-accent-color', accentColor);
   }, [accentColor]);
-  
+
   // Effect to listen for system preference changes
   useEffect(() => {
     if (theme !== 'system') return;
-    
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     // Initial check
     setIsDarkMode(mediaQuery.matches);
-    
+
     // Update theme when system preference changes
     const handler = (e: MediaQueryListEvent) => {
       document.documentElement.classList.remove('light', 'dark');
       document.documentElement.classList.add(e.matches ? 'dark' : 'light');
       setIsDarkMode(e.matches);
     };
-    
+
     // Add event listener
     mediaQuery.addEventListener('change', handler);
-    
+
     // Clean up
     return () => mediaQuery.removeEventListener('change', handler);
   }, [theme]);
-  
+
   // Set theme helper function
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
   };
-  
+
   // Set accent color helper function
   const setAccentColor = (newAccentColor: AccentColor) => {
     setAccentColorState(newAccentColor);
   };
-  
+
   // Context value
   const contextValue: ThemeContextType = {
     theme,
@@ -177,10 +180,19 @@ export function ThemeProvider({
     setAccentColor,
     isDarkMode
   };
-  
+
+  // Create MUI theme based on current mode
+  const muiTheme = useMemo(() => {
+    const mode: PaletteMode = isDarkMode ? 'dark' : 'light';
+    return createAppTheme(mode);
+  }, [isDarkMode]);
+
   return (
     <ThemeContext.Provider value={contextValue}>
-      {children}
+      <MuiThemeProvider theme={muiTheme}>
+        <CssBaseline />
+        {children}
+      </MuiThemeProvider>
     </ThemeContext.Provider>
   );
 }
@@ -190,11 +202,11 @@ export function ThemeProvider({
  */
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
-  
+
   if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
-  
+
   return context;
 }
 
@@ -214,7 +226,7 @@ export function withTheme<P>(Component: React.ComponentType<P & ThemeContextType
  */
 export function ThemeToggle({ className = '' }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  
+
   const toggleTheme = () => {
     switch (theme) {
       case 'light':
@@ -228,7 +240,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
         break;
     }
   };
-  
+
   return (
     <button
       onClick={toggleTheme}
