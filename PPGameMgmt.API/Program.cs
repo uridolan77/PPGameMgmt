@@ -88,6 +88,9 @@ try
             cfg.RegisterServicesFromAssembly(typeof(PPGameMgmt.Core.CQRS.Commands.Players.UpdatePlayerSegmentCommand).Assembly);
         })
 
+        // Authentication services
+        .AddAuthenticationServices(builder.Configuration)
+
         // Domain services
         .AddScoped<IDomainEventDispatcher, DomainEventDispatcher>()
         .AddScoped<INotificationService, NotificationService>()

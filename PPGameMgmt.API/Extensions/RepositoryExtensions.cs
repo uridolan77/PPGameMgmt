@@ -38,6 +38,9 @@ namespace PPGameMgmt.API.Extensions
             // Add Transaction Manager - ensure it's properly scoped
             services.AddScoped<ITransactionManager, TransactionManager>();
 
+            // Register additional repositories
+            services.AddScoped<IUserRepository, UserRepository>();
+
             return services;
         }
     }

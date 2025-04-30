@@ -31,6 +31,15 @@ namespace PPGameMgmt.API.Models.Mapping
             // Bonus mappings
             CreateMap<Bonus, BonusDto>();
             CreateMap<BonusDto, Bonus>();
+            
+            // User mappings
+            CreateMap<User, UserDto>();
+            CreateMap<UserDto, User>()
+                .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+                .ForMember(dest => dest.PasswordSalt, opt => opt.Ignore())
+                .ForMember(dest => dest.VerificationToken, opt => opt.Ignore())
+                .ForMember(dest => dest.ResetPasswordToken, opt => opt.Ignore())
+                .ForMember(dest => dest.ResetPasswordExpires, opt => opt.Ignore());
         }
     }
 }

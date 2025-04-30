@@ -1,81 +1,98 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePlayers } from '../hooks';
-import { Button } from '@/components/ui/button';
+import { usePlayersQueryV3 } from '../hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { PlusIcon, SearchIcon, DownloadIcon, FilterIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { VirtualizedList } from '../../../shared/components/VirtualizedList/VirtualizedList';
-
-interface Player {
-  id: number;
-  username: string;
-  email: string;
-  playerLevel: number;
-  isActive: boolean;
-  segment?: string | null;
-  lastLogin?: string | null;
-}
+  PlayerListHeader,
+  PlayerFilters,
+  PlayerListTable,
+  PlayerStats,
+  PlayerPagination
+} from '../components';
+import { Player } from '../types';
 
 const PlayersList: React.FC = () => {
   const navigate = useNavigate();
-  const { data: players, isLoading, isError } = usePlayers();
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const { data: players, isLoading, isError } = usePlayersQueryV3();
 
+  // Stats for the overview tab
+  const playerStats = useMemo(() => {
+    if (!players) return {
+      totalPlayers: 0,
+      activePlayers: 0,
+      newPlayers: 0,
+      vipPlayers: 0
+    };
+
+    const totalPlayers = players.length;
+    const activePlayers = players.filter(p => p.isActive).length;
+    const vipPlayers = players.filter(p => p.segment === 'VIP').length;
+
+    // Assume new players are those who registered in the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // This is a placeholder - in a real app we'd use registrationDate
+    const newPlayers = Math.floor(totalPlayers * 0.15); // 15% of total as a placeholder
+
+    return {
+      totalPlayers,
+      activePlayers,
+      newPlayers,
+      vipPlayers
+    };
+  }, [players]);
+
+  // Handle row click to navigate to player details
   const handleRowClick = (player: Player) => {
     navigate(`/players/${player.id}`);
   };
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString();
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
   };
 
-  // Generate a consistent color from a string
-  const getAvatarColor = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const color = Math.abs(hash).toString(16).substring(0, 6);
-    return `#${color.padStart(6, '0')}`;
+  // Handle search change
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  // Handle export
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    console.log(`Exporting players as ${format}`);
+    // Implementation would go here
   };
 
   // Memoize filtered players to avoid unnecessary re-filtering
-  const filteredPlayers = useMemo(() =>
-    players?.filter(player =>
+  const filteredPlayers = useMemo(() => {
+    if (!players) return [];
+
+    return players.filter(player =>
       player.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       player.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (player.segment && player.segment.toLowerCase().includes(searchQuery.toLowerCase()))
-    ) || [],
-    [players, searchQuery]
-  );
+    );
+  }, [players, searchQuery]);
 
   return (
     <div className="container mx-auto py-6">
       <div className="flex flex-col gap-5">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Players</h1>
-            <p className="text-muted-foreground">
-              Manage and monitor all players on your platform
-            </p>
-          </div>
-          <Button onClick={() => navigate('/players/new')}>
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Add New Player
-          </Button>
-        </div>
+        {/* Page Header */}
+        <PlayerListHeader />
 
+        {/* Player Statistics */}
+        <PlayerStats
+          totalPlayers={playerStats.totalPlayers}
+          activePlayers={playerStats.activePlayers}
+          newPlayers={playerStats.newPlayers}
+          vipPlayers={playerStats.vipPlayers}
+        />
+
+        {/* Main Content */}
         <Card>
           <CardHeader>
             <CardTitle>Player Reports</CardTitle>
@@ -84,137 +101,66 @@ const PlayersList: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between pb-4">
-              <div className="relative w-full max-w-sm">
-                <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search players..."
-                  className="pl-10 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <FilterIcon className="mr-2 h-4 w-4" />
-                  Filter
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger>
-                    <Button variant="outline" size="sm">
-                      <DownloadIcon className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>Export as CSV</DropdownMenuItem>
-                    <DropdownMenuItem>Export as Excel</DropdownMenuItem>
-                    <DropdownMenuItem>Export as PDF</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+            {/* Tabs for different views */}
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="active">Active Players</TabsTrigger>
+                <TabsTrigger value="inactive">Inactive Players</TabsTrigger>
+                <TabsTrigger value="vip">VIP Players</TabsTrigger>
+              </TabsList>
 
-            <div className="rounded-md border">
-              <div className="bg-background">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead className="text-center">Level</TableHead>
-                      <TableHead>Segment</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                </Table>
+              {/* Search and Filters */}
+              <PlayerFilters
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                onExport={handleExport}
+              />
 
-                <VirtualizedList
-                  items={filteredPlayers}
-                  height={500}
-                  estimateSize={60}
+              {/* Player List Table */}
+              <TabsContent value="overview">
+                <PlayerListTable
+                  players={filteredPlayers}
                   isLoading={isLoading}
-                  isEmpty={filteredPlayers.length === 0}
-                  loadingComponent={
-                    <div className="h-24 flex items-center justify-center">
-                      Loading player data...
-                    </div>
-                  }
-                  emptyComponent={
-                    <div className="h-24 flex items-center justify-center">
-                      {isError ? (
-                        <span className="text-red-500">Error loading player data</span>
-                      ) : (
-                        <span>No players found</span>
-                      )}
-                    </div>
-                  }
-                  renderItem={(player) => (
-                    <div
-                      onClick={() => handleRowClick(player)}
-                      className="cursor-pointer hover:bg-muted/50 border-b"
-                    >
-                      <div className="grid grid-cols-6 py-3">
-                        <div className="px-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarFallback style={{ backgroundColor: getAvatarColor(player.username) }}>
-                                {player.username.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{player.username}</span>
-                          </div>
-                        </div>
-                        <div className="px-4">{player.email}</div>
-                        <div className="px-4 text-center">
-                          <Badge variant="outline">
-                            Level {player.playerLevel}
-                          </Badge>
-                        </div>
-                        <div className="px-4">
-                          {player.segment ? (
-                            <Badge variant="secondary">
-                              {player.segment}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">None</span>
-                          )}
-                        </div>
-                        <div className="px-4">{formatDate(player.lastLogin)}</div>
-                        <div className="px-4 text-center">
-                          <Badge variant={player.isActive ? "default" : "destructive"}>
-                            {player.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  isError={isError}
+                  onRowClick={handleRowClick}
                 />
-              </div>
-            </div>
+              </TabsContent>
 
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                {filteredPlayers.length} {filteredPlayers.length === 1 ? 'player' : 'players'} found
-              </div>
-              <div className="space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={true}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={true}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+              <TabsContent value="active">
+                <PlayerListTable
+                  players={filteredPlayers.filter(p => p.isActive)}
+                  isLoading={isLoading}
+                  isError={isError}
+                  onRowClick={handleRowClick}
+                />
+              </TabsContent>
+
+              <TabsContent value="inactive">
+                <PlayerListTable
+                  players={filteredPlayers.filter(p => !p.isActive)}
+                  isLoading={isLoading}
+                  isError={isError}
+                  onRowClick={handleRowClick}
+                />
+              </TabsContent>
+
+              <TabsContent value="vip">
+                <PlayerListTable
+                  players={filteredPlayers.filter(p => p.segment === 'VIP')}
+                  isLoading={isLoading}
+                  isError={isError}
+                  onRowClick={handleRowClick}
+                />
+              </TabsContent>
+            </Tabs>
+
+            {/* Pagination */}
+            <PlayerPagination
+              totalItems={filteredPlayers.length}
+              itemsPerPage={10}
+              currentPage={1}
+            />
           </CardContent>
         </Card>
       </div>
