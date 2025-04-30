@@ -26,20 +26,43 @@ namespace PPGameMgmt.API.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
+            _logger.LogInformation("ApiManagementMiddleware processing request for path: {Path}", context.Request.Path);
+            _logger.LogInformation("RequireSubscriptionKey setting: {RequireSubscriptionKey}", _apiManagementConfig.RequireSubscriptionKey);
+
             // Skip subscription key validation for:
             // 1. If globally disabled
             // 2. Swagger documentation
             // 3. SignalR hubs
             // 4. Paths explicitly exempted in configuration
-            if (!_apiManagementConfig.RequireSubscriptionKey ||
-                context.Request.Path.StartsWithSegments("/swagger") ||
-                context.Request.Path.StartsWithSegments("/hubs") ||
-                IsExemptPath(context.Request.Path))
+            if (!_apiManagementConfig.RequireSubscriptionKey)
             {
+                _logger.LogInformation("Subscription key validation is globally disabled");
                 await _next(context);
                 return;
             }
 
+            if (context.Request.Path.StartsWithSegments("/swagger"))
+            {
+                _logger.LogInformation("Skipping subscription key validation for Swagger path");
+                await _next(context);
+                return;
+            }
+
+            if (context.Request.Path.StartsWithSegments("/hubs"))
+            {
+                _logger.LogInformation("Skipping subscription key validation for SignalR hub path");
+                await _next(context);
+                return;
+            }
+
+            if (IsExemptPath(context.Request.Path))
+            {
+                _logger.LogInformation("Skipping subscription key validation for exempt path: {Path}", context.Request.Path);
+                await _next(context);
+                return;
+            }
+
+            _logger.LogInformation("Validating subscription key for path: {Path}", context.Request.Path);
             bool hasValidSubscriptionKey = ValidateSubscriptionKey(context);
 
             if (!hasValidSubscriptionKey)
@@ -58,6 +81,8 @@ namespace PPGameMgmt.API.Middleware
                 return;
             }
 
+            _logger.LogInformation("Subscription key validation passed for path: {Path}", context.Request.Path);
+
             // Add request tracking
             AddRequestTracking(context);
 
@@ -66,20 +91,33 @@ namespace PPGameMgmt.API.Middleware
 
         private bool ValidateSubscriptionKey(HttpContext context)
         {
+            _logger.LogInformation("Validating subscription key for request");
+            _logger.LogInformation("Subscription key header name: {SubscriptionKeyHeaderName}", _apiManagementConfig.SubscriptionKeyHeaderName);
+
             // Check if subscription key is present in the header or query string
             if (context.Request.Headers.TryGetValue(_apiManagementConfig.SubscriptionKeyHeaderName, out var headerKey))
             {
+                _logger.LogInformation("Found subscription key in header: {HeaderKey}", headerKey);
+
                 // In a production system, you would validate this key against a list of valid keys or
                 // pass this validation to Azure API Management itself
-                return !string.IsNullOrEmpty(headerKey);
+                bool isValid = !string.IsNullOrEmpty(headerKey);
+                _logger.LogInformation("Header key is valid: {IsValid}", isValid);
+                return isValid;
             }
+
+            _logger.LogInformation("No subscription key found in header, checking query string");
 
             // Check query string as a fallback
             if (context.Request.Query.TryGetValue("subscription-key", out var queryKey))
             {
-                return !string.IsNullOrEmpty(queryKey);
+                _logger.LogInformation("Found subscription key in query string: {QueryKey}", queryKey);
+                bool isValid = !string.IsNullOrEmpty(queryKey);
+                _logger.LogInformation("Query key is valid: {IsValid}", isValid);
+                return isValid;
             }
 
+            _logger.LogInformation("No subscription key found in query string");
             return false;
         }
 
@@ -101,21 +139,29 @@ namespace PPGameMgmt.API.Middleware
 
         private bool IsExemptPath(PathString path)
         {
+            _logger.LogInformation("Checking if path {Path} is exempt from subscription key requirement", path);
+
             if (_apiManagementConfig.ExemptPaths == null || _apiManagementConfig.ExemptPaths.Count == 0)
             {
+                _logger.LogInformation("No exempt paths configured");
                 return false;
             }
+
+            _logger.LogInformation("Exempt paths: {ExemptPaths}", string.Join(", ", _apiManagementConfig.ExemptPaths));
 
             // Check if the current path matches any of the exempt paths
             foreach (var exemptPath in _apiManagementConfig.ExemptPaths)
             {
+                _logger.LogInformation("Checking if path {Path} starts with exempt path {ExemptPath}", path, exemptPath);
+
                 if (path.StartsWithSegments(exemptPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogDebug("Path {Path} is exempt from subscription key requirement", path);
+                    _logger.LogInformation("Path {Path} is exempt from subscription key requirement", path);
                     return true;
                 }
             }
 
+            _logger.LogInformation("Path {Path} is not exempt from subscription key requirement", path);
             return false;
         }
     }

@@ -8,6 +8,7 @@ using PPGameMgmt.Core.Interfaces;
 using PPGameMgmt.Infrastructure.CQRS;
 using PPGameMgmt.Infrastructure.Data.Contexts;
 using PPGameMgmt.API.Services;
+using PPGameMgmt.API.Middleware;
 using Serilog;
 using System;
 using System.Linq;
@@ -46,17 +47,17 @@ try
         .AddFluentValidationClientsideAdapters()
         .AddValidatorsFromAssemblyContaining<Program>()
         .AddEndpointsApiExplorer()
-        
+
         // Add AutoMapper
         .AddAutoMapperServices()
-        
-        // Add API Management and Rate Limiting - commenting out missing extensions
-        //.AddApiManagementConfiguration(builder.Configuration)
-        //.AddRateLimitingConfiguration(builder.Configuration)
-        
+
+        // Add API Management and Rate Limiting
+        .AddApiManagementConfiguration(builder.Configuration)
+        .AddRateLimitingConfiguration(builder.Configuration)
+
         // Add Architecture Patterns Implementation
         .AddArchitecturalPatterns(builder.Configuration)
-        
+
         // Authentication and Authorization
         .AddAuthorization(options =>
         {
@@ -77,20 +78,20 @@ try
             options.AddPolicy("IsAdmin", policy =>
                 policy.RequireClaim("Role", "admin"));
         })
-        
+
         // Database and caching
         .AddDatabase(builder.Configuration)
         .AddCachingServices(builder.Configuration)
-        
+
         // Register MediatR for CQRS
         .AddMediatR(cfg => {
             cfg.RegisterServicesFromAssembly(typeof(PPGameMgmt.Core.CQRS.Commands.Players.UpdatePlayerSegmentCommand).Assembly);
         })
-        
+
         // Domain services
         .AddScoped<IDomainEventDispatcher, DomainEventDispatcher>()
         .AddScoped<INotificationService, NotificationService>()
-        
+
         // Add repositories, services, and ML components
         .AddRepositories()
         .AddCoreServices()
@@ -126,23 +127,23 @@ async Task InitializeDatabaseAndModels(WebApplication app)
     {
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<Program>>();
-        
+
         try
         {
             logger.LogInformation("Testing database connection...");
             var context = services.GetRequiredService<CasinoDbContext>();
-            
+
             // Test database connection using CanConnect() which doesn't keep the connection open
             if (await context.Database.CanConnectAsync())
             {
                 logger.LogInformation("Successfully connected to database!");
-                
+
                 // Run pending migrations if any
                 try
                 {
                     var migrationRunner = services.GetRequiredService<PPGameMgmt.Infrastructure.Data.Migrations.MigrationRunner>();
                     var pendingMigrations = await migrationRunner.GetPendingMigrationsAsync();
-                    
+
                     if (pendingMigrations.Any())
                     {
                         logger.LogInformation($"Applying {pendingMigrations.Count} database migrations...");
@@ -180,7 +181,7 @@ async Task InitializeDatabaseAndModels(WebApplication app)
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred during application initialization.");
-            
+
             // Log inner exception details to help with debugging
             if (ex.InnerException != null)
             {

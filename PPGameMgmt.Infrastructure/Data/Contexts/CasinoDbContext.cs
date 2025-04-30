@@ -31,9 +31,6 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
         {
             base.OnModelCreating(modelBuilder);
 
-            // Ignore the compatibility classes entirely to avoid inheritance issues
-            modelBuilder.Ignore<Core.Entities.Bonuses.Bonus>();
-
             // Player configuration
             modelBuilder.Entity<Player>(entity =>
             {
@@ -124,7 +121,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                     .HasColumnName("preferred_bonus_type")
                     .HasConversion(
                         v => v.HasValue ? v.ToString() : null,
-                        v => string.IsNullOrEmpty(v) ? null : 
+                        v => string.IsNullOrEmpty(v) ? null :
                             (Core.Entities.Bonuses.BonusType?)Enum.Parse(typeof(Core.Entities.Bonuses.BonusType), v)
                     );
 
@@ -162,13 +159,13 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                         )
                     );
             });
-            
+
             // Configure Bonus entity (from Bonuses namespace)
-            modelBuilder.Entity<Core.Entities.Bonuses.Bonus>(entity => 
+            modelBuilder.Entity<Core.Entities.Bonuses.Bonus>(entity =>
             {
                 entity.HasKey(b => b.Id);
                 entity.ToTable("bonuses"); // Specify table name explicitly
-                
+
                 // Configure properties
                 entity.Property(b => b.Id).HasColumnName("id");
                 entity.Property(b => b.Name).HasColumnName("name").IsRequired();
@@ -189,19 +186,19 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                         v => v.ToString(),
                         v => (Core.Entities.Bonuses.BonusType)Enum.Parse(typeof(Core.Entities.Bonuses.BonusType), v)
                     );
-                
+
                 // Configure relationship with BonusClaim
                 entity.HasMany(b => b.BonusClaims)
                       .WithOne(bc => bc.Bonus)
                       .HasForeignKey(bc => bc.BonusId);
             });
-            
+
             // Configure BonusClaim entity
-            modelBuilder.Entity<Core.Entities.Bonuses.BonusClaim>(entity => 
+            modelBuilder.Entity<Core.Entities.Bonuses.BonusClaim>(entity =>
             {
                 entity.HasKey(bc => bc.Id);
                 entity.ToTable("bonus_claims"); // Specify table name explicitly
-                
+
                 // Configure properties
                 entity.Property(bc => bc.Id).HasColumnName("id");
                 entity.Property(bc => bc.PlayerId).HasColumnName("player_id");
@@ -213,7 +210,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(bc => bc.AmountConverted).HasColumnName("amount_converted").HasPrecision(18, 2);
                 entity.Property(bc => bc.ConversionDate).HasColumnName("conversion_date");
                 entity.Property(bc => bc.CompletionDate).HasColumnName("completion_date");
-                
+
                 // Configure enum conversion for BonusClaimStatus
                 entity.Property(bc => bc.Status)
                     .HasColumnName("status")
@@ -221,23 +218,23 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                         v => v.ToString(),
                         v => (Core.Entities.Bonuses.BonusClaimStatus)Enum.Parse(typeof(Core.Entities.Bonuses.BonusClaimStatus), v)
                     );
-                
+
                 // Configure relationships
                 entity.HasOne(bc => bc.Player)
                       .WithMany(p => p.BonusClaims)
                       .HasForeignKey(bc => bc.PlayerId);
-                
+
                 entity.HasOne(bc => bc.Bonus)
                       .WithMany(b => b.BonusClaims)
                       .HasForeignKey(bc => bc.BonusId);
             });
-            
+
             // Configure BonusRecommendation entity
             modelBuilder.Entity<Core.Entities.Recommendations.BonusRecommendation>(entity =>
             {
                 entity.HasKey(br => br.Id);
                 entity.ToTable("bonus_recommendations"); // Specify table name explicitly
-                
+
                 // Configure properties
                 entity.Property(br => br.Id).HasColumnName("id");
                 entity.Property(br => br.PlayerId).HasColumnName("player_id");
@@ -249,12 +246,12 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(br => br.IsClaimed).HasColumnName("is_claimed");
                 entity.Property(br => br.ShownDate).HasColumnName("shown_date");
                 entity.Property(br => br.ClaimedDate).HasColumnName("claimed_date");
-                
+
                 // Configure relationships
                 entity.HasOne<Player>()
                       .WithMany()
                       .HasForeignKey(br => br.PlayerId);
-                
+
                 // Use string-based foreign key configuration instead of navigation property
                 entity.HasOne<Core.Entities.Bonuses.Bonus>()
                       .WithMany()

@@ -36,13 +36,24 @@ namespace PPGameMgmt.API.Middleware
         {
             try
             {
+                _logger.LogInformation("GlobalExceptionHandlingMiddleware processing request for path: {Path}", context.Request.Path);
                 await _next(context);
+                _logger.LogInformation("GlobalExceptionHandlingMiddleware completed request for path: {Path}", context.Request.Path);
             }
             catch (Exception ex)
             {
                 // Log the exception with correlation ID for traceability
                 var correlationId = context.TraceIdentifier;
-                _logger.LogError(ex, "An unhandled exception occurred. CorrelationId: {CorrelationId}", correlationId);
+                _logger.LogError(ex, "An unhandled exception occurred. CorrelationId: {CorrelationId}, Path: {Path}", correlationId, context.Request.Path);
+
+                // Log inner exception details if available
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError(ex.InnerException, "Inner exception details. CorrelationId: {CorrelationId}", correlationId);
+                }
+
+                // Log stack trace
+                _logger.LogError("Exception stack trace: {StackTrace}", ex.StackTrace);
 
                 await HandleExceptionAsync(context, ex, correlationId);
             }
@@ -70,7 +81,7 @@ namespace PPGameMgmt.API.Middleware
             if (exception is DomainException domainException)
             {
                 errorResponse.ErrorCode = domainException.ErrorCode;
-                
+
                 // Add validation details if available
                 if (domainException is ValidationException validationEx && validationEx.Errors.Count > 0)
                 {
@@ -104,7 +115,7 @@ namespace PPGameMgmt.API.Middleware
                 ConcurrencyException => HttpStatusCode.Conflict,
                 InfrastructureException => HttpStatusCode.ServiceUnavailable,
                 DomainException => HttpStatusCode.BadRequest,
-                
+
                 // Standard exceptions
                 KeyNotFoundException => HttpStatusCode.NotFound,
                 UnauthorizedAccessException => HttpStatusCode.Unauthorized,
@@ -126,7 +137,7 @@ namespace PPGameMgmt.API.Middleware
             {
                 return exception.Message;
             }
-            
+
             // Provide user-friendly messages based on status code
             return statusCode switch
             {

@@ -40,42 +40,78 @@ namespace PPGameMgmt.API.Services
 
         public async Task<Recommendation> GetPersonalizedRecommendationAsync(string playerId)
         {
-            var cacheKey = string.Format(RECOMMENDATION_PERSONALIZED_CACHE_KEY, playerId);
+            try
+            {
+                var cacheKey = string.Format(RECOMMENDATION_PERSONALIZED_CACHE_KEY, playerId);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _recommendationService.GetPersonalizedRecommendationAsync(playerId),
-                RECOMMENDATION_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _recommendationService.GetPersonalizedRecommendationAsync(playerId),
+                    RECOMMENDATION_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetPersonalizedRecommendationAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _recommendationService.GetPersonalizedRecommendationAsync(playerId);
+            }
         }
 
         public async Task<Recommendation> GetLatestRecommendationAsync(string playerId)
         {
-            var cacheKey = string.Format(RECOMMENDATION_LATEST_CACHE_KEY, playerId);
+            try
+            {
+                var cacheKey = string.Format(RECOMMENDATION_LATEST_CACHE_KEY, playerId);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _recommendationService.GetLatestRecommendationAsync(playerId),
-                RECOMMENDATION_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _recommendationService.GetLatestRecommendationAsync(playerId),
+                    RECOMMENDATION_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetLatestRecommendationAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _recommendationService.GetLatestRecommendationAsync(playerId);
+            }
         }
 
         public async Task<IEnumerable<GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5)
         {
-            var cacheKey = string.Format(GAME_RECOMMENDATIONS_CACHE_KEY, playerId, count);
+            try
+            {
+                var cacheKey = string.Format(GAME_RECOMMENDATIONS_CACHE_KEY, playerId, count);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _recommendationService.GetGameRecommendationsAsync(playerId, count),
-                GAME_RECOMMENDATIONS_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _recommendationService.GetGameRecommendationsAsync(playerId, count),
+                    GAME_RECOMMENDATIONS_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetGameRecommendationsAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _recommendationService.GetGameRecommendationsAsync(playerId, count);
+            }
         }
 
         public async Task<BonusRecommendation> GetBonusRecommendationAsync(string playerId)
         {
-            var cacheKey = string.Format(BONUS_RECOMMENDATION_CACHE_KEY, playerId);
+            try
+            {
+                var cacheKey = string.Format(BONUS_RECOMMENDATION_CACHE_KEY, playerId);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _recommendationService.GetBonusRecommendationAsync(playerId),
-                BONUS_RECOMMENDATION_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _recommendationService.GetBonusRecommendationAsync(playerId),
+                    BONUS_RECOMMENDATION_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetBonusRecommendationAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _recommendationService.GetBonusRecommendationAsync(playerId);
+            }
         }
 
         public async Task RecordRecommendationDisplayedAsync(string recommendationId)
@@ -96,6 +132,7 @@ namespace PPGameMgmt.API.Services
 
             // We don't know which player this recommendation belongs to, so we can't invalidate specific caches
             // In a real implementation, we would store the player ID with the recommendation ID to enable targeted cache invalidation
+            _logger.LogInformation("Recommendation {RecommendationId} was accepted, but cache invalidation is not possible without player ID", recommendationId);
         }
     }
 }

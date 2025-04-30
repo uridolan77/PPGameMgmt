@@ -42,70 +42,133 @@ namespace PPGameMgmt.API.Services
 
         public async Task<Bonus> GetBonusAsync(string bonusId)
         {
-            var cacheKey = string.Format(BONUS_CACHE_KEY, bonusId);
+            try
+            {
+                var cacheKey = string.Format(BONUS_CACHE_KEY, bonusId);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _bonusService.GetBonusAsync(bonusId),
-                BONUS_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _bonusService.GetBonusAsync(bonusId),
+                    BONUS_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetBonusAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _bonusService.GetBonusAsync(bonusId);
+            }
         }
 
         public async Task<IEnumerable<Bonus>> GetAllActiveBonusesAsync()
         {
-            return await _cacheService.GetOrCreateAsync(
-                BONUSES_ACTIVE_CACHE_KEY,
-                () => _bonusService.GetAllActiveBonusesAsync(),
-                BONUSES_CACHE_DURATION);
+            try
+            {
+                return await _cacheService.GetOrCreateAsync(
+                    BONUSES_ACTIVE_CACHE_KEY,
+                    () => _bonusService.GetAllActiveBonusesAsync(),
+                    BONUSES_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetAllActiveBonusesAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _bonusService.GetAllActiveBonusesAsync();
+            }
         }
 
         public async Task<IEnumerable<Bonus>> GetBonusesByTypeAsync(BonusType type)
         {
-            var cacheKey = string.Format(BONUSES_BY_TYPE_CACHE_KEY, type);
+            try
+            {
+                var cacheKey = string.Format(BONUSES_BY_TYPE_CACHE_KEY, type);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _bonusService.GetBonusesByTypeAsync(type),
-                BONUSES_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _bonusService.GetBonusesByTypeAsync(type),
+                    BONUSES_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetBonusesByTypeAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _bonusService.GetBonusesByTypeAsync(type);
+            }
         }
 
         public async Task<IEnumerable<Bonus>> GetBonusesForPlayerSegmentAsync(PlayerSegment segment)
         {
-            var cacheKey = string.Format(BONUSES_BY_SEGMENT_CACHE_KEY, segment);
+            try
+            {
+                var cacheKey = string.Format(BONUSES_BY_SEGMENT_CACHE_KEY, segment);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _bonusService.GetBonusesForPlayerSegmentAsync(segment),
-                BONUSES_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _bonusService.GetBonusesForPlayerSegmentAsync(segment),
+                    BONUSES_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetBonusesForPlayerSegmentAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _bonusService.GetBonusesForPlayerSegmentAsync(segment);
+            }
         }
 
         public async Task<IEnumerable<Bonus>> GetBonusesForGameAsync(string gameId)
         {
-            var cacheKey = string.Format(BONUSES_BY_GAME_CACHE_KEY, gameId);
+            try
+            {
+                var cacheKey = string.Format(BONUSES_BY_GAME_CACHE_KEY, gameId);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _bonusService.GetBonusesForGameAsync(gameId),
-                BONUSES_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _bonusService.GetBonusesForGameAsync(gameId),
+                    BONUSES_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetBonusesForGameAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _bonusService.GetBonusesForGameAsync(gameId);
+            }
         }
 
         public async Task<IEnumerable<BonusClaim>> GetPlayerBonusClaimsAsync(string playerId)
         {
-            var cacheKey = string.Format(PLAYER_BONUS_CLAIMS_CACHE_KEY, playerId);
+            try
+            {
+                var cacheKey = string.Format(PLAYER_BONUS_CLAIMS_CACHE_KEY, playerId);
 
-            return await _cacheService.GetOrCreateAsync(
-                cacheKey,
-                () => _bonusService.GetPlayerBonusClaimsAsync(playerId),
-                BONUS_CLAIMS_CACHE_DURATION);
+                return await _cacheService.GetOrCreateAsync(
+                    cacheKey,
+                    () => _bonusService.GetPlayerBonusClaimsAsync(playerId),
+                    BONUS_CLAIMS_CACHE_DURATION);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for GetPlayerBonusClaimsAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _bonusService.GetPlayerBonusClaimsAsync(playerId);
+            }
         }
 
         public async Task<BonusClaim> ClaimBonusAsync(string playerId, string bonusId)
         {
             var result = await _bonusService.ClaimBonusAsync(playerId, bonusId);
 
-            // Invalidate caches
-            await _cacheService.RemoveAsync(string.Format(PLAYER_BONUS_CLAIMS_CACHE_KEY, playerId));
-            await _cacheService.RemoveAsync(string.Format(BONUS_CACHE_KEY, bonusId));
-            await _cacheService.RemoveAsync(BONUSES_ACTIVE_CACHE_KEY);
+            try
+            {
+                // Invalidate caches
+                await _cacheService.RemoveAsync(string.Format(PLAYER_BONUS_CLAIMS_CACHE_KEY, playerId));
+                await _cacheService.RemoveAsync(string.Format(BONUS_CACHE_KEY, bonusId));
+                await _cacheService.RemoveAsync(BONUSES_ACTIVE_CACHE_KEY);
+                _logger.LogInformation("Successfully invalidated caches for claimed bonus {BonusId} by player {PlayerId}", bonusId, playerId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed during ClaimBonusAsync, but bonus was claimed successfully");
+                // Continue even if cache invalidation fails
+            }
 
             return result;
         }

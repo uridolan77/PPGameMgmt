@@ -3,43 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { Button, ButtonProps } from '@/components/ui/button';
 
+// Import the new component
+import { BackButton as NewBackButton } from '@/lib/ui/navigation';
+
 export interface BackButtonProps extends Omit<ButtonProps, 'onClick'> {
   label?: string;
   to?: string;
   onBack?: () => void;
 }
 
-export const BackButton: React.FC<BackButtonProps> = ({
-  label = 'Back',
-  to,
-  onBack,
-  className = '',
-  variant = 'ghost',
-  size = 'sm',
-  ...rest
-}) => {
-  const navigate = useNavigate();
+/**
+ * @deprecated Use BackButton from @/lib/ui/navigation instead
+ */
+export const BackButton: React.FC<BackButtonProps> = (props) => {
+  // Log deprecation warning in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      'The BackButton component from @/shared/components/ui-kit is deprecated. ' +
+      'Please use BackButton from @/lib/ui/navigation instead.'
+    );
+  }
   
-  const handleClick = () => {
-    if (onBack) {
-      onBack();
-    } else if (to) {
-      navigate(to);
-    } else {
-      navigate(-1);
-    }
-  };
-
-  return (
-    <Button
-      variant={variant}
-      size={size}
-      className={`flex items-center ${className}`}
-      onClick={handleClick}
-      {...rest}
-    >
-      <ChevronLeft className="h-4 w-4 mr-1" />
-      {label}
-    </Button>
-  );
+  // Pass through to new component
+  return <NewBackButton {...props} />;
 };
