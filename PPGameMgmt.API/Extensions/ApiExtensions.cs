@@ -95,8 +95,6 @@ namespace PPGameMgmt.API.Extensions
 
                 // Add schema filter for ApiErrorResponse
                 c.SchemaFilter<ApiErrorResponseSchemaFilter>();
-
-                // Add schema filter for Bonus types
                 c.SchemaFilter<BonusSchemaFilter>();
 
                 // Comment out the non-existent document filter
