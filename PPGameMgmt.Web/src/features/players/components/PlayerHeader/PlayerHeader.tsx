@@ -9,8 +9,8 @@ import {
   MailIcon, 
   TagIcon
 } from 'lucide-react';
-import { Player } from '../types';
-import { usePlayerActions } from '../hooks';
+import { Player } from '../../types';
+import { usePlayerActions } from '../../hooks';
 
 interface PlayerHeaderProps {
   player: Player;

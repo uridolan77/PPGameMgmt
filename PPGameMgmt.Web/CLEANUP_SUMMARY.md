@@ -29,8 +29,14 @@ This document summarizes the changes made to clean up the PPGameMgmt Web codebas
   - `PlayerCard`
   - `GameCard`
   - `BonusCard`
+  - `PlayerHeader`
+  - `PlayerFeaturesTab`
+  - `PlayerGamesTab`
+  - `PlayerBonusesTab`
+  - `LoadingIndicator` (moved to shared components)
 - Each component now follows this structure:
-  ```
+
+  ```text
   ComponentName/
     ├── ComponentName.tsx
     ├── ComponentName.test.tsx
