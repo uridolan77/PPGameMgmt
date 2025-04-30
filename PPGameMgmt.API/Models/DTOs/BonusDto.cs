@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PPGameMgmt.Core.Entities;
+using BonusType = PPGameMgmt.Core.Entities.Bonuses.BonusType;
 
 namespace PPGameMgmt.API.Models.DTOs
 {

@@ -248,11 +248,14 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 async () => {
                     _logger?.LogInformation($"Getting games compatible with device type: {deviceType}");
 
-                    // Assuming there's a CompatibleDevices field or a device compatibility flag
-                    // This implementation may need to be adjusted based on actual entity structure
+                    // Use the CompatibleDevices array property
                     var games = await _context.Games
-                        .Where(g => g.IsActive && g.CompatibleDevices.Contains(deviceType))
+                        .Where(g => g.IsActive)
                         .ToListAsync();
+
+                    // Filter in memory since EF Core might not support array contains
+                    games = games.Where(g => g.CompatibleDevices != null &&
+                                          g.CompatibleDevices.Contains(deviceType)).ToList();
 
                     _logger?.LogInformation($"Retrieved {games.Count} games compatible with device type: {deviceType}");
 
@@ -270,11 +273,14 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 async () => {
                     _logger?.LogInformation($"Getting games with feature: {featureName}");
 
-                    // Assuming there's a Features array or a related Features entity
-                    // This implementation may need to be adjusted based on actual entity structure
+                    // Use the Features array property
                     var games = await _context.Games
-                        .Where(g => g.IsActive && g.Features.Contains(featureName))
+                        .Where(g => g.IsActive)
                         .ToListAsync();
+
+                    // Filter in memory since EF Core might not support array contains
+                    games = games.Where(g => g.Features != null &&
+                                          g.Features.Contains(featureName)).ToList();
 
                     _logger?.LogInformation($"Retrieved {games.Count} games with feature: {featureName}");
 
@@ -293,14 +299,14 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                     _logger?.LogInformation($"Updating popularity score for game with ID: {gameId} to {newPopularityScore}");
 
                     var game = await _context.Games.FindAsync(gameId);
-                    
+
                     if (game == null)
                     {
                         throw new EntityNotFoundException(_entityName, gameId);
                     }
 
                     game.PopularityScore = newPopularityScore;
-                    
+
                     // Update the entity
                     _context.Games.Update(game);
                     await _context.SaveChangesAsync();

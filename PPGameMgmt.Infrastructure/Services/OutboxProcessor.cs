@@ -22,7 +22,7 @@ namespace PPGameMgmt.Infrastructure.Services
         private readonly TimeSpan _processingInterval = TimeSpan.FromSeconds(10);
         private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(1);
         private DateTime _lastCleanup = DateTime.UtcNow;
-        
+
         public OutboxProcessor(
             ILogger<OutboxProcessor> logger,
             IServiceProvider serviceProvider)
@@ -30,17 +30,17 @@ namespace PPGameMgmt.Infrastructure.Services
             _logger = logger;
             _serviceProvider = serviceProvider;
         }
-        
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Outbox processor starting");
-            
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     await ProcessOutboxMessagesAsync();
-                    
+
                     // Periodically clean up old messages
                     if (DateTime.UtcNow - _lastCleanup > _cleanupInterval)
                     {
@@ -52,27 +52,27 @@ namespace PPGameMgmt.Infrastructure.Services
                 {
                     _logger.LogError(ex, "Error processing outbox messages");
                 }
-                
+
                 await Task.Delay(_processingInterval, stoppingToken);
             }
-            
+
             _logger.LogInformation("Outbox processor stopping");
         }
-        
+
         private async Task ProcessOutboxMessagesAsync()
         {
             using var scope = _serviceProvider.CreateScope();
             var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
             var eventDispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
-            
-            var messages = await outboxRepository.GetUnprocessedMessagesAsync();
+
+            var messages = await outboxRepository.GetUnprocessedMessagesAsync(100);
             if (!messages.Any())
             {
                 return;
             }
-            
-            _logger.LogInformation($"Processing {messages.Count()} outbox messages");
-            
+
+            _logger.LogInformation("Processing {Count} outbox messages", messages.Count());
+
             foreach (var message in messages)
             {
                 try
@@ -85,13 +85,13 @@ namespace PPGameMgmt.Infrastructure.Services
                         await outboxRepository.MarkAsProcessedAsync(message.Id);
                         continue;
                     }
-                    
+
                     // Create a generic DeserializeData method call with the correct type
                     var deserializeMethod = typeof(OutboxProcessor).GetMethod("DeserializeAndDispatchEvent");
                     var genericMethod = deserializeMethod.MakeGenericMethod(eventType);
-                    
+
                     await (Task)genericMethod.Invoke(this, new object[] { message, eventDispatcher });
-                    
+
                     // Mark the message as processed
                     await outboxRepository.MarkAsProcessedAsync(message.Id);
                 }
@@ -101,7 +101,7 @@ namespace PPGameMgmt.Infrastructure.Services
                 }
             }
         }
-        
+
         public async Task DeserializeAndDispatchEvent<T>(OutboxMessage message, IDomainEventDispatcher eventDispatcher)
             where T : class, IDomainEvent
         {
@@ -109,15 +109,15 @@ namespace PPGameMgmt.Infrastructure.Services
             await eventDispatcher.DispatchAsync(@event);
             _logger.LogInformation($"Dispatched event {typeof(T).Name} from outbox message {message.Id}");
         }
-        
+
         private async Task CleanupOldMessagesAsync()
         {
             using var scope = _serviceProvider.CreateScope();
             var outboxRepository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
-            
+
             // Remove messages older than 7 days
             var cutoff = DateTime.UtcNow.AddDays(-7);
-            
+
             _logger.LogInformation($"Cleaning up processed outbox messages before {cutoff:yyyy-MM-dd}");
             await outboxRepository.CleanupProcessedMessagesAsync(cutoff);
         }

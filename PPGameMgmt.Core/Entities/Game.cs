@@ -8,53 +8,61 @@ namespace PPGameMgmt.Core.Entities
     public class Game
     {
         [Column("id")]
-        public string Id { get; set; }
-        
+        public required string Id { get; set; }
+
         [Column("name")]
-        public string Name { get; set; }
-        
+        public required string Name { get; set; }
+
         [Column("provider")]
-        public string Provider { get; set; }
-        
+        public required string Provider { get; set; }
+
         [Column("type")]
         public GameType Type { get; set; }
-        
+
         [Column("category")]
         public GameCategory Category { get; set; }
-        
+
         [Column("genre")]
-        public string Genre { get; set; }
-        
+        public required string Genre { get; set; }
+
         [Column("description")]
-        public string Description { get; set; }
-        
+        public required string Description { get; set; }
+
         [Column("is_featured")]
         public bool IsFeatured { get; set; }
-        
+
         [Column("rtp")]
         public decimal RTP { get; set; }
-        
+
         [Column("minimum_bet")]
         public decimal MinimumBet { get; set; }
-        
+
         [Column("maximum_bet")]
         public decimal MaximumBet { get; set; }
-        
+
         [Column("release_date")]
         public DateTime ReleaseDate { get; set; }
-        
+
         [Column("thumbnail_url")]
-        public string ThumbnailUrl { get; set; }
-        
+        public required string ThumbnailUrl { get; set; }
+
         [Column("game_url")]
-        public string GameUrl { get; set; }
-        
+        public required string GameUrl { get; set; }
+
         [Column("is_active")]
         public bool IsActive { get; set; }
-        
+
+        [Column("popularity_score")]
+        public int PopularityScore { get; set; }
+
+        [Column("compatible_devices")]
+        public string[]? CompatibleDevices { get; set; }
+
+        [Column("features")]
+        public string[]? Features { get; set; }
+
         // Navigation properties
-        //[NotMapped]
-        //public ICollection<GameSession> GameSessions { get; set; } = new List<GameSession>();
+        public ICollection<GameSession> GameSessions { get; set; } = [];
     }
 
     public enum GameType

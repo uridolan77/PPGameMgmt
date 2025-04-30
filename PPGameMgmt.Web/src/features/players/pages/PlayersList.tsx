@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { PlusIcon, SearchIcon, DownloadIcon, FilterIcon } from 'lucide-react';
 import { 
@@ -22,22 +22,21 @@ interface Player {
   email: string;
   playerLevel: number;
   isActive: boolean;
-  segment?: string;
-  lastLogin?: string;
+  segment?: string | null;
+  lastLogin?: string | null;
 }
 
 const PlayersList: React.FC = () => {
   const navigate = useNavigate();
   const { data: players, isLoading, isError } = usePlayers();
-  const { preferences } = useStore();
-  const tablePreference = preferences.tablePreferences?.players;
+  const { auth } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleRowClick = (player: Player) => {
     navigate(`/players/${player.id}`);
   };
 
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleDateString();
   };
@@ -98,13 +97,13 @@ const PlayersList: React.FC = () => {
                   Filter
                 </Button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger>
                     <Button variant="outline" size="sm">
                       <DownloadIcon className="mr-2 h-4 w-4" />
                       Export
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent>
                     <DropdownMenuItem>Export as CSV</DropdownMenuItem>
                     <DropdownMenuItem>Export as Excel</DropdownMenuItem>
                     <DropdownMenuItem>Export as PDF</DropdownMenuItem>
@@ -178,7 +177,7 @@ const PlayersList: React.FC = () => {
                         </TableCell>
                         <TableCell>{formatDate(player.lastLogin)}</TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={player.isActive ? "success" : "destructive"}>
+                          <Badge variant={player.isActive ? "default" : "destructive"}>
                             {player.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>

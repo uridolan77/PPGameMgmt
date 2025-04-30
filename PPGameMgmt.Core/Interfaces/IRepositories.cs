@@ -12,13 +12,7 @@ namespace PPGameMgmt.Core.Interfaces
         // Add specific bonus repository methods here
     }
 
-    /// <summary>
-    /// Interface for game session repository
-    /// </summary>
-    public interface IGameSessionRepository : IRepository<object>
-    {
-        // Add specific game session repository methods here
-    }
+
 
     /// <summary>
     /// Interface for recommendation repository

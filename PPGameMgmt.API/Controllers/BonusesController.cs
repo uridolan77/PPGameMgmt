@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PPGameMgmt.Core.Entities;
+using PPGameMgmt.Core.Entities.Bonuses;
+using PPGameMgmt.Core.Entities.Recommendations;
 using PPGameMgmt.Core.Interfaces;
 
 namespace PPGameMgmt.API.Controllers
@@ -156,7 +158,7 @@ namespace PPGameMgmt.API.Controllers
         [HttpGet("optimize/{playerId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<BonusRecommendation>> GetOptimalBonus(string playerId)
+        public async Task<ActionResult<Entities.Recommendations.BonusRecommendation>> GetOptimalBonus(string playerId)
         {
             try
             {

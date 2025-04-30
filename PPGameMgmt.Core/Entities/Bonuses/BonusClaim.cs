@@ -7,13 +7,13 @@ namespace PPGameMgmt.Core.Entities.Bonuses
     public class BonusClaim
     {
         [Column("id")]
-        public string Id { get; set; }
+        public required string Id { get; set; }
 
         [Column("player_id")]
-        public string PlayerId { get; set; }
+        public required string PlayerId { get; set; }
 
         [Column("bonus_id")]
-        public string BonusId { get; set; }
+        public required string BonusId { get; set; }
 
         [Column("claim_date")]
         public DateTime ClaimDate { get; set; }
@@ -39,9 +39,12 @@ namespace PPGameMgmt.Core.Entities.Bonuses
         [Column("conversion_date")]
         public DateTime? ConversionDate { get; set; }
 
+        [Column("completion_date")]
+        public DateTime? CompletionDate { get; set; }
+
         // Navigation properties
-        public Player Player { get; set; }
-        public Bonus Bonus { get; set; }
+        public required Player Player { get; set; }
+        public required Bonus Bonus { get; set; }
     }
 
     public enum BonusClaimStatus

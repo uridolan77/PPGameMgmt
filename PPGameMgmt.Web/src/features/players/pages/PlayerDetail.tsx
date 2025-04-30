@@ -1,63 +1,50 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Typography,
-  Box,
-  Paper,
-  Grid,
-  Chip,
-  Button,
-  Divider,
-  Tabs,
-  Tab,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  Card,
-  CardContent,
-  CardHeader,
-  Skeleton
-} from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Email as EmailIcon,
-  CalendarToday as CalendarIcon,
-  LocalOffer as TagIcon
-} from '@mui/icons-material';
 import { usePlayer, usePlayerGameSessions, usePlayerFeatures, usePlayerBonusClaims } from '../hooks';
 import { useStore } from '../../../core/store';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ArrowLeftIcon, 
+  PencilIcon, 
+  TrashIcon, 
+  MailIcon, 
+  TagIcon, 
+  CalendarIcon 
+} from 'lucide-react';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface PlayerFeature {
+  id: number;
+  name: string;
+  isEnabled: boolean;
 }
 
-const TabPanel = (props: TabPanelProps) => {
-  const { children, value, index, ...other } = props;
+interface GameSession {
+  id: number;
+  gameName: string;
+  startTime: string;
+  duration: number;
+  betAmount: number;
+  winAmount: number;
+}
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`player-tabpanel-${index}`}
-      aria-labelledby={`player-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-};
+interface BonusClaim {
+  id: number;
+  bonusName: string;
+  claimDate: string;
+  value: number;
+  status: string;
+}
 
 const PlayerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { ui } = useStore();
-  const [tabValue, setTabValue] = useState(0);
   
   // Convert id to number for API calls
   const playerId = id ? parseInt(id, 10) : undefined;
@@ -70,13 +57,8 @@ const PlayerDetail: React.FC = () => {
   const { data: features, isLoading: featuresLoading } = usePlayerFeatures(playerId);
   const { data: bonusClaims, isLoading: bonusesLoading } = usePlayerBonusClaims(playerId);
 
-  // Tab handling
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
   // Format date for display
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
@@ -91,313 +73,294 @@ const PlayerDetail: React.FC = () => {
     });
   };
 
+  // Generate a consistent color from a string for avatar
+  const getAvatarColor = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = Math.abs(hash).toString(16).substring(0, 6);
+    return `#${color.padStart(6, '0')}`;
+  };
+
   if (playerLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box mb={4}>
-          <Skeleton height={50} width={200} />
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Skeleton height={30} width="60%" />
-          </Box>
-        </Box>
-        <Skeleton variant="rectangular" height={400} />
-      </Container>
+      <div className="container mx-auto py-6">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-60" />
+            </div>
+          </div>
+          <Skeleton className="h-[400px] w-full" />
+        </div>
+      </div>
     );
   }
 
   if (!player) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" color="error">
-          Player not found
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<ArrowBackIcon />}
+      <div className="container mx-auto py-6">
+        <h2 className="text-2xl font-bold text-destructive">Player not found</h2>
+        <Button 
+          variant="outline" 
+          className="mt-4"
           onClick={() => navigate('/players')}
-          sx={{ mt: 2 }}
         >
+          <ArrowLeftIcon className="mr-2 h-4 w-4" />
           Back to Players
         </Button>
-      </Container>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header with back button and actions */}
-      <Box mb={4}>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/players')}
-          sx={{ mb: 2 }}
-        >
-          Back to Players
-        </Button>
-        
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box display="flex" alignItems="center">
-            <Avatar
-              sx={{ 
-                width: 64, 
-                height: 64, 
-                bgcolor: 'primary.main',
-                fontSize: 24,
-                mr: 2
-              }}
-            >
-              {player.username.charAt(0).toUpperCase()}
-            </Avatar>
-            <div>
-              <Typography variant="h4">
-                {player.username}
-              </Typography>
-              <Box display="flex" alignItems="center">
-                <EmailIcon sx={{ fontSize: 18, mr: 0.5, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
-                  {player.email}
-                </Typography>
-              </Box>
-            </div>
-          </Box>
+    <div className="container mx-auto py-6">
+      <div className="flex flex-col gap-6">
+        {/* Header with back button */}
+        <div>
+          <Button 
+            variant="outline" 
+            className="mb-4"
+            onClick={() => navigate('/players')}
+          >
+            <ArrowLeftIcon className="mr-2 h-4 w-4" />
+            Back to Players
+          </Button>
           
-          <Box>
-            <Button
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={() => navigate(`/players/edit/${player.id}`)}
-              sx={{ mr: 1 }}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handleDeletePlayer}
-            >
-              Delete
-            </Button>
-          </Box>
-        </Box>
-      </Box>
-      
-      {/* Status chip */}
-      <Box mb={3}>
-        <Chip
-          label={player.isActive ? "Active" : "Inactive"}
-          color={player.isActive ? "success" : "error"}
-          sx={{ fontWeight: 500 }}
-        />
-        
-        <Chip
-          label={`Level ${player.playerLevel}`}
-          variant="outlined"
-          sx={{ ml: 1 }}
-        />
-        
-        {player.segment && (
-          <Chip
-            icon={<TagIcon />}
-            label={player.segment}
-            variant="outlined"
-            color="primary"
-            sx={{ ml: 1 }}
-          />
-        )}
-      </Box>
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarFallback 
+                  style={{ backgroundColor: getAvatarColor(player.username) }}
+                  className="text-2xl"
+                >
+                  {player.username.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">{player.username}</h1>
+                <div className="flex items-center text-muted-foreground">
+                  <MailIcon className="h-4 w-4 mr-1" />
+                  <span>{player.email}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(`/players/edit/${player.id}`)}
+              >
+                <PencilIcon className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+              <Button 
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={handleDeletePlayer}
+              >
+                <TrashIcon className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          </div>
+          
+          {/* Status badges */}
+          <div className="flex gap-2 mt-4">
+            <Badge variant={player.isActive ? "default" : "destructive"}>
+              {player.isActive ? 'Active' : 'Inactive'}
+            </Badge>
+            
+            <Badge variant="outline">
+              Level {player.playerLevel}
+            </Badge>
+            
+            {player.segment && (
+              <Badge variant="secondary" className="flex items-center">
+                <TagIcon className="h-3 w-3 mr-1" />
+                {player.segment}
+              </Badge>
+            )}
+          </div>
+        </div>
 
-      {/* Tabs navigation */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
-          variant="scrollable" 
-          scrollButtons="auto"
-          aria-label="player details tabs"
-        >
-          <Tab label="Overview" />
-          <Tab label="Game History" />
-          <Tab label="Bonuses" />
-          <Tab label="Features" />
-        </Tabs>
-
-        <Divider />
-
-        {/* Tab content panels */}
-        <TabPanel value={tabValue} index={0}>
-          <Typography variant="h6" gutterBottom>Player Overview</Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+        {/* Tabs for player details */}
+        <Tabs defaultValue="overview" className="mt-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="games">Game History</TabsTrigger>
+            <TabsTrigger value="bonuses">Bonuses</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="mt-6 space-y-6">
+            <h3 className="text-lg font-medium">Player Overview</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
-                <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>Account Information</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">Username</Typography>
-                    <Typography variant="body1">{player.username}</Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">Email</Typography>
-                    <Typography variant="body1">{player.email}</Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">Player Level</Typography>
-                    <Typography variant="body1">{player.playerLevel}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Status</Typography>
-                    <Typography variant="body1">{player.isActive ? 'Active' : 'Inactive'}</Typography>
-                  </Box>
+                <CardHeader>
+                  <CardTitle>Account Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Username</div>
+                    <div>{player.username}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Email</div>
+                    <div>{player.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Player Level</div>
+                    <div>{player.playerLevel}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Status</div>
+                    <div>{player.isActive ? 'Active' : 'Inactive'}</div>
+                  </div>
                 </CardContent>
               </Card>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
+              
               <Card>
-                <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>Activity Summary</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">Last Login</Typography>
-                    <Typography variant="body1">{player.lastLogin ? formatDate(player.lastLogin) : 'Never'}</Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">Total Game Sessions</Typography>
-                    <Typography variant="body1">{sessionsLoading ? '...' : gameSessions?.length || 0}</Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">Bonus Claims</Typography>
-                    <Typography variant="body1">{bonusesLoading ? '...' : bonusClaims?.length || 0}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Enabled Features</Typography>
-                    <Typography variant="body1">
+                <CardHeader>
+                  <CardTitle>Activity Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Last Login</div>
+                    <div>{player.lastLogin ? formatDate(player.lastLogin) : 'Never'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Total Game Sessions</div>
+                    <div>{sessionsLoading ? '...' : gameSessions?.length || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Bonus Claims</div>
+                    <div>{bonusesLoading ? '...' : bonusClaims?.length || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Enabled Features</div>
+                    <div>
                       {featuresLoading 
                         ? '...' 
-                        : features?.filter(f => f.isEnabled).length || 0}
-                    </Typography>
-                  </Box>
+                        : features?.filter((f: PlayerFeature) => f.isEnabled).length || 0}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
-        </TabPanel>
-        
-        <TabPanel value={tabValue} index={1}>
-          <Typography variant="h6" gutterBottom>Game History</Typography>
-          {sessionsLoading ? (
-            <Box sx={{ p: 2 }}>Loading game history...</Box>
-          ) : gameSessions && gameSessions.length > 0 ? (
-            <Paper>
-              <List>
-                {gameSessions.map((session) => (
-                  <React.Fragment key={session.id}>
-                    <ListItem>
-                      <ListItemText
-                        primary={session.gameName}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {formatDate(session.startTime)}
-                            </Typography>
-                            {" — Duration: "}
-                            {Math.round(session.duration / 60)} minutes
-                            {" • "}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="games" className="mt-6 space-y-4">
+            <h3 className="text-lg font-medium">Game History</h3>
+            {sessionsLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading game history...</p>
+              </div>
+            ) : gameSessions && gameSessions.length > 0 ? (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="rounded-md border divide-y">
+                    {gameSessions.map((session: GameSession) => (
+                      <div key={session.id} className="p-4">
+                        <div className="font-medium">{session.gameName}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          <div className="flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            <span>{formatDate(session.startTime)}</span>
+                            <span className="mx-1">•</span>
+                            <span>Duration: {Math.round(session.duration / 60)} minutes</span>
+                          </div>
+                          <div className="mt-1">
                             Bet: ${session.betAmount.toFixed(2)}
-                            {" • "}
+                            <span className="mx-1">•</span>
                             Win: ${session.winAmount.toFixed(2)}
-                          </>
-                        }
-                      />
-                    </ListItem>
-                    <Divider />
-                  </React.Fragment>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">
+                No game sessions found
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="bonuses" className="mt-6 space-y-4">
+            <h3 className="text-lg font-medium">Bonus Claims</h3>
+            {bonusesLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading bonus claims...</p>
+              </div>
+            ) : bonusClaims && bonusClaims.length > 0 ? (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="rounded-md border divide-y">
+                    {bonusClaims.map((bonus: BonusClaim) => (
+                      <div key={bonus.id} className="p-4 flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">{bonus.bonusName}</div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            Claimed on {formatDate(bonus.claimDate)}
+                            <span className="mx-1">•</span>
+                            Value: ${bonus.value.toFixed(2)}
+                          </div>
+                        </div>
+                        <Badge variant={
+                          bonus.status === 'Completed' ? 'default' :
+                          bonus.status === 'Active' ? 'secondary' :
+                          'destructive'
+                        }>
+                          {bonus.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">
+                No bonus claims found
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="features" className="mt-6 space-y-4">
+            <h3 className="text-lg font-medium">Player Features</h3>
+            {featuresLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading features...</p>
+              </div>
+            ) : features && features.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {features.map((feature: PlayerFeature) => (
+                  <Card key={feature.id} className={`border-l-4 ${feature.isEnabled ? 'border-l-green-500' : 'border-l-destructive'}`}>
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div className="font-medium">{feature.name}</div>
+                      <Badge variant={feature.isEnabled ? 'default' : 'destructive'}>
+                        {feature.isEnabled ? 'Enabled' : 'Disabled'}
+                      </Badge>
+                    </CardContent>
+                  </Card>
                 ))}
-              </List>
-            </Paper>
-          ) : (
-            <Typography color="text.secondary">No game sessions found</Typography>
-          )}
-        </TabPanel>
-        
-        <TabPanel value={tabValue} index={2}>
-          <Typography variant="h6" gutterBottom>Bonus Claims</Typography>
-          {bonusesLoading ? (
-            <Box sx={{ p: 2 }}>Loading bonus claims...</Box>
-          ) : bonusClaims && bonusClaims.length > 0 ? (
-            <Paper>
-              <List>
-                {bonusClaims.map((bonus) => (
-                  <React.Fragment key={bonus.id}>
-                    <ListItem>
-                      <ListItemText
-                        primary={bonus.bonusName}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              Claimed on {formatDate(bonus.claimDate)}
-                            </Typography>
-                            {" — Value: "}
-                            ${bonus.value.toFixed(2)}
-                            {" • "}
-                            Status: {bonus.status}
-                          </>
-                        }
-                      />
-                      <Chip 
-                        label={bonus.status} 
-                        color={
-                          bonus.status === 'Completed' ? 'success' :
-                          bonus.status === 'Active' ? 'primary' :
-                          bonus.status === 'Expired' ? 'error' : 'default'
-                        }
-                        size="small"
-                        variant="outlined"
-                      />
-                    </ListItem>
-                    <Divider />
-                  </React.Fragment>
-                ))}
-              </List>
-            </Paper>
-          ) : (
-            <Typography color="text.secondary">No bonus claims found</Typography>
-          )}
-        </TabPanel>
-        
-        <TabPanel value={tabValue} index={3}>
-          <Typography variant="h6" gutterBottom>Player Features</Typography>
-          {featuresLoading ? (
-            <Box sx={{ p: 2 }}>Loading features...</Box>
-          ) : features && features.length > 0 ? (
-            <Grid container spacing={2}>
-              {features.map((feature) => (
-                <Grid item xs={12} sm={6} md={4} key={feature.id}>
-                  <Paper 
-                    sx={{ 
-                      p: 2, 
-                      border: 1, 
-                      borderColor: feature.isEnabled ? 'success.main' : 'error.main',
-                      borderRadius: 1
-                    }}
-                  >
-                    <Typography variant="subtitle1">{feature.name}</Typography>
-                    <Chip
-                      label={feature.isEnabled ? 'Enabled' : 'Disabled'}
-                      color={feature.isEnabled ? 'success' : 'error'}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    />
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Typography color="text.secondary">No features found</Typography>
-          )}
-        </TabPanel>
-      </Paper>
-    </Container>
+              </div>
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">
+                No features found
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 };
 

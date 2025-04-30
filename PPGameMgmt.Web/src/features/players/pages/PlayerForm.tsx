@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../../core/api';
+
+// Import shadcn components
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 // TypeScript interface for player form data
 interface PlayerFormInputs {
@@ -25,24 +34,36 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ playerId, onSuccess }) => {
     register, 
     handleSubmit, 
     formState: { errors },
-    reset
-  } = useForm<PlayerFormInputs>();
+    reset,
+    setValue,
+    watch
+  } = useForm<PlayerFormInputs>({
+    defaultValues: {
+      isActive: true,
+      playerLevel: 1
+    }
+  });
+
+  // Watch the isActive field to use with Switch component
+  const watchIsActive = watch('isActive');
   
   // Fetch player data if editing an existing player
-  const { data: playerData, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['player', playerId],
     queryFn: async () => {
       if (!playerId) return undefined;
       // Use the improved apiClient
       return apiClient.get<PlayerFormInputs>(`/api/players/${playerId}`);
     },
-    enabled: !!playerId,
-    onSuccess: (data) => {
-      if (data) {
-        reset(data); // Pre-fill form with existing data
-      }
-    }
+    enabled: !!playerId
   });
+
+  // Use useEffect to reset form when data is loaded
+  useEffect(() => {
+    if (data) {
+      reset(data);
+    }
+  }, [data, reset]);
 
   // Create or update player mutation
   const mutation = useMutation({
@@ -67,101 +88,155 @@ const PlayerForm: React.FC<PlayerFormProps> = ({ playerId, onSuccess }) => {
     mutation.mutate(data);
   };
 
+  // Handle switch toggle separately since it's not directly bound to register
+  const handleSwitchChange = (checked: boolean) => {
+    setValue('isActive', checked);
+  };
+
   if (isLoading) {
-    return <div className="text-center p-4">Loading player data...</div>;
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-3/4 mb-2" />
+          <Skeleton className="h-4 w-1/2" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-6 w-24" />
+        </CardContent>
+        <CardFooter>
+          <Skeleton className="h-10 w-full" />
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Alert variant="destructive" className="max-w-md mx-auto">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Error loading player data: {(error as Error)?.message || 'Unknown error'}
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        {playerId ? 'Edit Player' : 'Create New Player'}
-      </h2>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle>{playerId ? 'Edit Player' : 'Create New Player'}</CardTitle>
+        <CardDescription>
+          {playerId 
+            ? 'Update the player information below' 
+            : 'Fill in the details to create a new player'}
+        </CardDescription>
+      </CardHeader>
       
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Username
-          </label>
-          <input
-            {...register('username', { 
-              required: 'Username is required',
-              minLength: { value: 3, message: 'Username must be at least 3 characters' }
-            })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.username && (
-            <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
-          )}
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              {...register('username', { 
+                required: 'Username is required',
+                minLength: { value: 3, message: 'Username must be at least 3 characters' }
+              })}
+              placeholder="Enter username"
+            />
+            {errors.username && (
+              <p className="text-sm text-destructive">{errors.username.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              {...register('email', { 
+                required: 'Email is required',
+                pattern: { 
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Invalid email address'
+                }
+              })}
+              placeholder="Enter email address"
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="playerLevel">Player Level</Label>
+            <Input
+              id="playerLevel"
+              type="number"
+              {...register('playerLevel', { 
+                required: 'Player level is required',
+                min: { value: 1, message: 'Level must be at least 1' },
+                valueAsNumber: true
+              })}
+              placeholder="Enter player level"
+            />
+            {errors.playerLevel && (
+              <p className="text-sm text-destructive">{errors.playerLevel.message}</p>
+            )}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="flex h-5 w-10 cursor-pointer rounded-full bg-muted p-1"
+               onClick={() => handleSwitchChange(!watchIsActive)}>
+              <div
+                className={`h-3 w-3 rounded-full transition-all ${watchIsActive ? "translate-x-4 bg-primary" : "bg-muted-foreground"}`}
+              />
+            </div>
+            <Label htmlFor="isActive" className="cursor-pointer" onClick={() => handleSwitchChange(!watchIsActive)}>
+              Active Player
+            </Label>
+          </div>
+          
+          <input type="hidden" {...register('isActive')} />
+        </CardContent>
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            {...register('email', { 
-              required: 'Email is required',
-              pattern: { 
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address'
-              }
-            })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-          )}
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Player Level
-          </label>
-          <input
-            type="number"
-            {...register('playerLevel', { 
-              required: 'Player level is required',
-              min: { value: 1, message: 'Level must be at least 1' },
-              valueAsNumber: true
-            })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.playerLevel && (
-            <p className="text-red-500 text-sm mt-1">{errors.playerLevel.message}</p>
-          )}
-        </div>
-        
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="isActive"
-            {...register('isActive')}
-            className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
-          />
-          <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
-            Active Player
-          </label>
-        </div>
-        
-        <div className="flex justify-end space-x-2 pt-4">
-          <button
+        <CardFooter className="flex justify-between">
+          <Button
             type="button"
+            variant="outline"
             onClick={() => reset()}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Reset
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={mutation.isPending}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            {mutation.isPending ? 'Saving...' : 'Save Player'}
-          </button>
-        </div>
+            {mutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+              </>
+            ) : (
+              'Save Player'
+            )}
+          </Button>
+        </CardFooter>
       </form>
-    </div>
+      
+      {mutation.isError && (
+        <div className="px-6 pb-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {(mutation.error as Error)?.message || 'Failed to save player'}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+    </Card>
   );
 };
 

@@ -94,16 +94,22 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                     }
 
                     // Load game sessions
-                    player.GameSessions = await _context.GameSessions
+                    player.GameSessions = await _context.Set<GameSession>()
                         .Where(gs => gs.PlayerId == playerId)
                         .ToListAsync();
 
                     // Load bonus claims
-                    player.BonusClaims = await _context.BonusClaims
+                    var bonusClaims = await _context.Set<BonusClaim>()
                         .Where(bc => bc.PlayerId == playerId)
                         .ToListAsync();
 
-                    _logger?.LogInformation($"Retrieved player with {player.GameSessions.Count} sessions and {player.BonusClaims.Count} bonus claims");
+                    foreach (var claim in bonusClaims)
+                    {
+                        player.BonusClaims.Add(claim);
+                    }
+
+                    _logger?.LogInformation("Retrieved player with {SessionCount} sessions and {ClaimCount} bonus claims",
+                        player.GameSessions.Count, player.BonusClaims.Count);
 
                     return player;
                 },
@@ -169,7 +175,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                     _logger?.LogInformation($"Getting active players within the last {daysActive} days");
 
                     var cutoffDate = DateTime.UtcNow.AddDays(-daysActive);
-                    
+
                     var players = await _context.Players
                         .Where(p => p.LastLoginDate >= cutoffDate)
                         .ToListAsync();
@@ -241,7 +247,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 async () => {
                     _logger?.LogInformation($"Getting players who have played game with ID: {gameId}");
 
-                    var playerIds = await _context.GameSessions
+                    var playerIds = await _context.Set<GameSession>()
                         .Where(gs => gs.GameId == gameId)
                         .Select(gs => gs.PlayerId)
                         .Distinct()
@@ -267,7 +273,7 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                 async () => {
                     _logger?.LogInformation($"Getting players who have claimed bonus with ID: {bonusId}");
 
-                    var playerIds = await _context.BonusClaims
+                    var playerIds = await _context.Set<BonusClaim>()
                         .Where(bc => bc.BonusId == bonusId)
                         .Select(bc => bc.PlayerId)
                         .Distinct()
@@ -314,14 +320,14 @@ namespace PPGameMgmt.Infrastructure.Data.Repositories
                     _logger?.LogInformation($"Updating player segment for ID: {playerId} to {segment}");
 
                     var player = await _context.Players.FindAsync(playerId);
-                    
+
                     if (player == null)
                     {
                         throw new EntityNotFoundException(_entityName, playerId);
                     }
 
                     player.Segment = segment;
-                    
+
                     // Update the entity
                     _context.Players.Update(player);
                     await _context.SaveChangesAsync();
