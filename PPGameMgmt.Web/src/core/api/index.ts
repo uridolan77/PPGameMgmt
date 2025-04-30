@@ -18,5 +18,6 @@ export {
 // Export cache configuration
 export { CACHE_KEYS, STALE_TIMES, getStaleTime, getCacheTime } from './cacheConfig';
 
-// Export hook factory
+// Export hook factories
 export { createEntityHooks } from './hookFactory';
+export { createFeatureApi } from './createFeatureApi';
