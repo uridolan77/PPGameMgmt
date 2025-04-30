@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using PPGameMgmt.Core.Entities;
-using PPGameMgmt.Core.Entities.Bonuses;
-using PPGameMgmt.Core.Entities.Recommendations;
+// Use namespace aliases to distinguish between ambiguous types
+using CoreEntities = PPGameMgmt.Core.Entities;
+using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using RecommendationEntities = PPGameMgmt.Core.Entities.Recommendations;
 using PPGameMgmt.Core.Interfaces;
 
 namespace PPGameMgmt.API.Controllers
@@ -34,9 +35,9 @@ namespace PPGameMgmt.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ResponseCache(Duration = 60)] // Cache for 1 minute
-        public async Task<ActionResult<IEnumerable<Bonus>>> GetAllBonuses(
-            [FromQuery] BonusType? type = null,
-            [FromQuery] PlayerSegment? segment = null,
+        public async Task<ActionResult<IEnumerable<BonusEntities.Bonus>>> GetAllBonuses(
+            [FromQuery] BonusEntities.BonusType? type = null,
+            [FromQuery] CoreEntities.PlayerSegment? segment = null,
             [FromQuery] string? gameId = null)
         {
             try
@@ -44,7 +45,7 @@ namespace PPGameMgmt.API.Controllers
                 _logger.LogInformation("Retrieving bonuses with filters - Type: {Type}, Segment: {Segment}, GameId: {GameId}",
                     type, segment, gameId ?? "null");
 
-                IEnumerable<Bonus> bonuses;
+                IEnumerable<BonusEntities.Bonus> bonuses;
 
                 if (type.HasValue)
                 {
@@ -87,7 +88,7 @@ namespace PPGameMgmt.API.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Bonus>> GetBonus(string id)
+        public async Task<ActionResult<BonusEntities.Bonus>> GetBonus(string id)
         {
             try
             {
@@ -110,7 +111,7 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet("player/{playerId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<BonusClaim>>> GetPlayerBonuses(string playerId)
+        public async Task<ActionResult<IEnumerable<BonusEntities.BonusClaim>>> GetPlayerBonuses(string playerId)
         {
             try
             {
@@ -129,7 +130,7 @@ namespace PPGameMgmt.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<BonusClaim>> ClaimBonus([FromBody] BonusClaimRequest request)
+        public async Task<ActionResult<BonusEntities.BonusClaim>> ClaimBonus([FromBody] BonusClaimRequest request)
         {
             if (request == null || string.IsNullOrEmpty(request.PlayerId) || string.IsNullOrEmpty(request.BonusId))
             {
@@ -158,7 +159,7 @@ namespace PPGameMgmt.API.Controllers
         [HttpGet("optimize/{playerId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Entities.Recommendations.BonusRecommendation>> GetOptimalBonus(string playerId)
+        public async Task<ActionResult<RecommendationEntities.BonusRecommendation>> GetOptimalBonus(string playerId)
         {
             try
             {
@@ -181,7 +182,7 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet("rank/{playerId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Bonus>>> RankBonusesForPlayer(string playerId)
+        public async Task<ActionResult<IEnumerable<BonusEntities.Bonus>>> RankBonusesForPlayer(string playerId)
         {
             try
             {

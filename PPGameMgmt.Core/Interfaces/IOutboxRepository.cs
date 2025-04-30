@@ -12,5 +12,8 @@ namespace PPGameMgmt.Core.Interfaces
         Task AddMessageAsync(object message);
         Task<IEnumerable<object>> GetPendingMessagesAsync(int batchSize);
         Task MarkMessageAsProcessedAsync(Guid id);
+        Task<IEnumerable<object>> GetUnprocessedMessagesAsync(int batchSize);
+        Task MarkAsProcessedAsync(string messageId);
+        Task CleanupProcessedMessagesAsync(DateTime before);
     }
 }

@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using PPGameMgmt.Core.Entities;
-using PPGameMgmt.Core.Entities.Recommendations;
+// Use namespace aliases to distinguish between ambiguous types
+using CoreEntities = PPGameMgmt.Core.Entities;
+using RecommendationEntities = PPGameMgmt.Core.Entities.Recommendations;
 using PPGameMgmt.Core.Interfaces;
 
 namespace PPGameMgmt.API.Services
@@ -38,7 +39,7 @@ namespace PPGameMgmt.API.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<Recommendation> GetPersonalizedRecommendationAsync(string playerId)
+        public async Task<RecommendationEntities.Recommendation> GetPersonalizedRecommendationAsync(string playerId)
         {
             var cacheKey = string.Format(RECOMMENDATION_PERSONALIZED_CACHE_KEY, playerId);
 
@@ -48,7 +49,7 @@ namespace PPGameMgmt.API.Services
                 RECOMMENDATION_CACHE_DURATION);
         }
 
-        public async Task<Recommendation> GetLatestRecommendationAsync(string playerId)
+        public async Task<RecommendationEntities.Recommendation> GetLatestRecommendationAsync(string playerId)
         {
             var cacheKey = string.Format(RECOMMENDATION_LATEST_CACHE_KEY, playerId);
 
@@ -58,7 +59,7 @@ namespace PPGameMgmt.API.Services
                 RECOMMENDATION_CACHE_DURATION);
         }
 
-        public async Task<IEnumerable<Entities.Recommendations.GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5)
+        public async Task<IEnumerable<RecommendationEntities.GameRecommendation>> GetGameRecommendationsAsync(string playerId, int count = 5)
         {
             var cacheKey = string.Format(GAME_RECOMMENDATIONS_CACHE_KEY, playerId, count);
 
@@ -68,7 +69,7 @@ namespace PPGameMgmt.API.Services
                 GAME_RECOMMENDATIONS_CACHE_DURATION);
         }
 
-        public async Task<Entities.Recommendations.BonusRecommendation> GetBonusRecommendationAsync(string playerId)
+        public async Task<RecommendationEntities.BonusRecommendation> GetBonusRecommendationAsync(string playerId)
         {
             var cacheKey = string.Format(BONUS_RECOMMENDATION_CACHE_KEY, playerId);
 

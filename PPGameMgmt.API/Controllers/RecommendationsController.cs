@@ -4,9 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using PPGameMgmt.Core.Entities;
-using PPGameMgmt.Core.Entities.Bonuses;
-using PPGameMgmt.Core.Entities.Recommendations;
+// Use namespace aliases to distinguish between ambiguous types
+using CoreEntities = PPGameMgmt.Core.Entities;
+using BonusEntities = PPGameMgmt.Core.Entities.Bonuses;
+using RecommendationEntities = PPGameMgmt.Core.Entities.Recommendations;
 using PPGameMgmt.Core.Interfaces;
 
 namespace PPGameMgmt.API.Controllers
@@ -45,14 +46,14 @@ namespace PPGameMgmt.API.Controllers
         [HttpGet("{playerId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Recommendation>> GetRecommendation(string playerId)
+        public async Task<ActionResult<RecommendationEntities.Recommendation>> GetRecommendation(string playerId)
         {
             try
             {
                 // Create a mock recommendation for testing
                 if (playerId == "mock")
                 {
-                    var mockRecommendation = new Recommendation
+                    var mockRecommendation = new RecommendationEntities.Recommendation
                     {
                         Id = "R001",
                         PlayerId = playerId,
@@ -63,16 +64,16 @@ namespace PPGameMgmt.API.Controllers
                         IsAccepted = false,
                         IsViewed = false,
                         IsPlayed = false,
-                        RecommendedGames = new List<GameRecommendation>
+                        RecommendedGames = new List<RecommendationEntities.GameRecommendation>
                         {
-                            new GameRecommendation
+                            new RecommendationEntities.GameRecommendation
                             {
                                 GameId = "G001",
                                 GameName = "Test Game 1",
                                 Score = 0.95,
                                 RecommendationReason = "Test recommendation"
                             },
-                            new GameRecommendation
+                            new RecommendationEntities.GameRecommendation
                             {
                                 GameId = "G002",
                                 GameName = "Test Game 2",
@@ -80,11 +81,11 @@ namespace PPGameMgmt.API.Controllers
                                 RecommendationReason = "Test recommendation"
                             }
                         },
-                        RecommendedBonus = new BonusRecommendation
+                        RecommendedBonus = new RecommendationEntities.BonusRecommendation
                         {
                             BonusId = "B001",
                             BonusName = "Test Bonus",
-                            BonusType = BonusType.DepositMatch,
+                            BonusType = BonusEntities.BonusType.DepositMatch,
                             Amount = 100,
                             PercentageMatch = 100,
                             Score = 0.9,
@@ -116,7 +117,7 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet("{playerId}/games")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<GameRecommendation>>> GetGameRecommendations(string playerId, [FromQuery] int count = 5)
+        public async Task<ActionResult<IEnumerable<RecommendationEntities.GameRecommendation>>> GetGameRecommendations(string playerId, [FromQuery] int count = 5)
         {
             try
             {
@@ -133,7 +134,7 @@ namespace PPGameMgmt.API.Controllers
         [HttpGet("{playerId}/bonus")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Entities.Recommendations.BonusRecommendation>> GetBonusRecommendation(string playerId)
+        public async Task<ActionResult<RecommendationEntities.BonusRecommendation>> GetBonusRecommendation(string playerId)
         {
             try
             {

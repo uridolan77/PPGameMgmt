@@ -73,41 +73,73 @@ namespace PPGameMgmt.Infrastructure.Services
 
             _logger.LogInformation("Processing {Count} outbox messages", messages.Count());
 
-            foreach (var message in messages)
+            foreach (var messageObj in messages)
             {
                 try
                 {
+                    // Use dynamic to access properties
+                    dynamic message = messageObj;
+                    string messageType = message.Type;
+                    string messageId = message.Id;
+
                     // Get the event type
-                    Type eventType = Type.GetType(message.Type);
+                    Type? eventType = Type.GetType(messageType);
                     if (eventType == null)
                     {
-                        _logger.LogWarning($"Unknown event type: {message.Type}");
-                        await outboxRepository.MarkAsProcessedAsync(message.Id);
+                        _logger.LogWarning($"Unknown event type: {messageType}");
+                        await outboxRepository.MarkAsProcessedAsync(messageId);
                         continue;
                     }
 
                     // Create a generic DeserializeData method call with the correct type
                     var deserializeMethod = typeof(OutboxProcessor).GetMethod("DeserializeAndDispatchEvent");
-                    var genericMethod = deserializeMethod.MakeGenericMethod(eventType);
+                    if (deserializeMethod != null)
+                    {
+                        var genericMethod = deserializeMethod.MakeGenericMethod(eventType);
+                        await (Task)genericMethod.Invoke(this, new object[] { messageObj, eventDispatcher })!;
 
-                    await (Task)genericMethod.Invoke(this, new object[] { message, eventDispatcher });
-
-                    // Mark the message as processed
-                    await outboxRepository.MarkAsProcessedAsync(message.Id);
+                        // Mark the message as processed
+                        await outboxRepository.MarkAsProcessedAsync(messageId);
+                    }
+                    else
+                    {
+                        _logger.LogError("Could not find DeserializeAndDispatchEvent method");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Error processing outbox message {message.Id}");
+                    // Use try-catch here to safely get the ID
+                    string errorId = "unknown";
+                    try 
+                    {
+                        dynamic msg = messageObj;
+                        errorId = msg.Id;
+                    }
+                    catch {}
+                    
+                    _logger.LogError(ex, $"Error processing outbox message {errorId}");
                 }
             }
         }
 
-        public async Task DeserializeAndDispatchEvent<T>(OutboxMessage message, IDomainEventDispatcher eventDispatcher)
+        public async Task DeserializeAndDispatchEvent<T>(object message, IDomainEventDispatcher eventDispatcher)
             where T : class, IDomainEvent
         {
-            var @event = message.DeserializeData<T>();
-            await eventDispatcher.DispatchAsync(@event);
-            _logger.LogInformation($"Dispatched event {typeof(T).Name} from outbox message {message.Id}");
+            // Convert the object to OutboxMessage if possible, otherwise use dynamic
+            if (message is OutboxMessage typedMessage)
+            {
+                var @event = typedMessage.DeserializeData<T>();
+                await eventDispatcher.DispatchAsync(@event);
+                _logger.LogInformation($"Dispatched event {typeof(T).Name} from outbox message {typedMessage.Id}");
+            }
+            else
+            {
+                dynamic dynamicMessage = message;
+                string id = dynamicMessage.Id;
+                var @event = dynamicMessage.DeserializeData<T>();
+                await eventDispatcher.DispatchAsync(@event);
+                _logger.LogInformation($"Dispatched event {typeof(T).Name} from outbox message {id}");
+            }
         }
 
         private async Task CleanupOldMessagesAsync()

@@ -15,7 +15,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
 
         private readonly ILogger<GameRecommendationModel> _logger;
         private MLContext _mlContext;
-        private ITransformer _model;
+        private ITransformer? _model;
         private string _modelPath;
         private bool _isInitialized = false;
 
@@ -54,7 +54,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             }
         }
 
-        public async Task<List<object>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, int maxRecommendations = 5)
+        public async Task<List<GameRecommendation>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, int maxRecommendations = 5)
         {
             if (!_isInitialized)
             {
@@ -114,7 +114,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         public class PlayerFeatureInput
         {
             [LoadColumn(0)]
-            public string PlayerId { get; set; }
+            public required string PlayerId { get; set; }
 
             [LoadColumn(1)]
             public int DaysSinceRegistration { get; set; }
@@ -132,10 +132,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             public float SessionFrequency { get; set; }
 
             [LoadColumn(6)]
-            public string CountryCode { get; set; }
+            public required string CountryCode { get; set; }
 
             [LoadColumn(7)]
-            public string PreferredDevice { get; set; }
+            public required string PreferredDevice { get; set; }
 
             [LoadColumn(8)]
             public float AverageSessionDurationMinutes { get; set; }
@@ -144,10 +144,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         public class GameRecommendationPrediction
         {
             [VectorType(10)]
-            public string[] GameIds { get; set; }
+            public string[] GameIds { get; set; } = Array.Empty<string>();
 
             [VectorType(10)]
-            public float[] Scores { get; set; }
+            public float[] Scores { get; set; } = Array.Empty<float>();
         }
     }
 }

@@ -15,7 +15,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
 
         private readonly ILogger<BonusOptimizationModel> _logger;
         private MLContext _mlContext;
-        private ITransformer _model;
+        private ITransformer? _model; // Made nullable
         private string _modelPath;
         private bool _isInitialized = false;
 
@@ -54,7 +54,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
             }
         }
 
-        public async Task<List<object>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, List<object> availableBonuses, int maxRecommendations = 3)
+        public async Task<List<BonusRecommendation>> GetRecommendationsAsync(string playerId, PlayerFeatures playerFeatures, List<object> availableBonuses, int maxRecommendations = 3)
         {
             if (!_isInitialized)
             {
@@ -73,14 +73,21 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                 var recommendations = new List<BonusRecommendation>();
                 foreach (var bonus in availableBonuses)
                 {
+                    // Get properties via dynamic to avoid compilation errors
+                    dynamic bonusObj = bonus;
+                    string bonusId = bonusObj.Id;
+                    int bonusType = (int)bonusObj.Type;
+                    float bonusValue = (float)bonusObj.Value;
+                    int wageringRequirement = (int)bonusObj.WageringRequirement;
+
                     // Convert player features to input format
                     var input = new PlayerBonusFeatureInput
                     {
                         PlayerId = playerId,
-                        BonusId = bonus.Id,
-                        BonusTypeIndex = (int)bonus.Type,
-                        BonusAmount = (float)bonus.Value,
-                        WageringRequirement = (int)bonus.WageringRequirement, // Cast to int
+                        BonusId = bonusId,
+                        BonusTypeIndex = bonusType,
+                        BonusAmount = bonusValue,
+                        WageringRequirement = wageringRequirement,
                         DepositFrequencyPerMonth = playerFeatures.DepositFrequencyPerMonth,
                         AverageDepositAmount = (float)playerFeatures.AverageDepositAmount,
                         DaysSinceRegistration = playerFeatures.DaysSinceRegistration,
@@ -100,7 +107,7 @@ namespace PPGameMgmt.Infrastructure.ML.Models
                         {
                             Id = Guid.NewGuid().ToString(),
                             PlayerId = playerId,
-                            BonusId = bonus.Id,
+                            BonusId = bonusId,
                             Score = prediction.ConversionProbability,
                             RecommendationDate = DateTime.UtcNow,
                             Reason = $"ML-based optimization (ROI: {prediction.ExpectedROI:P2})"
@@ -126,10 +133,10 @@ namespace PPGameMgmt.Infrastructure.ML.Models
         public class PlayerBonusFeatureInput
         {
             [LoadColumn(0)]
-            public string PlayerId { get; set; }
+            public required string PlayerId { get; set; } // Added required modifier
 
             [LoadColumn(1)]
-            public string BonusId { get; set; }
+            public required string BonusId { get; set; } // Added required modifier
 
             [LoadColumn(2)]
             public int BonusTypeIndex { get; set; }
