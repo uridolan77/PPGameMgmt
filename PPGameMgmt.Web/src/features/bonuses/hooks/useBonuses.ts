@@ -19,10 +19,29 @@ export function useBonuses(filters?: BonusFilter) {
 
   // Handle errors
   if (query.error) {
+    console.error('Error in useBonuses hook:', query.error);
     handleApiError(query.error, 'Failed to load bonuses');
   }
 
-  return query;
+  // Process the data to ensure it's always an array
+  const processedData = query.data && typeof query.data === 'object' ? (
+    // Handle different response structures
+    'value' in query.data ?
+      query.data.value :
+    'data' in query.data ?
+      query.data.data :
+    'isSuccess' in query.data && 'data' in query.data ?
+      query.data.data :
+    Array.isArray(query.data) ?
+      query.data :
+      []
+  ) : [];
+
+  // Return the modified query with processed data
+  return {
+    ...query,
+    data: Array.isArray(processedData) ? processedData : []
+  };
 }
 
 /**

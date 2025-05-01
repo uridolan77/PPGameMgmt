@@ -107,12 +107,19 @@ const MuiBonusesList: React.FC = () => {
 
   // Calculate bonus statistics
   const bonusStats = useMemo(() => {
-    if (!bonuses) return {
+    // Default stats if no bonuses data
+    const defaultStats = {
       totalBonuses: 0,
       activeBonuses: 0,
       expiredBonuses: 0,
       vipBonuses: 0
     };
+
+    // Check if bonuses exists and is an array
+    if (!bonuses || !Array.isArray(bonuses)) {
+      console.log('Bonuses data is not an array:', bonuses);
+      return defaultStats;
+    }
 
     const now = new Date();
     const totalBonuses = bonuses.length;
@@ -130,44 +137,55 @@ const MuiBonusesList: React.FC = () => {
 
   // Memoize filtered bonuses to avoid unnecessary re-filtering
   const filteredBonuses = useMemo(() => {
-    if (!bonuses) return [];
+    // Check if bonuses exists and is an array
+    if (!bonuses || !Array.isArray(bonuses)) {
+      console.log('Bonuses data is not an array for filtering:', bonuses);
+      return [];
+    }
 
-    return bonuses.filter((bonus) =>
-      bonus.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bonus.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (bonus.targetSegment && bonus.targetSegment.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return bonuses;
+
+    return bonuses.filter((bonus) => {
+      if (!bonus) return false;
+
+      return (
+        (bonus.name && bonus.name.toLowerCase().includes(query)) ||
+        (bonus.description && bonus.description.toLowerCase().includes(query)) ||
+        (bonus.targetSegment && bonus.targetSegment.toLowerCase().includes(query))
+      );
+    });
   }, [bonuses, searchQuery]);
 
   // Define columns for the data table
   const columns: Column<Bonus>[] = [
-    { 
-      id: 'name', 
+    {
+      id: 'name',
       label: 'Name',
       format: (value, bonus) => (
         <Box>
           <Typography variant="body2" fontWeight="medium">{value}</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            {bonus.description.length > 60 
-              ? `${bonus.description.substring(0, 60)}...` 
+            {bonus.description.length > 60
+              ? `${bonus.description.substring(0, 60)}...`
               : bonus.description}
           </Typography>
         </Box>
       )
     },
-    { 
-      id: 'value', 
+    {
+      id: 'value',
       label: 'Value',
       format: (value, bonus) => (
-        <Chip 
-          label={formatBonusValue(bonus)} 
-          size="small" 
+        <Chip
+          label={formatBonusValue(bonus)}
+          size="small"
           variant="outlined"
         />
       )
     },
-    { 
-      id: 'period', 
+    {
+      id: 'period',
       label: 'Period',
       format: (_, bonus) => (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -178,13 +196,13 @@ const MuiBonusesList: React.FC = () => {
         </Box>
       )
     },
-    { 
-      id: 'targetSegment', 
+    {
+      id: 'targetSegment',
       label: 'Target Segment',
       format: (value) => value ? (
-        <Chip 
-          label={value} 
-          size="small" 
+        <Chip
+          label={value}
+          size="small"
           color={value === 'VIP' ? 'warning' : 'default'}
           variant="outlined"
         />
@@ -192,8 +210,8 @@ const MuiBonusesList: React.FC = () => {
         <Typography variant="body2" color="text.secondary">All Players</Typography>
       )
     },
-    { 
-      id: 'claims', 
+    {
+      id: 'claims',
       label: 'Claims',
       format: (_, bonus) => (
         <Typography variant="body2">
@@ -202,16 +220,16 @@ const MuiBonusesList: React.FC = () => {
         </Typography>
       )
     },
-    { 
-      id: 'isActive', 
+    {
+      id: 'isActive',
       label: 'Status',
       align: 'center',
       format: (value, bonus) => {
         const isExpired = isBonusExpired(bonus);
         return (
-          <Chip 
-            label={getStatusText(bonus)} 
-            size="small" 
+          <Chip
+            label={getStatusText(bonus)}
+            size="small"
             color={isExpired ? 'error' : value ? 'success' : 'default'}
             variant="outlined"
           />
@@ -300,13 +318,13 @@ const MuiBonusesList: React.FC = () => {
       {/* Main Content */}
       <Paper sx={{ mb: 4 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange} 
-            variant="fullWidth" 
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            variant="fullWidth"
             indicatorColor="primary"
             textColor="primary"
-            sx={{ 
+            sx={{
               '& .MuiTab-root': {
                 py: 2,
                 fontWeight: 'medium'

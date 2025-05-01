@@ -47,7 +47,7 @@ export function usePlayersQueryV3(params?: any) {
         result.data.value :
       'data' in result.data ?
         result.data.data :
-      'isSuccess' in result.data && result.data.data ?
+      'isSuccess' in result.data && 'data' in result.data ?
         result.data.data :
       Array.isArray(result.data) ?
         result.data :
@@ -96,7 +96,7 @@ export function usePlayerFeaturesV3(playerId?: number) {
   const api = usePlayerApiV3();
   return api.createCustomQuery(
     'features',
-    (id) => playerApi.getFeatures(id),
+    (id: string | number) => playerApi.getFeatures(typeof id === 'string' ? parseInt(id, 10) : id),
     {
       validateResponse: playerSchemas.playerFeature.array(),
     }
@@ -107,7 +107,7 @@ export function usePlayerGameSessionsV3(playerId?: number) {
   const api = usePlayerApiV3();
   return api.createCustomQuery(
     'game-sessions',
-    (id) => playerApi.getGameSessions(id),
+    (id: string | number) => playerApi.getGameSessions(typeof id === 'string' ? parseInt(id, 10) : id),
     {
       validateResponse: playerSchemas.gameSession.array(),
     }
@@ -118,7 +118,7 @@ export function usePlayerBonusClaimsV3(playerId?: number) {
   const api = usePlayerApiV3();
   return api.createCustomQuery(
     'bonus-claims',
-    (id) => playerApi.getBonusClaims(id),
+    (id: string | number) => playerApi.getBonusClaims(typeof id === 'string' ? parseInt(id, 10) : id),
     {
       validateResponse: playerSchemas.bonusClaim.array(),
     }
@@ -139,8 +139,8 @@ export function useTogglePlayerStatusV3() {
       invalidateQueries: [CACHE_KEYS.PLAYERS],
       updateQueries: [
         {
-          queryKey: [CACHE_KEYS.PLAYER, 'detail', id],
-          updater: (oldData, newData) => newData
+          queryKey: [CACHE_KEYS.PLAYER, 'detail'],
+          updater: (_oldData, newData) => newData
         }
       ],
       successMessage: 'Player status updated successfully',

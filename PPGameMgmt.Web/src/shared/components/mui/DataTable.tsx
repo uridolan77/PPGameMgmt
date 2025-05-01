@@ -116,6 +116,9 @@ export function DataTable<T>({
     }
   };
 
+  // Ensure data is an array
+  const safeData = Array.isArray(data) ? data : [];
+
   // Display states
   if (isLoading) {
     if (loadingComponent) {
@@ -149,7 +152,26 @@ export function DataTable<T>({
     );
   }
 
-  if (data.length === 0) {
+  if (!Array.isArray(data)) {
+    console.error('DataTable received non-array data:', data);
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '300px', gap: 2 }}>
+        <Typography color="error">Invalid data format</Typography>
+        {onRetry && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={onRetry}
+            sx={{ mt: 2 }}
+          >
+            Retry
+          </Button>
+        )}
+      </Box>
+    );
+  }
+
+  if (safeData.length === 0) {
     if (emptyComponent) {
       return <>{emptyComponent}</>;
     }
@@ -162,8 +184,8 @@ export function DataTable<T>({
 
   // Pagination logic
   const paginatedData = pagination
-    ? data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : data;
+    ? safeData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+    : safeData;
 
   return (
     <Paper sx={paperStyle}>
@@ -212,7 +234,7 @@ export function DataTable<T>({
         <TablePagination
           rowsPerPageOptions={rowsPerPageOptions}
           component="div"
-          count={data.length}
+          count={safeData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
