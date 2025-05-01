@@ -130,8 +130,10 @@ try
 
     // Configure the HTTP request pipeline using our extension methods
     app.ConfigureMiddleware(builder.Configuration)
-       .ConfigureHealthChecks()
-       .ConfigureEndpoints();
+       .ConfigureHealthChecks();
+       
+    // Call one of the ConfigureEndpoints methods directly to avoid ambiguity
+    PPGameMgmt.API.Extensions.EndpointExtensions.ConfigureEndpoints(app);
 
     // Test database connection at startup and initialize ML models
     await InitializeDatabaseAndModels(app);

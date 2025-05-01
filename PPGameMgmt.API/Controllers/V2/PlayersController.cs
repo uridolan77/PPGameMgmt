@@ -19,7 +19,6 @@ namespace PPGameMgmt.API.Controllers.V2
     [Authorize]
     public class PlayersController : BaseApiController
     {
-        private readonly ILogger<PlayersController> _logger;
         private readonly IPlayerService _playerService;
         private readonly IMediator _mediator;
 
@@ -27,8 +26,8 @@ namespace PPGameMgmt.API.Controllers.V2
             ILogger<PlayersController> logger,
             IPlayerService playerService,
             IMediator mediator)
+            : base(logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         }
@@ -48,7 +47,12 @@ namespace PPGameMgmt.API.Controllers.V2
 
                 if (segment.HasValue)
                 {
-                    _logger.LogInformation($"V2 API: Getting players by segment: {segment}, page {pageNumber}, size {pageSize}");
+                    _logger.LogInformation(
+                        "Getting players by segment: {Segment}, Page: {PageNumber}, Size: {PageSize}",
+                        segment,
+                        pageNumber,
+                        pageSize);
+
                     var query = new GetPlayersBySegmentQuery { Segment = segment.Value };
                     players = await _mediator.Send(query);
                     totalCount = players.Count();
@@ -58,7 +62,11 @@ namespace PPGameMgmt.API.Controllers.V2
                 }
                 else
                 {
-                    _logger.LogInformation($"V2 API: Getting all active players, page {pageNumber}, size {pageSize}");
+                    _logger.LogInformation(
+                        "Getting all active players, Page: {PageNumber}, Size: {PageSize}",
+                        pageNumber,
+                        pageSize);
+
                     players = await _playerService.GetActivePlayers(30); // Active within last 30 days
                     totalCount = players.Count();
 
@@ -88,7 +96,13 @@ namespace PPGameMgmt.API.Controllers.V2
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving players");
+                _logger.LogError(
+                    ex,
+                    "Error retrieving players with parameters: Segment={Segment}, PageNumber={PageNumber}, PageSize={PageSize}",
+                    segment,
+                    pageNumber,
+                    pageSize);
+
                 return ServerErrorResponse<IEnumerable<PlayerDto>>("Error retrieving players");
             }
         }
@@ -132,8 +146,12 @@ namespace PPGameMgmt.API.Controllers.V2
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving player {id}");
-                return ServerErrorResponse<PlayerDto>("Error retrieving player");
+                _logger.LogError(
+                    ex,
+                    "Error retrieving player with ID: {PlayerId}",
+                    id);
+
+                return ServerErrorResponse<PlayerDto>($"Error retrieving player with ID {id}");
             }
         }
     }

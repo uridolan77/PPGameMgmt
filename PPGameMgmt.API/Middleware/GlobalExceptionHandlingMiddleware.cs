@@ -34,26 +34,72 @@ namespace PPGameMgmt.API.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
+            // Ensure we have a correlation ID for request tracing
+            var correlationId = context.TraceIdentifier;
+
+            // Add correlation ID to response headers for client-side tracking
+            context.Response.Headers.Append("X-Correlation-Id", correlationId);
+
+            // Add correlation ID to logging context for all logs in this request
+            using var scope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["CorrelationId"] = correlationId,
+                ["RequestPath"] = context.Request.Path,
+                ["RequestMethod"] = context.Request.Method,
+                ["UserAgent"] = context.Request.Headers.UserAgent.ToString()
+            });
+
             try
             {
-                _logger.LogInformation("GlobalExceptionHandlingMiddleware processing request for path: {Path}", context.Request.Path);
+                _logger.LogDebug("Request started: {Method} {Path}", context.Request.Method, context.Request.Path);
+
+                // Measure request execution time
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 await _next(context);
-                _logger.LogInformation("GlobalExceptionHandlingMiddleware completed request for path: {Path}", context.Request.Path);
+                stopwatch.Stop();
+
+                _logger.LogInformation(
+                    "Request completed: {Method} {Path} - Status: {StatusCode}, Duration: {ElapsedMilliseconds}ms",
+                    context.Request.Method,
+                    context.Request.Path,
+                    context.Response.StatusCode,
+                    stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
-                // Log the exception with correlation ID for traceability
-                var correlationId = context.TraceIdentifier;
-                _logger.LogError(ex, "An unhandled exception occurred. CorrelationId: {CorrelationId}, Path: {Path}", correlationId, context.Request.Path);
+                // Log the exception with structured data for better analysis
+                _logger.LogError(
+                    ex,
+                    "Exception occurred while processing request: {Method} {Path}",
+                    context.Request.Method,
+                    context.Request.Path);
+
+                // Log additional context information
+                var requestBody = string.Empty;
+                if (context.Request.ContentLength.HasValue && context.Request.ContentLength > 0 && context.Request.Body.CanSeek)
+                {
+                    context.Request.EnableBuffering();
+                    context.Request.Body.Position = 0;
+                    using var reader = new System.IO.StreamReader(context.Request.Body, leaveOpen: true);
+                    requestBody = await reader.ReadToEndAsync();
+                    context.Request.Body.Position = 0;
+
+                    // Only log request body for non-sensitive endpoints
+                    if (!context.Request.Path.ToString().Contains("login", StringComparison.OrdinalIgnoreCase) &&
+                        !context.Request.Path.ToString().Contains("auth", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogDebug("Request body: {RequestBody}", requestBody);
+                    }
+                }
 
                 // Log inner exception details if available
                 if (ex.InnerException != null)
                 {
-                    _logger.LogError(ex.InnerException, "Inner exception details. CorrelationId: {CorrelationId}", correlationId);
+                    _logger.LogError(
+                        ex.InnerException,
+                        "Inner exception: {InnerExceptionMessage}",
+                        ex.InnerException.Message);
                 }
-
-                // Log stack trace
-                _logger.LogError("Exception stack trace: {StackTrace}", ex.StackTrace);
 
                 await HandleExceptionAsync(context, ex, correlationId);
             }

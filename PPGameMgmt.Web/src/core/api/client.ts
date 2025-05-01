@@ -177,6 +177,9 @@ export class ApiClient {
         // Construct the full URL with parameters
         const fullUrl = new URL(url.startsWith('/') ? url.slice(1) : url, this.baseUrl);
 
+        // Log the request URL for debugging
+        console.log(`API Request: ${method} ${fullUrl.toString()}`);
+
         // Add query parameters if they exist
         if (params) {
           Object.entries(params).forEach(([key, value]) => {
@@ -365,7 +368,7 @@ export class ApiClient {
 
 // Create and export a default instance with environment variables
 export const apiClient = new ApiClient({
-  baseUrl: (import.meta.env.VITE_API_URL || 'http://localhost:7210') + '/api',
+  baseUrl: 'https://localhost:7210', // Use HTTPS and the base URL without the /api suffix
   cacheConfig: {
     enabled: true,
     maxAge: 2 * 60 * 1000, // 2 minutes

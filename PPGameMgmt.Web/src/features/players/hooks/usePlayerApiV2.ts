@@ -13,7 +13,7 @@ import { CACHE_KEYS } from '../../../core/api/cacheConfig';
 
 // Create the base player hooks using the hook factory
 const playerHooks = createEntityHooks<Player>(
-  'players',
+  'Players',
   playerApi,
   DataCategory.PLAYER
 );
@@ -52,7 +52,7 @@ export function usePlayerBonusClaims(playerId?: number) {
  */
 export function useTogglePlayerStatus() {
   const queryClient = useQueryClient();
-  
+
   return playerHooks.createCustomMutation<Player, { id: number; isActive: boolean }>(
     ({ id, isActive }) => playerApi.update(id, { isActive }),
     {

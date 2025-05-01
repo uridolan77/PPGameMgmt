@@ -11,7 +11,7 @@ import { CACHE_KEYS } from '../../../core/api/cacheConfig';
 
 // Create the enhanced player API hook
 const usePlayerApiV3 = createFeatureApi(
-  'players',
+  'Players',
   playerApi,
   {
     entity: playerSchemas.player,
@@ -28,12 +28,52 @@ export { usePlayerApiV3 };
 // Create and export individual hooks for specific operations
 export function usePlayersQueryV3(params?: any) {
   const api = usePlayerApiV3();
-  return api.getAll(params);
+  const result = api.getAll(params);
+
+  // Add debugging to see what's happening with the data
+  console.log('usePlayersQueryV3 result:', {
+    data: result.data,
+    isLoading: result.isLoading,
+    isError: result.isError,
+    error: result.error
+  });
+
+  // Create a modified result with transformed data if needed
+  const modifiedResult = {
+    ...result,
+    data: result.data && typeof result.data === 'object' ? (
+      // Handle different response structures
+      'value' in result.data ?
+        result.data.value :
+      'data' in result.data ?
+        result.data.data :
+      'isSuccess' in result.data && result.data.data ?
+        result.data.data :
+      Array.isArray(result.data) ?
+        result.data :
+        result.data
+    ) : result.data
+  };
+
+  // Additional logging to see the transformed data
+  console.log('usePlayersQueryV3 transformed data:', modifiedResult.data);
+
+  return modifiedResult;
 }
 
 export function usePlayerQueryV3(id?: number) {
   const api = usePlayerApiV3();
-  return api.getById(id);
+  const result = api.getById(id);
+
+  // Add debugging to see what's happening with the data
+  console.log('usePlayerQueryV3 result:', {
+    data: result.data,
+    isLoading: result.isLoading,
+    isError: result.isError,
+    error: result.error
+  });
+
+  return result;
 }
 
 export function useCreatePlayerMutationV3() {
@@ -90,10 +130,10 @@ export function usePlayerBonusClaimsV3(playerId?: number) {
  */
 export function useTogglePlayerStatusV3() {
   const api = usePlayerApiV3();
-  
+
   return api.createCustomMutation(
     'toggle-status',
-    ({ id, isActive }: { id: number; isActive: boolean }) => 
+    ({ id, isActive }: { id: number; isActive: boolean }) =>
       playerApi.update(id, { isActive }),
     {
       invalidateQueries: [CACHE_KEYS.PLAYERS],

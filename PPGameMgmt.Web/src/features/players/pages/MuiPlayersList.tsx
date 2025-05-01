@@ -8,6 +8,7 @@ import { handleApiError, ErrorDomain } from '../../../core/error';
 // MUI Components
 import {
   Box,
+  Button,
   Container,
   Grid,
   Paper,
@@ -16,6 +17,8 @@ import {
   Avatar,
   Chip,
   IconButton,
+  CircularProgress,
+  Typography,
   useTheme
 } from '@mui/material';
 
@@ -26,7 +29,8 @@ import {
   PersonOutlined,
   PersonAddOutlined,
   EmojiEvents,
-  Visibility
+  Visibility,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 
 // Shared MUI Components
@@ -46,6 +50,7 @@ const MuiPlayersList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Use the real API hook instead of mock data
+  console.log('MuiPlayersList: Before usePlayersQueryV3 call');
   const {
     data: players,
     isLoading,
@@ -54,28 +59,114 @@ const MuiPlayersList: React.FC = () => {
     refetch
   } = usePlayersQueryV3();
 
-  // Handle API errors
+  // Log detailed information for debugging
+  console.log('MuiPlayersList: After usePlayersQueryV3 call', {
+    players,
+    isLoading,
+    isError,
+    error,
+    playersType: players ? typeof players : 'undefined',
+    playersIsArray: players ? Array.isArray(players) : false,
+    playersLength: players && Array.isArray(players) ? players.length : 'N/A'
+  });
+
+  // Handle API errors with more context
   React.useEffect(() => {
     if (isError && error) {
+      console.error('Error loading players data:', error);
       handleApiError(error, 'Failed to load players', {
         domain: ErrorDomain.PLAYER,
-        action: 'fetch'
+        showToast: true,
+        logError: true
       });
     }
   }, [isError, error]);
 
+  // Add a manual refresh function
+  const handleManualRefresh = () => {
+    console.log('MuiPlayersList: Manual refresh triggered');
+    if (refetch) {
+      refetch();
+    }
+  };
+
+  // Component lifecycle logging
+  React.useEffect(() => {
+    console.log('MuiPlayersList: Component mounted');
+
+    // Trigger a manual refetch when the component mounts
+    if (refetch) {
+      console.log('MuiPlayersList: Initial refetch triggered');
+      refetch();
+    }
+
+    return () => {
+      console.log('MuiPlayersList: Component unmounted');
+    };
+  }, [refetch]);
+
+  // Handle API errors
+  React.useEffect(() => {
+    if (isError && error) {
+      console.log('MuiPlayersList: Error detected', error);
+      handleApiError(error, 'Failed to load players', {
+        domain: ErrorDomain.PLAYER,
+        action: 'fetch',
+        showToast: true,
+        logError: true
+      });
+
+      // Automatically retry after 5 seconds on network errors
+      if (error.message && (
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('Network Error') ||
+        error.message.includes('timeout')
+      )) {
+        console.log('MuiPlayersList: Network error detected, scheduling retry');
+        const retryTimer = setTimeout(() => {
+          console.log('MuiPlayersList: Auto-retrying after network error');
+          if (refetch) {
+            refetch();
+          }
+        }, 5000);
+
+        return () => clearTimeout(retryTimer);
+      }
+    }
+  }, [isError, error, refetch]);
+
   // Stats for the overview tab
   const playerStats = useMemo(() => {
-    if (!players) return {
+    // Default stats if no players data
+    const defaultStats = {
       totalPlayers: 0,
       activePlayers: 0,
       newPlayers: 0,
       vipPlayers: 0
     };
 
+    // Check if players exists and is an array
+    if (!players || !Array.isArray(players)) {
+      console.log('Players data is not an array:', players);
+      return defaultStats;
+    }
+
+    console.log('Processing players array:', players);
+
     const totalPlayers = players.length;
-    const activePlayers = players.filter((p: Player) => p.isActive).length;
-    const vipPlayers = players.filter((p: Player) => p.segment === 'VIP').length;
+
+    // Safely filter players with null checks
+    const activePlayers = players.filter((p: Player) => p && p.isActive).length;
+
+    // Handle different segment formats (string or number)
+    const vipPlayers = players.filter((p: Player) => {
+      if (!p || !p.segment) return false;
+
+      // Check if segment is 'VIP' (string) or a number representing VIP status
+      return p.segment === 'VIP' ||
+             p.segment === 'vip' ||
+             (typeof p.segment === 'number' && p.segment >= 3);
+    }).length;
 
     // Calculate new players (those who registered in the last 30 days)
     const thirtyDaysAgo = new Date();
@@ -83,9 +174,18 @@ const MuiPlayersList: React.FC = () => {
 
     // Use registrationDate if available, otherwise use a placeholder
     const newPlayers = players.filter((p: Player) => {
-      if (p.registrationDate) {
-        const regDate = new Date(p.registrationDate);
-        return regDate >= thirtyDaysAgo;
+      if (!p) return false;
+
+      // Check for different date field names
+      const dateField = p.registrationDate || p.createdAt || p.created || p.joinDate;
+
+      if (dateField) {
+        try {
+          const regDate = new Date(dateField);
+          return !isNaN(regDate.getTime()) && regDate >= thirtyDaysAgo;
+        } catch (e) {
+          return false;
+        }
       }
       return false;
     }).length || Math.floor(totalPlayers * 0.15); // Fallback to 15% if no registration dates
@@ -175,13 +275,44 @@ const MuiPlayersList: React.FC = () => {
 
   // Memoize filtered players to avoid unnecessary re-filtering
   const filteredPlayers = useMemo(() => {
-    if (!players) return [];
+    // Check if players exists and is an array
+    if (!players || !Array.isArray(players)) {
+      console.log('Players data is not an array for filtering:', players);
+      return [];
+    }
 
-    return players.filter((player: Player) =>
-      player.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      player.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (player.segment && player.segment.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return players;
+
+    return players.filter((player: Player) => {
+      if (!player) return false;
+
+      // Check username (handle different field names)
+      const username = player.username || player.name || player.displayName || '';
+      if (username.toLowerCase().includes(query)) return true;
+
+      // Check email
+      const email = player.email || '';
+      if (email.toLowerCase().includes(query)) return true;
+
+      // Check segment (handle different types)
+      const segment = player.segment || '';
+      if (typeof segment === 'string' && segment.toLowerCase().includes(query)) return true;
+
+      // Check other fields that might be searchable
+      const firstName = player.firstName || '';
+      const lastName = player.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (firstName.toLowerCase().includes(query) ||
+          lastName.toLowerCase().includes(query) ||
+          fullName.toLowerCase().includes(query)) return true;
+
+      // Check country
+      const country = player.country || '';
+      if (country.toLowerCase().includes(query)) return true;
+
+      return false;
+    });
   }, [players, searchQuery]);
 
   // Add a retry button for error state
@@ -197,6 +328,27 @@ const MuiPlayersList: React.FC = () => {
       <PageHeader
         title="Players"
         description="Manage and monitor all players on your platform"
+        actions={
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleManualRefresh}
+              startIcon={<RefreshIcon />}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<PersonAddOutlined />}
+              onClick={() => navigate('/players/new')}
+            >
+              Add Player
+            </Button>
+          </Box>
+        }
       />
 
       {/* Stats Overview */}
@@ -364,55 +516,87 @@ const PlayerDataTable: React.FC<PlayerDataTableProps> = ({
     {
       id: 'username',
       label: 'Username',
-      format: (value, player) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar sx={{ bgcolor: getAvatarColor(player.username), width: 32, height: 32 }}>
-            {player.username.charAt(0).toUpperCase()}
-          </Avatar>
-          {value}
-        </Box>
-      )
+      format: (value, player) => {
+        // Handle different username field names
+        const displayName = value || player.name || player.displayName || 'User';
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar sx={{ bgcolor: getAvatarColor(displayName), width: 32, height: 32 }}>
+              {displayName.charAt(0).toUpperCase()}
+            </Avatar>
+            {displayName}
+          </Box>
+        );
+      }
     },
-    { id: 'email', label: 'Email' },
+    {
+      id: 'email',
+      label: 'Email',
+      format: (value) => value || 'N/A'
+    },
     {
       id: 'playerLevel',
       label: 'Level',
       align: 'center',
-      format: (value) => (
-        <Chip
-          label={`Level ${value}`}
-          size="small"
-          variant="outlined"
-        />
-      )
+      format: (value, player) => {
+        // Handle different level field names
+        const level = value || player.level || 1;
+        return (
+          <Chip
+            label={`Level ${level}`}
+            size="small"
+            variant="outlined"
+          />
+        );
+      }
     },
     {
       id: 'segment',
       label: 'Segment',
-      format: (value) => value ? (
-        <Chip
-          label={value}
-          size="small"
-          color={value === 'VIP' ? 'warning' : 'default'}
-        />
-      ) : 'None'
+      format: (value) => {
+        if (!value) return 'None';
+
+        // Handle different segment formats
+        const isVip = value === 'VIP' ||
+                     value === 'vip' ||
+                     (typeof value === 'number' && value >= 3);
+
+        return (
+          <Chip
+            label={typeof value === 'string' ? value : `Segment ${value}`}
+            size="small"
+            color={isVip ? 'warning' : 'default'}
+          />
+        );
+      }
     },
     {
       id: 'lastLogin',
       label: 'Last Login',
-      format: (value) => value ? formatDate(value) : 'Never'
+      format: (value, player) => {
+        // Handle different last login field names
+        const lastLoginDate = value || player.lastLoginDate;
+        return lastLoginDate ? formatDate(lastLoginDate) : 'Never';
+      }
     },
     {
       id: 'isActive',
       label: 'Status',
       align: 'center',
-      format: (value) => (
-        <Chip
-          label={value ? 'Active' : 'Inactive'}
-          size="small"
-          color={value ? 'success' : 'error'}
-        />
-      )
+      format: (value, player) => {
+        // Handle different active status field names
+        const isActive = value !== undefined ? value :
+                        player.active !== undefined ? player.active :
+                        player.status === 'active' || player.status === true;
+
+        return (
+          <Chip
+            label={isActive ? 'Active' : 'Inactive'}
+            size="small"
+            color={isActive ? 'success' : 'error'}
+          />
+        );
+      }
     },
     {
       id: 'actions',
@@ -429,6 +613,28 @@ const PlayerDataTable: React.FC<PlayerDataTableProps> = ({
     }
   ];
 
+  // If there's an error, show a more user-friendly error message with retry button
+  if (isError) {
+    return (
+      <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'error.light', color: 'error.contrastText' }}>
+        <Typography variant="h6" gutterBottom>
+          Error loading player data
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          There was a problem connecting to the server. Please try again.
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={onRetry}
+          startIcon={<RefreshIcon />}
+        >
+          Retry
+        </Button>
+      </Paper>
+    );
+  }
+
   return (
     <DataTable
       columns={columns}
@@ -442,6 +648,14 @@ const PlayerDataTable: React.FC<PlayerDataTableProps> = ({
       initialRowsPerPage={10}
       rowsPerPageOptions={[5, 10, 25, 50]}
       onRetry={onRetry}
+      loadingComponent={
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+          <CircularProgress size={40} />
+          <Typography variant="h6" sx={{ ml: 2 }}>
+            Loading players...
+          </Typography>
+        </Box>
+      }
     />
   );
 };

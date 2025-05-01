@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace PPGameMgmt.API.Models
@@ -39,55 +40,73 @@ namespace PPGameMgmt.API.Models
         public long ExecutionTimeMs { get; set; }
 
         /// <summary>
-        /// Creates a successful response with data
+        /// Correlation ID for request tracing
         /// </summary>
-        public static ApiResponse<T> Success(T data, string? message = null)
-        {
-            return new ApiResponse<T>
-            {
-                IsSuccess = true,
-                Message = message,
-                Data = data
-            };
-        }
+        public string? CorrelationId { get; set; }
 
         /// <summary>
-        /// Creates a successful paginated response with data
+        /// Timestamp of the response in UTC
         /// </summary>
-        public static ApiResponse<T> SuccessWithPagination(T data, PaginationMetadata pagination, string? message = null)
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Creates a successful response with data
+        /// </summary>
+        public static ApiResponse<T> Success(T data, string? message = null, string? correlationId = null)
         {
             return new ApiResponse<T>
             {
                 IsSuccess = true,
                 Message = message,
                 Data = data,
-                Pagination = pagination
+                CorrelationId = correlationId ?? Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
+        /// Creates a successful paginated response with data
+        /// </summary>
+        public static ApiResponse<T> SuccessWithPagination(T data, PaginationMetadata pagination, string? message = null, string? correlationId = null)
+        {
+            return new ApiResponse<T>
+            {
+                IsSuccess = true,
+                Message = message,
+                Data = data,
+                Pagination = pagination,
+                CorrelationId = correlationId ?? Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
             };
         }
 
         /// <summary>
         /// Creates a failed response with errors
         /// </summary>
-        public static ApiResponse<T> Failure(string message, List<string>? errors = null)
+        public static ApiResponse<T> Failure(string message, List<string>? errors = null, string? correlationId = null)
         {
             return new ApiResponse<T>
             {
                 IsSuccess = false,
                 Message = message,
-                Errors = errors ?? new List<string>()
+                Errors = errors ?? [],
+                CorrelationId = correlationId ?? Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
             };
         }
 
         /// <summary>
         /// Creates a failed response with a single error
         /// </summary>
-        public static ApiResponse<T> Failure(string message, string error)
+        public static ApiResponse<T> Failure(string message, string error, string? correlationId = null)
         {
             return new ApiResponse<T>
             {
                 IsSuccess = false,
                 Message = message,
-                Errors = new List<string> { error }
+                Errors = [error],
+                CorrelationId = correlationId ?? Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
             };
         }
     }

@@ -13,14 +13,14 @@ import { CACHE_KEYS } from '../../../core/api/cacheConfig';
 
 // Create the base bonus hooks using the hook factory
 const bonusHooks = createEntityHooks<Bonus>(
-  'bonuses',
+  'Bonuses',
   bonusApi,
   DataCategory.BONUS
 );
 
 // Create the base bonus claim hooks using the hook factory
 const bonusClaimHooks = createEntityHooks<BonusClaim, Omit<BonusClaim, 'id'>, Partial<BonusClaim>>(
-  'bonus-claims',
+  'BonusClaims',
   {
     getAll: (params?: BonusClaimFilter) => bonusApi.getClaims(params),
     getById: (id: number) => bonusApi.getClaimById(id),
@@ -87,7 +87,7 @@ export function useBonusApiV2() {
     createBonus: useCreateBonusMutation,
     updateBonus: useUpdateBonusMutation,
     deleteBonus: useDeleteBonusMutation,
-    
+
     // Bonus claim operations
     getBonusClaims: useBonusClaimsQuery,
     getBonusClaim: useBonusClaimQuery,

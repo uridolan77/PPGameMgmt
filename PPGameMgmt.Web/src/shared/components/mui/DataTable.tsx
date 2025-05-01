@@ -41,6 +41,9 @@ export interface DataTableProps<T> {
   rowsPerPageOptions?: number[];
   sx?: SxProps<Theme>;
   paperSx?: SxProps<Theme>;
+  loadingComponent?: React.ReactNode;
+  errorComponent?: React.ReactNode;
+  emptyComponent?: React.ReactNode;
 }
 
 export function DataTable<T>({
@@ -57,7 +60,10 @@ export function DataTable<T>({
   initialRowsPerPage = 10,
   rowsPerPageOptions = [5, 10, 25, 50],
   sx,
-  paperSx
+  paperSx,
+  loadingComponent,
+  errorComponent,
+  emptyComponent
 }: DataTableProps<T>) {
   const theme = useTheme();
   let currentTheme;
@@ -112,6 +118,9 @@ export function DataTable<T>({
 
   // Display states
   if (isLoading) {
+    if (loadingComponent) {
+      return <>{loadingComponent}</>;
+    }
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
         <CircularProgress size={40} />
@@ -120,6 +129,9 @@ export function DataTable<T>({
   }
 
   if (isError) {
+    if (errorComponent) {
+      return <>{errorComponent}</>;
+    }
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '300px', gap: 2 }}>
         <Typography color="error">{errorMessage}</Typography>
@@ -138,6 +150,9 @@ export function DataTable<T>({
   }
 
   if (data.length === 0) {
+    if (emptyComponent) {
+      return <>{emptyComponent}</>;
+    }
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
         <Typography color="text.secondary">{emptyMessage}</Typography>

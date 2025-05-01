@@ -158,7 +158,7 @@ namespace PPGameMgmt.Infrastructure.Services
                 if (playerFeatures == null)
                 {
                     _logger.LogWarning("Unable to get features for player: {PlayerId}, returning default ranking", playerId);
-                    return activeBonuses.OrderByDescending(b => b.Value);
+                    return activeBonuses.OrderByDescending(b => b.Amount);
                 }
 
                 // In a real implementation, we'd score each bonus using the ML model
@@ -174,7 +174,7 @@ namespace PPGameMgmt.Infrastructure.Services
                     .OrderByDescending(b => preferredType.HasValue && b.Type.Equals(preferredType.Value) ? 1 : 0)
                     .ThenByDescending(b => b.TargetSegments != null &&
                                      b.TargetSegments.Contains(playerFeatures.CurrentSegment) ? 1 : 0)
-                    .ThenByDescending(b => b.Value)
+                    .ThenByDescending(b => b.Amount)
                     .ToList();
 
                 _logger.LogInformation("Ranked {Count} bonuses for player: {PlayerId}", rankedBonuses.Count, playerId);

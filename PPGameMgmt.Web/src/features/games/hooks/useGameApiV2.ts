@@ -13,7 +13,7 @@ import { CACHE_KEYS } from '../../../core/api/cacheConfig';
 
 // Create the base game hooks using the hook factory
 const gameHooks = createEntityHooks<Game>(
-  'games',
+  'Games',
   gameApi,
   DataCategory.GAME
 );
@@ -30,7 +30,7 @@ export const useDeleteGameMutation = gameHooks.useDelete;
  */
 export function useToggleGameStatus() {
   const queryClient = useQueryClient();
-  
+
   return gameHooks.createCustomMutation<Game, { id: number; isActive: boolean }>(
     ({ id, isActive }) => gameApi.updateStatus(id, isActive),
     {

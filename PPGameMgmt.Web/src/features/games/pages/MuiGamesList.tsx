@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGames } from '../hooks';
 import { Game, GameFilter } from '../types';
 import { GameCard } from '../components';
+import { handleApiError, ErrorDomain } from '../../../core/error';
 
 // MUI Components
 import {
@@ -19,7 +20,8 @@ import {
   Typography,
   Tabs,
   Tab,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 
 // MUI Icons
@@ -29,7 +31,8 @@ import {
   SportsEsports as GamesIcon,
   VideogameAsset as ActiveGamesIcon,
   Block as InactiveGamesIcon,
-  Stars as PopularGamesIcon
+  Stars as PopularGamesIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 
 // Shared MUI Components
@@ -66,6 +69,29 @@ const MuiGamesList: React.FC = () => {
     toggleGameStatus
   } = useGames(filters);
 
+  // Log detailed information for debugging
+  console.log('MuiGamesList: After useGames call', {
+    games,
+    isLoading,
+    isError,
+    error,
+    gamesType: games ? typeof games : 'undefined',
+    gamesIsArray: games ? Array.isArray(games) : false,
+    gamesLength: games && Array.isArray(games) ? games.length : 'N/A'
+  });
+
+  // Handle API errors with more context
+  React.useEffect(() => {
+    if (isError && error) {
+      console.error('Error loading games data:', error);
+      handleApiError(error, 'Failed to load games', {
+        domain: ErrorDomain.GAME,
+        showToast: true,
+        logError: true
+      });
+    }
+  }, [isError, error]);
+
   // Handle game click navigation
   const handleGameClick = (game: Game) => {
     navigate(`/games/${game.id}`);
@@ -99,17 +125,35 @@ const MuiGamesList: React.FC = () => {
 
   // Calculate game statistics
   const gameStats = useMemo(() => {
-    if (!games) return {
+    // Default stats if no games data
+    const defaultStats = {
       totalGames: 0,
       activeGames: 0,
       inactiveGames: 0,
       popularGames: 0
     };
 
+    // Check if games exists and is an array
+    if (!games || !Array.isArray(games)) {
+      console.log('Games data is not an array:', games);
+      return defaultStats;
+    }
+
+    console.log('Processing games array:', games);
+
     const totalGames = games.length;
-    const activeGames = games.filter(game => game.isActive).length;
-    const inactiveGames = totalGames - activeGames;
-    const popularGames = games.filter(game => game.popularity > 4).length;
+
+    // Safely filter games with null checks
+    const activeGames = games.filter(game => game && game.isActive).length;
+    const inactiveGames = games.filter(game => game && !game.isActive).length;
+
+    // Handle different popularity formats
+    const popularGames = games.filter(game => {
+      if (!game) return false;
+
+      // Check if popularity is a number and greater than 4
+      return typeof game.popularity === 'number' && game.popularity > 4;
+    }).length;
 
     return {
       totalGames,
@@ -121,24 +165,47 @@ const MuiGamesList: React.FC = () => {
 
   // Memoize filtered games to avoid unnecessary re-filtering
   const filteredGames = useMemo(() => {
-    if (!games) return [];
+    // Check if games exists and is an array
+    if (!games || !Array.isArray(games)) {
+      console.log('Games data is not an array for filtering:', games);
+      return [];
+    }
 
-    return games.filter((game) =>
-      game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      game.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      game.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return games;
+
+    return games.filter((game) => {
+      if (!game) return false;
+
+      // Safely check title
+      const title = game.title || '';
+      if (title.toLowerCase().includes(query)) return true;
+
+      // Safely check provider
+      const provider = game.provider || '';
+      if (provider.toLowerCase().includes(query)) return true;
+
+      // Safely check category
+      const category = game.category || '';
+      if (category.toLowerCase().includes(query)) return true;
+
+      // Check other fields that might be searchable
+      const description = game.description || '';
+      if (description.toLowerCase().includes(query)) return true;
+
+      return false;
+    });
   }, [games, searchQuery]);
 
   // Define columns for the data table
   const columns: Column<Game>[] = [
-    { 
-      id: 'title', 
+    {
+      id: 'title',
       label: 'Title',
       format: (value, game) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar 
-            src={game.thumbnailUrl} 
+          <Avatar
+            src={game.thumbnailUrl}
             variant="rounded"
             sx={{ width: 40, height: 40 }}
           >
@@ -151,39 +218,39 @@ const MuiGamesList: React.FC = () => {
         </Box>
       )
     },
-    { 
-      id: 'category', 
+    {
+      id: 'category',
       label: 'Category',
       format: (value) => (
-        <Chip 
-          label={value} 
-          size="small" 
+        <Chip
+          label={value}
+          size="small"
           variant="outlined"
         />
       )
     },
-    { 
-      id: 'releaseDate', 
+    {
+      id: 'releaseDate',
       label: 'Release Date',
       format: (value) => new Date(value).toLocaleDateString()
     },
-    { 
-      id: 'popularity', 
+    {
+      id: 'popularity',
       label: 'Popularity',
       align: 'center',
       format: (value) => (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Typography variant="body2">{value.toFixed(1)}</Typography>
-          <Box sx={{ 
-            width: 50, 
-            height: 6, 
-            ml: 1, 
-            borderRadius: 3, 
+          <Box sx={{
+            width: 50,
+            height: 6,
+            ml: 1,
+            borderRadius: 3,
             bgcolor: 'grey.300',
             position: 'relative',
             overflow: 'hidden'
           }}>
-            <Box sx={{ 
+            <Box sx={{
               position: 'absolute',
               top: 0,
               left: 0,
@@ -196,27 +263,27 @@ const MuiGamesList: React.FC = () => {
         </Box>
       )
     },
-    { 
-      id: 'isActive', 
+    {
+      id: 'isActive',
       label: 'Status',
       align: 'center',
       format: (value) => (
-        <Chip 
-          label={value ? 'Active' : 'Inactive'} 
-          size="small" 
+        <Chip
+          label={value ? 'Active' : 'Inactive'}
+          size="small"
           color={value ? 'success' : 'error'}
           variant="outlined"
         />
       )
     },
-    { 
-      id: 'actions', 
+    {
+      id: 'actions',
       label: 'Actions',
       align: 'center',
       format: (_, game) => (
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={(e) => {
               e.stopPropagation();
               toggleGameStatus({ id: game.id, isActive: !game.isActive });
@@ -236,14 +303,25 @@ const MuiGamesList: React.FC = () => {
         title="Games Management"
         description="Manage and monitor all games on your platform"
         actions={
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleAddGame}
-          >
-            Add Game
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => refetch && refetch()}
+              startIcon={<RefreshIcon />}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleAddGame}
+            >
+              Add Game
+            </Button>
+          </Box>
         }
       />
 
@@ -309,13 +387,13 @@ const MuiGamesList: React.FC = () => {
       {/* Main Content */}
       <Paper sx={{ mb: 4 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange} 
-            variant="fullWidth" 
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            variant="fullWidth"
             indicatorColor="primary"
             textColor="primary"
-            sx={{ 
+            sx={{
               '& .MuiTab-root': {
                 py: 2,
                 fontWeight: 'medium'
@@ -343,7 +421,7 @@ const MuiGamesList: React.FC = () => {
           <TabPanel value={tabValue} index={0}>
             <DataTable
               columns={columns}
-              data={filteredGames}
+              data={Array.isArray(filteredGames) ? filteredGames : []}
               isLoading={isLoading}
               isError={isError}
               errorMessage="Error loading game data"
@@ -352,13 +430,21 @@ const MuiGamesList: React.FC = () => {
               pagination={true}
               initialRowsPerPage={10}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              loadingComponent={
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+                  <CircularProgress size={40} />
+                  <Typography variant="h6" sx={{ ml: 2 }}>
+                    Loading games...
+                  </Typography>
+                </Box>
+              }
             />
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
             <DataTable
               columns={columns}
-              data={filteredGames.filter(game => game.isActive)}
+              data={filteredGames.filter(game => game && game.isActive)}
               isLoading={isLoading}
               isError={isError}
               errorMessage="Error loading game data"
@@ -373,7 +459,7 @@ const MuiGamesList: React.FC = () => {
           <TabPanel value={tabValue} index={2}>
             <DataTable
               columns={columns}
-              data={filteredGames.filter(game => !game.isActive)}
+              data={filteredGames.filter(game => game && !game.isActive)}
               isLoading={isLoading}
               isError={isError}
               errorMessage="Error loading game data"
@@ -388,7 +474,7 @@ const MuiGamesList: React.FC = () => {
           <TabPanel value={tabValue} index={3}>
             <DataTable
               columns={columns}
-              data={filteredGames.filter(game => game.popularity > 4)}
+              data={filteredGames.filter(game => game && typeof game.popularity === 'number' && game.popularity > 4)}
               isLoading={isLoading}
               isError={isError}
               errorMessage="Error loading game data"

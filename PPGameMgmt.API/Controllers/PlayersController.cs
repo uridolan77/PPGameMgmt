@@ -32,7 +32,7 @@ namespace PPGameMgmt.API.Controllers
             IGameService gameService,
             IBonusService bonusService,
             IMediator mediator,
-            IMapper mapper)
+            IMapper mapper) : base(logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));

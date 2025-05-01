@@ -58,6 +58,8 @@ export function createFeatureApi<
     return {
       // Query hooks
       getAll: (params?: TParams) => {
+        console.log(`createFeatureApi: getAll called for ${entityName} with params:`, params);
+
         // Validate params if schema is provided
         if (schemas?.params && params) {
           try {
@@ -67,7 +69,9 @@ export function createFeatureApi<
           }
         }
 
-        return entityHooks.useGetAll(params);
+        const result = entityHooks.useGetAll(params);
+        console.log(`createFeatureApi: getAll result for ${entityName}:`, result);
+        return result;
       },
 
       getById: (id?: number | string) => {

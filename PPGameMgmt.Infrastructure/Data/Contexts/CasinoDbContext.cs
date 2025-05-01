@@ -11,7 +11,72 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
 {
     public class CasinoDbContext : DbContext
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions();
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true,
+            ReadCommentHandling = JsonCommentHandling.Skip
+        };
+
+        // Helper methods for value converters to avoid complex lambdas in EF Core configuration
+        private static string[] DeserializeStringArray(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return Array.Empty<string>();
+            
+            try 
+            {
+                return JsonSerializer.Deserialize<string[]>(json, _jsonOptions) ?? Array.Empty<string>();
+            }
+            catch 
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        private static PlayerSegment[] DeserializePlayerSegmentArray(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return Array.Empty<PlayerSegment>();
+            
+            try 
+            {
+                // First attempt: Try to parse as enum array directly
+                return JsonSerializer.Deserialize<PlayerSegment[]>(json, _jsonOptions) ?? Array.Empty<PlayerSegment>();
+            }
+            catch
+            {
+                try
+                {
+                    // Second attempt: Try to parse as string array and convert to enums
+                    var stringValues = JsonSerializer.Deserialize<string[]>(json, _jsonOptions);
+                    if (stringValues != null && stringValues.Length > 0)
+                    {
+                        return stringValues
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .Select(s => (PlayerSegment)Enum.Parse(typeof(PlayerSegment), s, true))
+                            .ToArray();
+                    }
+                }
+                catch { /* Continue to next attempt */ }
+
+                try
+                {
+                    // Third attempt: Try to parse as int array and convert to enums
+                    var intValues = JsonSerializer.Deserialize<int[]>(json, _jsonOptions);
+                    if (intValues != null && intValues.Length > 0)
+                    {
+                        return intValues
+                            .Select(i => (PlayerSegment)i)
+                            .ToArray();
+                    }
+                }
+                catch { /* Continue to fallback */ }
+
+                // If all parsing attempts fail, return empty array as fallback
+                return Array.Empty<PlayerSegment>();
+            }
+        }
 
         public CasinoDbContext(DbContextOptions<CasinoDbContext> options) : base(options)
         {
@@ -140,9 +205,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                     .HasColumnName("top_played_game_ids")
                     .HasConversion(
                         v => JsonSerializer.Serialize(v ?? Array.Empty<string>(), _jsonOptions),
-                        v => string.IsNullOrEmpty(v)
-                            ? Array.Empty<string>()
-                            : JsonSerializer.Deserialize<string[]>(v, _jsonOptions) ?? Array.Empty<string>()
+                        v => DeserializeStringArray(v)
                     ).Metadata.SetValueComparer(
                         new ValueComparer<string[]>(
                             (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
@@ -155,9 +218,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                     .HasColumnName("preferred_time_slots")
                     .HasConversion(
                         v => JsonSerializer.Serialize(v ?? Array.Empty<string>(), _jsonOptions),
-                        v => string.IsNullOrEmpty(v)
-                            ? Array.Empty<string>()
-                            : JsonSerializer.Deserialize<string[]>(v, _jsonOptions) ?? Array.Empty<string>()
+                        v => DeserializeStringArray(v)
                     ).Metadata.SetValueComparer(
                         new ValueComparer<string[]>(
                             (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
@@ -177,7 +238,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(b => b.Id).HasColumnName("id");
                 entity.Property(b => b.Name).HasColumnName("name").IsRequired();
                 entity.Property(b => b.Description).HasColumnName("description").IsRequired();
-                entity.Property(b => b.Value).HasColumnName("value").HasPrecision(18, 2);
+                entity.Property(b => b.Amount).HasColumnName("amount").HasPrecision(18, 2);
                 entity.Property(b => b.WageringRequirement).HasColumnName("wagering_requirement").HasPrecision(18, 2);
                 entity.Property(b => b.ValidFrom).HasColumnName("valid_from");
                 entity.Property(b => b.ValidTo).HasColumnName("valid_to");
@@ -192,6 +253,36 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                     .HasConversion(
                         v => v.ToString(),
                         v => (Core.Entities.Bonuses.BonusType)Enum.Parse(typeof(Core.Entities.Bonuses.BonusType), v)
+                    );
+
+                // Properly configure JSON serialization for array properties to fix deserialization issues
+                entity.Property(b => b.ApplicableGameIds)
+                    .HasColumnName("applicable_game_ids")
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v ?? Array.Empty<string>(), _jsonOptions),
+                        v => DeserializeStringArray(v)
+                    ).Metadata.SetValueComparer(
+                        new ValueComparer<string[]>(
+                            (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                            c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
+                            c => c != null ? c.ToArray() : Array.Empty<string>()
+                        )
+                    );
+
+                // Add proper serialization for TargetSegments array if it exists
+                entity.Property(b => b.TargetSegments)
+                    .HasColumnName("target_segments")
+                    .HasConversion(
+                        // Serialize to JSON string
+                        v => JsonSerializer.Serialize(v ?? Array.Empty<PlayerSegment>(), _jsonOptions),
+                        // Custom deserialization that handles various JSON formats
+                        v => DeserializePlayerSegmentArray(v)
+                    ).Metadata.SetValueComparer(
+                        new ValueComparer<PlayerSegment[]>(
+                            (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                            c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
+                            c => c != null ? c.ToArray() : Array.Empty<PlayerSegment>()
+                        )
                     );
 
                 // Configure relationship with BonusClaim

@@ -211,9 +211,9 @@ export default defineConfig(({ mode }) => {
       // Add proxy for API requests in development
       proxy: {
         '/api': {
-          target: 'http://localhost:7210',
+          target: 'https://localhost:7210',
           changeOrigin: true,
-          secure: false,
+          secure: false, // Accept self-signed certificates
           // Don't rewrite the path, keep the /api prefix
           // rewrite: (path) => path.replace(/^\/api/, '')
         },

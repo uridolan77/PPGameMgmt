@@ -11,73 +11,73 @@ export const bonusApi = {
    * Get a list of bonuses with optional filtering
    */
   getAll: (filters?: BonusFilter) =>
-    createApiHelpers.getList<Bonus>('bonuses', DataCategory.BONUS)(filters),
+    createApiHelpers.getList<Bonus>('Bonuses', DataCategory.BONUS)(filters),
 
   /**
    * Get a single bonus by ID
    */
-  getById: createApiHelpers.getOne<Bonus>('bonuses', DataCategory.BONUS),
+  getById: createApiHelpers.getOne<Bonus>('Bonuses', DataCategory.BONUS),
 
   /**
    * Create a new bonus
    */
-  create: createApiHelpers.create<Bonus, BonusInput>('bonuses'),
+  create: createApiHelpers.create<Bonus, BonusInput>('Bonuses'),
 
   /**
    * Update an existing bonus
    */
-  update: createApiHelpers.update<Bonus, Partial<Bonus>>('bonuses'),
+  update: createApiHelpers.update<Bonus, Partial<Bonus>>('Bonuses'),
 
   /**
    * Delete a bonus
    */
-  remove: createApiHelpers.remove('bonuses'),
+  remove: createApiHelpers.remove('Bonuses'),
 
   /**
    * Update bonus status (active/inactive)
    */
   updateStatus: (id: number, isActive: boolean) =>
-    createApiHelpers.patch<Bonus>('bonuses')(`${id}/status`, { isActive }),
+    createApiHelpers.patch<Bonus>('Bonuses')(`${id}/status`, { isActive }),
 
   /**
    * Get bonus statistics
    */
   getStats: (id: number) =>
-    createApiHelpers.getOne<BonusStats>(`bonuses/${id}/stats`, DataCategory.BONUS)(id),
+    createApiHelpers.getOne<BonusStats>(`Bonuses/${id}/stats`, DataCategory.BONUS)(id),
 
   /**
    * Get bonus claims with optional filtering
    */
   getClaims: (filters?: BonusClaimFilter) =>
-    createApiHelpers.getList<BonusClaim>('bonus-claims', DataCategory.BONUS)(filters),
+    createApiHelpers.getList<BonusClaim>('BonusClaims', DataCategory.BONUS)(filters),
 
   /**
    * Get a specific bonus claim by ID
    */
-  getClaimById: createApiHelpers.getOne<BonusClaim>('bonus-claims', DataCategory.BONUS),
+  getClaimById: createApiHelpers.getOne<BonusClaim>('BonusClaims', DataCategory.BONUS),
 
   /**
    * Get all claims for a specific bonus
    */
   getClaimsByBonusId: (bonusId: number) =>
-    createApiHelpers.getOne<BonusClaim[]>(`bonuses/${bonusId}/claims`, DataCategory.BONUS)(bonusId),
+    createApiHelpers.getOne<BonusClaim[]>(`Bonuses/${bonusId}/claims`, DataCategory.BONUS)(bonusId),
 
   /**
    * Get all claims for a specific player
    */
   getClaimsByPlayerId: (playerId: number) =>
-    createApiHelpers.getOne<BonusClaim[]>(`players/${playerId}/bonus-claims`, DataCategory.BONUS)(playerId),
+    createApiHelpers.getOne<BonusClaim[]>(`Players/${playerId}/bonus-claims`, DataCategory.BONUS)(playerId),
 
   /**
    * Create a new bonus claim
    */
-  createClaim: createApiHelpers.create<BonusClaim, { bonusId: number; playerId: number }>('bonus-claims'),
+  createClaim: createApiHelpers.create<BonusClaim, { bonusId: number; playerId: number }>('BonusClaims'),
 
   /**
    * Update bonus claim status
    */
   updateClaimStatus: (id: number, status: string) =>
-    createApiHelpers.patch<BonusClaim>('bonus-claims')(`${id}/status`, { status })
+    createApiHelpers.patch<BonusClaim>('BonusClaims')(`${id}/status`, { status })
 };
 
 // For backward compatibility

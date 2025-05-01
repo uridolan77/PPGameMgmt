@@ -2,7 +2,7 @@ import { useApiQuery, useApiMutation, ApiError } from '../../../core/api';
 import { CACHE_KEYS, STALE_TIMES } from '../../../core/api/cacheConfig';
 import { Game, GameFilter } from '../types';
 import { gameApi } from '../services';
-import { handleApiError } from '../../../core/error';
+import { handleApiError, ErrorDomain } from '../../../core/error';
 import { useQueryClient } from '@tanstack/react-query';
 
 /**
@@ -20,9 +20,14 @@ export function useGames(filters?: GameFilter) {
     }
   );
 
-  // Handle errors
+  // Handle errors with more detailed information
   if (gamesQuery.error) {
-    handleApiError(gamesQuery.error, 'Failed to load games');
+    console.error('Error in useGames hook:', gamesQuery.error);
+    handleApiError(gamesQuery.error, 'Failed to load games', {
+      domain: ErrorDomain.GAME,
+      showToast: true,
+      logError: true
+    });
   }
 
   // Mutation for creating a new game
@@ -99,8 +104,35 @@ export function useGames(filters?: GameFilter) {
     }
   );
 
+  // Ensure games is always an array
+  let games: Game[] = [];
+
+  if (gamesQuery.data) {
+    // Handle different response structures
+    if (Array.isArray(gamesQuery.data)) {
+      games = gamesQuery.data;
+    } else if (gamesQuery.data && typeof gamesQuery.data === 'object') {
+      const responseData = gamesQuery.data as any; // Type assertion to avoid TypeScript errors
+
+      // Handle response with 'value' property
+      if ('value' in responseData && Array.isArray(responseData.value)) {
+        games = responseData.value;
+      }
+      // Handle response with 'data' property
+      else if ('data' in responseData && Array.isArray(responseData.data)) {
+        games = responseData.data;
+      }
+      // Handle response with isSuccess and data properties
+      else if ('isSuccess' in responseData && 'data' in responseData && Array.isArray(responseData.data)) {
+        games = responseData.data;
+      }
+    }
+  }
+
+  console.log('useGames processed games:', games);
+
   return {
-    games: gamesQuery.data || [],
+    games,
     isLoading: gamesQuery.isLoading,
     isError: gamesQuery.isError,
     error: gamesQuery.error,
@@ -125,9 +157,14 @@ export function useGame(id?: string) {
     }
   );
 
-  // Handle errors
+  // Handle errors with more detailed information
   if (query.error) {
-    handleApiError(query.error, 'Failed to load game details');
+    console.error('Error in useGame hook:', query.error);
+    handleApiError(query.error, 'Failed to load game details', {
+      domain: ErrorDomain.GAME,
+      showToast: true,
+      logError: true
+    });
   }
 
   return query;

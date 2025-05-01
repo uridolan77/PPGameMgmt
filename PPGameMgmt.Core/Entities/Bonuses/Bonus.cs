@@ -19,8 +19,8 @@ namespace PPGameMgmt.Core.Entities.Bonuses
         [Column("bonus_type")]
         public BonusType Type { get; set; }
 
-        [Column("value")]
-        public decimal Value { get; set; }
+        [Column("amount")]
+        public decimal Amount { get; set; }
 
         [Column("wagering_requirement")]
         public decimal WageringRequirement { get; set; }
@@ -35,7 +35,7 @@ namespace PPGameMgmt.Core.Entities.Bonuses
         public bool IsActive { get; set; }
 
         [Column("terms_and_conditions")]
-        public required string TermsAndConditions { get; set; }
+        public string? TermsAndConditions { get; set; }
 
         [Column("max_conversion")]
         public decimal? MaxConversion { get; set; }
@@ -60,8 +60,8 @@ namespace PPGameMgmt.Core.Entities.Bonuses
         Cashback,
         NoDeposit,
         Reload,
-        VIP,
-        Tournament,
-        Referral
+        LoyaltyPoints,
+        ReferralBonus,
+        TournamentPrize
     }
 }

@@ -45,15 +45,35 @@ export function createEntityHooks<
     /**
      * Hook for fetching all entities with optional filtering
      */
-    useGetAll: (params?: any) =>
-      useApiQuery(
+    useGetAll: (params?: any) => {
+      console.log(`hookFactory: useGetAll called for ${entityName} with params:`, params);
+
+      // Log the apiService to see if it's correctly defined
+      console.log(`hookFactory: apiService for ${entityName}:`, apiService);
+
+      const result = useApiQuery(
         [CACHE_KEYS.ALL, params],
-        () => apiService.getAll(params),
+        () => {
+          console.log(`hookFactory: Executing query function for ${entityName}`);
+          return apiService.getAll(params).then(data => {
+            console.log(`hookFactory: Query function for ${entityName} succeeded:`, data);
+            return data;
+          }).catch(error => {
+            console.error(`hookFactory: Query function for ${entityName} failed:`, error);
+            throw error;
+          });
+        },
         {
           staleTime: STALE_TIMES.SHORT,
-          category
+          category,
+          retry: 1, // Limit retries to avoid excessive API calls
+          refetchOnWindowFocus: false // Disable automatic refetching
         }
-      ),
+      );
+
+      console.log(`hookFactory: useGetAll result for ${entityName}:`, result);
+      return result;
+    },
 
     /**
      * Hook for fetching a single entity by ID

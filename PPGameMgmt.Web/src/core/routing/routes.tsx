@@ -20,19 +20,19 @@ const DashboardPage = createLazyComponent('dashboard',
   () => import('../../features/dashboard').then(module => ({ default: module.DashboardPage }))
 );
 const GamesListPage = createLazyComponent('games-list',
-  () => import('../../features/games').then(module => ({ default: module.GamesListPage }))
+  () => import('../../features/games/pages/MuiGamesList').then(module => ({ default: module.default }))
 );
 const GameDetailPage = createLazyComponent('game-detail',
-  () => import('../../features/games').then(module => ({ default: module.GameDetailPage }))
+  () => import('../../features/games/pages/MuiGameDetail').then(module => ({ default: module.default }))
 );
 const GameFormPage = createLazyComponent('game-form',
   () => import('../../features/games').then(module => ({ default: module.GameFormPage }))
 );
 const PlayersListPage = createLazyComponent('players-list',
-  () => import('../../features/players').then(module => ({ default: module.PlayersListPage }))
+  () => import('../../features/players/pages/MuiPlayersList').then(module => ({ default: module.default }))
 );
 const PlayerDetailPage = createLazyComponent('player-detail',
-  () => import('../../features/players').then(module => ({ default: module.PlayerDetail }))
+  () => import('../../features/players/pages/MuiPlayerDetail').then(module => ({ default: module.default }))
 );
 const PlayerFormPage = createLazyComponent('player-form',
   () => import('../../features/players/components/PlayerForm').then(module => ({ default: module.default }))
@@ -76,6 +76,7 @@ const SuspenseBoundary = ({ children }: { children: ReactNode }) => {
         }
       };
     }
+    return undefined; // Explicit return for non-development environment
   }, []);
 
   return <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>;

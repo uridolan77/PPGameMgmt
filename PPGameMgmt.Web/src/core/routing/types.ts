@@ -1,7 +1,10 @@
 import { ReactNode } from 'react';
-import { RouteObject } from 'react-router-dom';
 
-export interface AppRouteObject extends RouteObject {
+export interface AppRouteObject {
+  path?: string;
+  element?: React.ReactNode;
+  children?: AppRouteObject[];
+  index?: boolean;
   requiresAuth?: boolean;
   requiredRoles?: string[];
   layout?: React.ComponentType<{ children: ReactNode }>;

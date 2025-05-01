@@ -11,33 +11,33 @@ export const gameApi = {
    * Get a list of games with optional filtering
    */
   getAll: (filters?: GameFilter) =>
-    createApiHelpers.getList<Game>('games', DataCategory.GAME)(filters),
+    createApiHelpers.getList<Game>('Games', DataCategory.GAME)(filters),
 
   /**
    * Get a single game by ID
    */
-  getById: createApiHelpers.getOne<Game>('games', DataCategory.GAME),
+  getById: createApiHelpers.getOne<Game>('Games', DataCategory.GAME),
 
   /**
    * Create a new game
    */
-  create: createApiHelpers.create<Game, Omit<Game, 'id'>>('games'),
+  create: createApiHelpers.create<Game, Omit<Game, 'id'>>('Games'),
 
   /**
    * Update an existing game
    */
-  update: createApiHelpers.update<Game, Partial<Game>>('games'),
+  update: createApiHelpers.update<Game, Partial<Game>>('Games'),
 
   /**
    * Delete a game
    */
-  remove: createApiHelpers.remove('games'),
+  remove: createApiHelpers.remove('Games'),
 
   /**
    * Update game status (active/inactive)
    */
   updateStatus: (id: string, isActive: boolean) =>
-    createApiHelpers.patch<Game>('games')(`${id}/status`, { isActive })
+    createApiHelpers.patch<Game>('Games')(`${id}/status`, { isActive })
 };
 
 // For backward compatibility

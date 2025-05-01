@@ -169,7 +169,9 @@ namespace PPGameMgmt.API.Extensions
                     "http://localhost:55824",
                     "https://localhost:55824",
                     "http://localhost:5824",
-                    "https://localhost:7210"
+                    "https://localhost:7210",
+                    "http://localhost:3000",
+                    "https://localhost:3000"
                 };
 
             services.AddCors(options =>
