@@ -13,13 +13,13 @@ namespace PPGameMgmt.Infrastructure.Services
         private readonly IUserRepository _userRepository;
         private readonly IPasswordService _passwordService;
         private readonly IJwtService _jwtService;
-        private readonly ILogger<AuthService> _logger;
+        private readonly ILogger<AuthService>? _logger;
 
         public AuthService(
             IUserRepository userRepository,
             IPasswordService passwordService,
             IJwtService jwtService,
-            ILogger<AuthService> logger = null)
+            ILogger<AuthService>? logger = null)
         {
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _passwordService = passwordService ?? throw new ArgumentNullException(nameof(passwordService));
@@ -29,14 +29,14 @@ namespace PPGameMgmt.Infrastructure.Services
 
         public async Task<AuthenticationResult> AuthenticateAsync(string usernameOrEmail, string password, string ipAddress)
         {
-            User user = null;
+            User? user = null;
 
             // Try to find user by email first
             if (usernameOrEmail.Contains('@'))
             {
                 user = await _userRepository.GetByEmailAsync(usernameOrEmail);
             }
-            
+
             // If not found, try by username
             if (user == null)
             {
@@ -125,8 +125,8 @@ namespace PPGameMgmt.Infrastructure.Services
             }
 
             // Revoke the current refresh token
-            await _userRepository.RevokeTokenAsync(token, ipAddress, null);
-            
+            await _userRepository.RevokeTokenAsync(token, ipAddress, string.Empty);
+
             // Generate new tokens
             var newJwtToken = _jwtService.GenerateJwtToken(user);
             var newRefreshToken = _jwtService.GenerateRefreshToken();
@@ -189,6 +189,7 @@ namespace PPGameMgmt.Infrastructure.Services
             // Create user
             var user = new User
             {
+                Id = Guid.NewGuid().ToString("N"), // Generate a new GUID for the user ID
                 Username = model.Username,
                 Email = model.Email,
                 PasswordHash = passwordHash,
@@ -212,8 +213,9 @@ namespace PPGameMgmt.Infrastructure.Services
 
         public async Task<bool> ValidateResetTokenAsync(string token)
         {
-            // This would typically check if the token exists in the database and is not expired
-            // For simplicity, we'll implement this as a placeholder
+            // This is a placeholder implementation - in a real application, you would
+            // check if the token exists in the database and is not expired
+            await Task.CompletedTask; // Add awaitable task to avoid warning
             return !string.IsNullOrEmpty(token);
         }
 
@@ -237,25 +239,31 @@ namespace PPGameMgmt.Infrastructure.Services
 
         public async Task ResetPasswordAsync(string token, string password)
         {
-            // This would typically verify the token and reset the password
-            // For simplicity, we'll implement this as a placeholder
+            // This is a placeholder implementation - in a real application, you would
+            // verify the token and reset the password
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(password))
             {
                 throw new ArgumentException("Token and password are required");
             }
-            
+
+            // Add awaitable task to avoid warning
+            await Task.CompletedTask;
+
             // In a real implementation, find the user with this token and update their password
         }
 
-        public async Task<User> VerifyEmailAsync(string token)
+        public async Task<User?> VerifyEmailAsync(string token)
         {
-            // This would typically verify the email by checking the verification token
-            // For simplicity, we'll implement this as a placeholder
+            // This is a placeholder implementation - in a real application, you would
+            // verify the email by checking the verification token
             if (string.IsNullOrEmpty(token))
             {
                 throw new ArgumentException("Token is required");
             }
-            
+
+            // Add awaitable task to avoid warning
+            await Task.CompletedTask;
+
             // In a real implementation, find the user with this token and mark their email as verified
             return null;
         }

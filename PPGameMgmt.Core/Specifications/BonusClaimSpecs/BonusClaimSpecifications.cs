@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using PPGameMgmt.Core.Entities.Bonuses;
 
 namespace PPGameMgmt.Core.Specifications.BonusClaimSpecs
@@ -61,6 +62,60 @@ namespace PPGameMgmt.Core.Specifications.BonusClaimSpecs
                          bc.ClaimDate >= DateTime.UtcNow.AddDays(-daysToLookBack))
         {
             ApplyOrderByDescending(bc => bc.ClaimDate);
+        }
+    }
+
+    public class ActiveBonusClaimsSpecification : BaseSpecification<BonusClaim>
+    {
+        public ActiveBonusClaimsSpecification()
+            : base(bc => bc.Status == BonusClaimStatus.Active && bc.ExpiryDate > DateTime.UtcNow)
+        {
+            AddInclude(bc => bc.Bonus);
+            AddInclude(bc => bc.Player);
+            ApplyOrderByDescending(bc => bc.ClaimDate);
+        }
+    }
+
+    public class PlayerBonusClaimsSpecification : BaseSpecification<BonusClaim>
+    {
+        public PlayerBonusClaimsSpecification(string playerId)
+            : base(bc => bc.PlayerId == playerId)
+        {
+            AddInclude(bc => bc.Bonus);
+            ApplyOrderByDescending(bc => bc.ClaimDate);
+        }
+    }
+
+    public class BonusClaimsByTypeSpecification : BaseSpecification<BonusClaim>
+    {
+        public BonusClaimsByTypeSpecification(BonusType type)
+            : base(bc => bc.Bonus.Type == type)
+        {
+            AddInclude(bc => bc.Bonus);
+            AddInclude(bc => bc.Player);
+            ApplyOrderByDescending(bc => bc.ClaimDate);
+        }
+    }
+
+    public class CompletedBonusClaimsSpecification : BaseSpecification<BonusClaim>
+    {
+        public CompletedBonusClaimsSpecification()
+            : base(bc => bc.Status == BonusClaimStatus.Completed)
+        {
+            AddInclude(bc => bc.Bonus);
+            AddInclude(bc => bc.Player);
+            ApplyOrderByDescending(bc => bc.CompletionDate);
+        }
+    }
+
+    public class ExpiredBonusClaimsSpecification : BaseSpecification<BonusClaim>
+    {
+        public ExpiredBonusClaimsSpecification()
+            : base(bc => bc.Status == BonusClaimStatus.Expired || (bc.Status == BonusClaimStatus.Active && bc.ExpiryDate <= DateTime.UtcNow))
+        {
+            AddInclude(bc => bc.Bonus);
+            AddInclude(bc => bc.Player);
+            ApplyOrderByDescending(bc => bc.ExpiryDate);
         }
     }
 }

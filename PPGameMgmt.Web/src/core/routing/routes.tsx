@@ -32,19 +32,19 @@ const PlayersListPage = createLazyComponent('players-list',
   () => import('../../features/players').then(module => ({ default: module.PlayersListPage }))
 );
 const PlayerDetailPage = createLazyComponent('player-detail',
-  () => import('../../features/players').then(module => ({ default: module.PlayerDetailPage }))
+  () => import('../../features/players').then(module => ({ default: module.PlayerDetail }))
 );
 const PlayerFormPage = createLazyComponent('player-form',
-  () => import('../../features/players').then(module => ({ default: module.PlayerFormPage }))
+  () => import('../../features/players/components/PlayerForm').then(module => ({ default: module.default }))
 );
 const BonusesList = createLazyComponent('bonuses-list',
-  () => import('../../features/bonuses/pages/BonusesList')
+  () => import('../../features/bonuses').then(module => ({ default: module.BonusesListPage }))
 );
 const BonusDetail = createLazyComponent('bonus-detail',
-  () => import('../../features/bonuses/pages/BonusDetail')
+  () => import('../../features/bonuses').then(module => ({ default: module.BonusDetailPage }))
 );
 const Recommendations = createLazyComponent('recommendations',
-  () => import('../../features/recommendations/pages/Recommendations')
+  () => import('../../features/recommendations').then(module => ({ default: module.RecommendationsPage }))
 );
 const Login = createLazyComponent('login',
   () => import('../../features/auth/pages/MuiLogin')

@@ -1,12 +1,12 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { 
-  AppBar, 
-  Box, 
-  CssBaseline, 
-  Drawer, 
-  IconButton, 
-  Toolbar, 
+import {
+  AppBar,
+  Box,
+  CssBaseline,
+  Drawer,
+  IconButton,
+  Toolbar,
   Typography,
   useMediaQuery,
   useTheme,
@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
+import { ThemeSwitcher } from '../../shared/components/mui';
 
 const drawerWidth = 240;
 
@@ -35,7 +36,7 @@ export const MainLayout: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { ui, auth } = useStore();
+  const { auth } = useStore();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleDrawerToggle = () => {
@@ -116,9 +117,12 @@ export const MainLayout: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             PP Game Management
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ThemeSwitcher />
+          </Box>
         </Toolbar>
       </AppBar>
       <Box
@@ -155,9 +159,9 @@ export const MainLayout: React.FC = () => {
       </Box>
       <Box
         component="main"
-        sx={{ 
-          flexGrow: 1, 
-          p: 3, 
+        sx={{
+          flexGrow: 1,
+          p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh'
         }}

@@ -1,21 +1,21 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
+import {
   Popover,
   PopoverContent,
-  PopoverTrigger 
+  PopoverTrigger
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -325,6 +325,59 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
             />
           </PopoverContent>
         </Popover>
+      )}
+    </FormFieldWrapper>
+  );
+};
+
+// Number Field
+export interface NumberFieldProps extends Omit<BaseFormFieldProps, 'type'> {
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export const NumberField: React.FC<NumberFieldProps> = ({
+  name,
+  label,
+  description,
+  placeholder,
+  disabled,
+  required,
+  className,
+  labelClassName,
+  controlClassName,
+  form,
+  min,
+  max,
+  step = 1,
+}) => {
+  return (
+    <FormFieldWrapper
+      name={name}
+      label={label}
+      description={description}
+      required={required}
+      className={className}
+      labelClassName={labelClassName}
+      form={form}
+    >
+      {({ field }) => (
+        <Input
+          {...field}
+          value={field.value ?? ''}
+          type="number"
+          placeholder={placeholder}
+          disabled={disabled}
+          className={controlClassName}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(e) => {
+            const value = e.target.value === '' ? '' : Number(e.target.value);
+            field.onChange(value);
+          }}
+        />
       )}
     </FormFieldWrapper>
   );

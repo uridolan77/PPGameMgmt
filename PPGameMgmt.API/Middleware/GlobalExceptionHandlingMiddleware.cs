@@ -83,9 +83,15 @@ namespace PPGameMgmt.API.Middleware
                 errorResponse.ErrorCode = domainException.ErrorCode;
 
                 // Add validation details if available
-                if (domainException is ValidationException validationEx && validationEx.Errors.Count > 0)
+                if (exception is ValidationException validationEx && validationEx.Errors.Count > 0)
                 {
-                    errorResponse.ValidationErrors = validationEx.Errors;
+                    // Convert Dictionary<string, string> to IDictionary<string, string[]>
+                    var validationErrors = new Dictionary<string, string[]>();
+                    foreach (var error in validationEx.Errors)
+                    {
+                        validationErrors[error.Key] = new[] { error.Value };
+                    }
+                    errorResponse.ValidationErrors = validationErrors;
                 }
             }
 

@@ -28,21 +28,21 @@ namespace PPGameMgmt.Core.Specifications
         /// <summary>
         /// Expression for primary ordering ascending
         /// </summary>
-        Expression<Func<T, object>> OrderBy { get; }
+        Expression<Func<T, object>>? OrderBy { get; }
         
         /// <summary>
         /// Expression for primary ordering descending
         /// </summary>
-        Expression<Func<T, object>> OrderByDescending { get; }
+        Expression<Func<T, object>>? OrderByDescending { get; }
         
         /// <summary>
         /// Expression for secondary ordering ascending
         /// </summary>
-        Expression<Func<T, object>> ThenBy { get; }
+        Expression<Func<T, object>>? ThenBy { get; }
         
         /// <summary>
         /// Expression for secondary ordering descending
         /// </summary>
-        Expression<Func<T, object>> ThenByDescending { get; }
+        Expression<Func<T, object>>? ThenByDescending { get; }
     }
 }

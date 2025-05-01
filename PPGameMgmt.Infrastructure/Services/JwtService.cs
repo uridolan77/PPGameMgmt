@@ -62,7 +62,7 @@ namespace PPGameMgmt.Infrastructure.Services
             return DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays);
         }
 
-        public string ValidateJwtToken(string token)
+        public string? ValidateJwtToken(string token)
         {
             if (string.IsNullOrEmpty(token))
                 return null;
@@ -95,7 +95,7 @@ namespace PPGameMgmt.Infrastructure.Services
             }
         }
 
-        public ClaimsPrincipal GetPrincipalFromToken(string token)
+        public ClaimsPrincipal? GetPrincipalFromToken(string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);

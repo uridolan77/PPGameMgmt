@@ -14,6 +14,6 @@ namespace PPGameMgmt.Core.Interfaces
         Task<bool> ValidateResetTokenAsync(string token);
         Task ForgotPasswordAsync(string email);
         Task ResetPasswordAsync(string token, string password);
-        Task<User> VerifyEmailAsync(string token);
+        Task<User?> VerifyEmailAsync(string token);
     }
 }

@@ -30,8 +30,7 @@ namespace PPGameMgmt.Core.Specifications.PlayerSpecs
             // Include related data
             AddInclude(p => p.BonusClaims);
             // Add ordering
-            ApplyOrderByDescending(p => p.TotalDeposits);
-            ApplyThenBy(p => p.Username);
+            ApplyOrderBy(p => p.LastLoginDate);
         }
     }
     
@@ -40,13 +39,15 @@ namespace PPGameMgmt.Core.Specifications.PlayerSpecs
     /// </summary>
     public class HighValuePlayersSpecification : BaseSpecification<Player>
     {
-        public HighValuePlayersSpecification(decimal minimumDeposit)
-            : base(p => p.TotalDeposits >= minimumDeposit)
+        public HighValuePlayersSpecification(decimal depositAmount)
+            : base(p => p.TotalDeposits >= depositAmount)
         {
             // Add ordering
             ApplyOrderByDescending(p => p.TotalDeposits);
-            // Include PlayerFeatures for more detailed information
-            AddInclude("PlayerFeatures");
         }
     }
+
+    // Note: The following classes have been removed as they are already defined in AdditionalPlayerSpecifications.cs:
+    // - PlayerWithSessionsAndBonusesSpecification
+    // - ActivePlayersSpecification
 }

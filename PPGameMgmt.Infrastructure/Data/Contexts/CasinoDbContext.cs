@@ -139,26 +139,30 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(e => e.TopPlayedGameIds)
                     .HasColumnName("top_played_game_ids")
                     .HasConversion(
-                        v => JsonSerializer.Serialize(v, _jsonOptions),
-                        v => JsonSerializer.Deserialize<string[]>(v, _jsonOptions)
+                        v => JsonSerializer.Serialize(v ?? Array.Empty<string>(), _jsonOptions),
+                        v => string.IsNullOrEmpty(v)
+                            ? Array.Empty<string>()
+                            : JsonSerializer.Deserialize<string[]>(v, _jsonOptions) ?? Array.Empty<string>()
                     ).Metadata.SetValueComparer(
                         new ValueComparer<string[]>(
                             (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                             c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
-                            c => c != null ? c.ToArray() : null
+                            c => c != null ? c.ToArray() : Array.Empty<string>()
                         )
                     );
 
                 entity.Property(e => e.PreferredTimeSlots)
                     .HasColumnName("preferred_time_slots")
                     .HasConversion(
-                        v => JsonSerializer.Serialize(v, _jsonOptions),
-                        v => JsonSerializer.Deserialize<string[]>(v, _jsonOptions)
+                        v => JsonSerializer.Serialize(v ?? Array.Empty<string>(), _jsonOptions),
+                        v => string.IsNullOrEmpty(v)
+                            ? Array.Empty<string>()
+                            : JsonSerializer.Deserialize<string[]>(v, _jsonOptions) ?? Array.Empty<string>()
                     ).Metadata.SetValueComparer(
                         new ValueComparer<string[]>(
                             (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                             c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
-                            c => c != null ? c.ToArray() : null
+                            c => c != null ? c.ToArray() : Array.Empty<string>()
                         )
                     );
             });
@@ -277,7 +281,7 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
             {
                 entity.HasKey(u => u.Id);
                 entity.ToTable("users");
-                
+
                 entity.Property(u => u.Id).HasColumnName("id").IsRequired();
                 entity.Property(u => u.Username).HasColumnName("username").HasMaxLength(50).IsRequired();
                 entity.Property(u => u.Email).HasColumnName("email").HasMaxLength(100).IsRequired();
@@ -295,24 +299,24 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(u => u.UpdatedAt).HasColumnName("updated_at").IsRequired();
                 entity.Property(u => u.Role).HasColumnName("role").HasMaxLength(20).IsRequired();
                 entity.Property(u => u.PlayerId).HasColumnName("player_id");
-                
+
                 // Indexes
                 entity.HasIndex(u => u.Username).IsUnique();
                 entity.HasIndex(u => u.Email).IsUnique();
-                
+
                 // Relationships
                 entity.HasOne(u => u.Player)
                     .WithMany()
                     .HasForeignKey(u => u.PlayerId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
-            
+
             // RefreshToken configuration
             modelBuilder.Entity<RefreshToken>(entity =>
             {
                 entity.HasKey(rt => rt.Id);
                 entity.ToTable("refresh_tokens");
-                
+
                 entity.Property(rt => rt.Id).HasColumnName("id").IsRequired();
                 entity.Property(rt => rt.UserId).HasColumnName("user_id").IsRequired();
                 entity.Property(rt => rt.Token).HasColumnName("token").HasMaxLength(255).IsRequired();
@@ -320,14 +324,14 @@ namespace PPGameMgmt.Infrastructure.Data.Contexts
                 entity.Property(rt => rt.CreatedAt).HasColumnName("created_at").IsRequired();
                 entity.Property(rt => rt.Revoked).HasColumnName("revoked").IsRequired();
                 entity.Property(rt => rt.ReplacedByToken).HasColumnName("replaced_by_token").HasMaxLength(255);
-                
+
                 // Indexes
                 entity.HasIndex(rt => rt.Token);
                 entity.HasIndex(rt => rt.UserId);
-                
+
                 // Relationships
                 entity.HasOne(rt => rt.User)
-                    .WithMany()
+                    .WithMany(u => u.RefreshTokens)
                     .HasForeignKey(rt => rt.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });

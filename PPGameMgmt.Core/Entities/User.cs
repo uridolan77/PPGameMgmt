@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PPGameMgmt.Core.Entities
@@ -7,25 +8,25 @@ namespace PPGameMgmt.Core.Entities
     public class User
     {
         [Column("id")]
-        public string Id { get; set; }
+        public required string Id { get; set; }
 
         [Column("username")]
-        public string Username { get; set; }
+        public required string Username { get; set; }
 
         [Column("email")]
-        public string Email { get; set; }
+        public required string Email { get; set; }
 
         [Column("password_hash")]
-        public string PasswordHash { get; set; }
+        public required string PasswordHash { get; set; }
 
         [Column("password_salt")]
-        public string PasswordSalt { get; set; }
+        public required string PasswordSalt { get; set; }
 
         [Column("first_name")]
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
         [Column("last_name")]
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
 
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
@@ -34,10 +35,10 @@ namespace PPGameMgmt.Core.Entities
         public bool IsEmailVerified { get; set; } = false;
 
         [Column("verification_token")]
-        public string VerificationToken { get; set; }
+        public string? VerificationToken { get; set; }
 
         [Column("reset_password_token")]
-        public string ResetPasswordToken { get; set; }
+        public string? ResetPasswordToken { get; set; }
 
         [Column("reset_password_expires")]
         public DateTime? ResetPasswordExpires { get; set; }
@@ -52,12 +53,15 @@ namespace PPGameMgmt.Core.Entities
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         [Column("role")]
-        public string Role { get; set; } = "User";
+        public required string Role { get; set; } = "User";
 
         [Column("player_id")]
-        public string PlayerId { get; set; }
+        public string? PlayerId { get; set; }
 
-        // Navigation property
-        public Player Player { get; set; }
+        // Navigation properties
+        public Player? Player { get; set; }
+
+        // Collection of refresh tokens associated with this user
+        public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
     }
 }

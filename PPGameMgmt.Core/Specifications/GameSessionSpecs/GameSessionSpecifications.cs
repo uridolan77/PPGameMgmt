@@ -13,7 +13,6 @@ namespace PPGameMgmt.Core.Specifications.GameSessionSpecs
         public GameSessionsByPlayerIdSpecification(string playerId)
             : base(gs => gs.PlayerId == playerId)
         {
-            AddInclude(gs => gs.Game);
             ApplyOrderByDescending(gs => gs.StartTime);
         }
     }
@@ -26,7 +25,6 @@ namespace PPGameMgmt.Core.Specifications.GameSessionSpecs
         public GameSessionsByPlayerIdPagedSpecification(string playerId)
             : base(gs => gs.PlayerId == playerId)
         {
-            AddInclude(gs => gs.Game);
             ApplyOrderByDescending(gs => gs.StartTime);
         }
     }
@@ -39,7 +37,6 @@ namespace PPGameMgmt.Core.Specifications.GameSessionSpecs
         public GameSessionsByGameIdSpecification(string gameId)
             : base(gs => gs.GameId == gameId)
         {
-            AddInclude(gs => gs.Player);
             ApplyOrderByDescending(gs => gs.StartTime);
         }
     }
@@ -52,8 +49,6 @@ namespace PPGameMgmt.Core.Specifications.GameSessionSpecs
         public ActiveGameSessionsSpecification()
             : base(gs => gs.EndTime == null)
         {
-            AddInclude(gs => gs.Player);
-            AddInclude(gs => gs.Game);
             ApplyOrderByDescending(gs => gs.StartTime);
         }
     }
@@ -95,8 +90,6 @@ namespace PPGameMgmt.Core.Specifications.GameSessionSpecs
         public GameSessionsByDeviceTypeSpecification(string deviceType)
             : base(gs => gs.DeviceType == deviceType)
         {
-            AddInclude(gs => gs.Player);
-            AddInclude(gs => gs.Game);
             ApplyOrderByDescending(gs => gs.StartTime);
         }
     }

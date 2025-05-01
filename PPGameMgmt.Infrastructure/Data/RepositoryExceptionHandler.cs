@@ -11,6 +11,12 @@ namespace PPGameMgmt.Infrastructure.Data
     /// <summary>
     /// Provides centralized exception handling for repository operations
     /// </summary>
+    /// <remarks>
+    /// [DEPRECATED] This class is deprecated and will be removed in a future version.
+    /// Please use the integrated exception handling in the Repository&lt;T&gt; base class through
+    /// the protected ExecuteRepositoryOperationAsync method instead.
+    /// </remarks>
+    [Obsolete("This class is deprecated. Use the integrated exception handling in Repository<T> base class instead.")]
     public static class RepositoryExceptionHandler
     {
         /// <summary>

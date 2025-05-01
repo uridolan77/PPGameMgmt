@@ -11,8 +11,8 @@ namespace PPGameMgmt.Core.Interfaces
         string GenerateRefreshToken();
         DateTime GetJwtExpirationTime();
         DateTime GetRefreshTokenExpirationTime();
-        string ValidateJwtToken(string token);
-        ClaimsPrincipal GetPrincipalFromToken(string token);
+        string? ValidateJwtToken(string token);
+        ClaimsPrincipal? GetPrincipalFromToken(string token);
         IEnumerable<Claim> GetClaimsFromUser(User user);
     }
 }

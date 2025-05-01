@@ -13,10 +13,26 @@ namespace PPGameMgmt.Core.Specifications
         private readonly List<Expression<Func<T, object>>> _includes = new();
         private readonly List<string> _includeStrings = new();
         
-        public BaseSpecification() { }
+        public BaseSpecification() 
+        {
+            // Initialize properties to avoid null reference warnings
+            Criteria = _ => true;
+            // Initialize ordering properties
+            OrderBy = x => 0;
+            OrderByDescending = x => 0;
+            ThenBy = x => 0;
+            ThenByDescending = x => 0;
+        }
         
-        public BaseSpecification(Expression<Func<T, bool>> criteria)
-            : base(criteria) { }
+        public BaseSpecification(Expression<Func<T, bool>> criteria) 
+        { 
+            Criteria = criteria;
+            // Initialize ordering properties
+            OrderBy = x => 0;
+            OrderByDescending = x => 0;
+            ThenBy = x => 0;
+            ThenByDescending = x => 0;
+        }
             
         /// <summary>
         /// Returns the criteria expression
@@ -27,11 +43,17 @@ namespace PPGameMgmt.Core.Specifications
         public IReadOnlyCollection<Expression<Func<T, object>>> Includes => _includes.AsReadOnly();
         public IReadOnlyCollection<string> IncludeStrings => _includeStrings.AsReadOnly();
         
-        // Implement IOrderSpecification
-        public Expression<Func<T, object>> OrderBy { get; private set; }
-        public Expression<Func<T, object>> OrderByDescending { get; private set; }
-        public Expression<Func<T, object>> ThenBy { get; private set; }
-        public Expression<Func<T, object>> ThenByDescending { get; private set; }
+        // Implement IOrderSpecification with explicit implementation
+        Expression<Func<T, object>> IOrderSpecification<T>.OrderBy => OrderBy;
+        Expression<Func<T, object>> IOrderSpecification<T>.OrderByDescending => OrderByDescending;
+        Expression<Func<T, object>> IOrderSpecification<T>.ThenBy => ThenBy;
+        Expression<Func<T, object>> IOrderSpecification<T>.ThenByDescending => ThenByDescending;
+        
+        // Internal properties that can be null
+        private Expression<Func<T, object>> OrderBy { get; set; }
+        private Expression<Func<T, object>> OrderByDescending { get; set; }
+        private Expression<Func<T, object>> ThenBy { get; set; }
+        private Expression<Func<T, object>> ThenByDescending { get; set; }
         
         // Base criteria expression
         protected Expression<Func<T, bool>> Criteria { get; }

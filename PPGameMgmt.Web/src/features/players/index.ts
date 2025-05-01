@@ -9,5 +9,5 @@ export * from './types';
 
 // Export pages (default exports need to be handled differently)
 import PlayerDetail from './pages/PlayerDetail';
-import PlayersList from './pages/PlayersList';
-export { PlayerDetail, PlayersList as PlayersListPage };
+import MuiPlayersList from './pages/MuiPlayersList';
+export { PlayerDetail, MuiPlayersList as PlayersListPage };

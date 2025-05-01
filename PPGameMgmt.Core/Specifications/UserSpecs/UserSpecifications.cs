@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using PPGameMgmt.Core.Entities;
 
 namespace PPGameMgmt.Core.Specifications.UserSpecs
@@ -9,24 +10,46 @@ namespace PPGameMgmt.Core.Specifications.UserSpecs
     public class UserByEmailSpecification : BaseSpecification<User>
     {
         public UserByEmailSpecification(string email)
-            : base(u => u.Email.ToLower() == email.ToLower())
+            : base(u => u.Email == email)
         {
-            AddInclude(u => u.Player);
         }
     }
-    
+
     /// <summary>
     /// Specification for retrieving a user by username
     /// </summary>
     public class UserByUsernameSpecification : BaseSpecification<User>
     {
         public UserByUsernameSpecification(string username)
-            : base(u => u.Username.ToLower() == username.ToLower())
+            : base(u => u.Username == username)
         {
-            AddInclude(u => u.Player);
         }
     }
-    
+
+    /// <summary>
+    /// Specification for retrieving a user with a specific refresh token
+    /// </summary>
+    public class UserWithRefreshTokenSpecification : BaseSpecification<User>
+    {
+        public UserWithRefreshTokenSpecification(string refreshToken)
+            : base(u => u.RefreshTokens.Any(rt => rt.Token == refreshToken && rt.IsActive))
+        {
+            AddInclude("RefreshTokens");
+        }
+    }
+
+    /// <summary>
+    /// Specification for retrieving active users
+    /// </summary>
+    public class ActiveUsersSpecification : BaseSpecification<User>
+    {
+        public ActiveUsersSpecification()
+            : base(u => u.IsActive)
+        {
+            ApplyOrderBy(u => u.Username);
+        }
+    }
+
     /// <summary>
     /// Specification for retrieving a refresh token by token value
     /// </summary>
