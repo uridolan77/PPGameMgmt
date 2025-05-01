@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMockPlayers } from '../hooks/useMockPlayers';
+import { usePlayersQueryV3 } from '../hooks';
 import { Player } from '../types';
 import { formatDate } from '../utils';
+import { handleApiError, ErrorDomain } from '../../../core/error';
 
 // MUI Components
 import {
@@ -43,7 +44,25 @@ const MuiPlayersList: React.FC = () => {
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: players, isLoading, isError } = useMockPlayers();
+
+  // Use the real API hook instead of mock data
+  const {
+    data: players,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = usePlayersQueryV3();
+
+  // Handle API errors
+  React.useEffect(() => {
+    if (isError && error) {
+      handleApiError(error, 'Failed to load players', {
+        domain: ErrorDomain.PLAYER,
+        action: 'fetch'
+      });
+    }
+  }, [isError, error]);
 
   // Stats for the overview tab
   const playerStats = useMemo(() => {
@@ -58,12 +77,18 @@ const MuiPlayersList: React.FC = () => {
     const activePlayers = players.filter((p: Player) => p.isActive).length;
     const vipPlayers = players.filter((p: Player) => p.segment === 'VIP').length;
 
-    // Assume new players are those who registered in the last 30 days
+    // Calculate new players (those who registered in the last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // This is a placeholder - in a real app we'd use registrationDate
-    const newPlayers = Math.floor(totalPlayers * 0.15); // 15% of total as a placeholder
+    // Use registrationDate if available, otherwise use a placeholder
+    const newPlayers = players.filter((p: Player) => {
+      if (p.registrationDate) {
+        const regDate = new Date(p.registrationDate);
+        return regDate >= thirtyDaysAgo;
+      }
+      return false;
+    }).length || Math.floor(totalPlayers * 0.15); // Fallback to 15% if no registration dates
 
     return {
       totalPlayers,
@@ -92,6 +117,37 @@ const MuiPlayersList: React.FC = () => {
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     console.log(`Exporting players as ${format}`);
     // Implementation would go here
+
+    // Example of how to export to CSV
+    if (format === 'csv' && players) {
+      try {
+        // Convert players to CSV
+        const headers = ['ID', 'Username', 'Email', 'Player Level', 'Segment', 'Status'];
+        const csvContent = [
+          headers.join(','),
+          ...players.map(player => [
+            player.id,
+            player.username,
+            player.email,
+            player.playerLevel,
+            player.segment || 'None',
+            player.isActive ? 'Active' : 'Inactive'
+          ].join(','))
+        ].join('\n');
+
+        // Create a blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `players_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error exporting players:', error);
+      }
+    }
   };
 
   // Format numbers with commas
@@ -127,6 +183,13 @@ const MuiPlayersList: React.FC = () => {
       (player.segment && player.segment.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [players, searchQuery]);
+
+  // Add a retry button for error state
+  const handleRetry = () => {
+    if (refetch) {
+      refetch();
+    }
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -236,6 +299,7 @@ const MuiPlayersList: React.FC = () => {
               isError={isError}
               onRowClick={handleRowClick}
               getAvatarColor={getAvatarColor}
+              onRetry={handleRetry}
             />
           </TabPanel>
 
@@ -246,6 +310,7 @@ const MuiPlayersList: React.FC = () => {
               isError={isError}
               onRowClick={handleRowClick}
               getAvatarColor={getAvatarColor}
+              onRetry={handleRetry}
             />
           </TabPanel>
 
@@ -256,6 +321,7 @@ const MuiPlayersList: React.FC = () => {
               isError={isError}
               onRowClick={handleRowClick}
               getAvatarColor={getAvatarColor}
+              onRetry={handleRetry}
             />
           </TabPanel>
 
@@ -266,6 +332,7 @@ const MuiPlayersList: React.FC = () => {
               isError={isError}
               onRowClick={handleRowClick}
               getAvatarColor={getAvatarColor}
+              onRetry={handleRetry}
             />
           </TabPanel>
         </Box>
@@ -281,6 +348,7 @@ interface PlayerDataTableProps {
   isError: boolean;
   onRowClick: (player: Player) => void;
   getAvatarColor: (username: string) => string;
+  onRetry?: () => void;
 }
 
 const PlayerDataTable: React.FC<PlayerDataTableProps> = ({
@@ -288,7 +356,8 @@ const PlayerDataTable: React.FC<PlayerDataTableProps> = ({
   isLoading,
   isError,
   onRowClick,
-  getAvatarColor
+  getAvatarColor,
+  onRetry
 }) => {
   // Define columns for the data table
   const columns: Column<Player>[] = [
@@ -372,6 +441,7 @@ const PlayerDataTable: React.FC<PlayerDataTableProps> = ({
       pagination={true}
       initialRowsPerPage={10}
       rowsPerPageOptions={[5, 10, 25, 50]}
+      onRetry={onRetry}
     />
   );
 };

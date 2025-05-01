@@ -40,7 +40,7 @@ export function useGames(filters?: GameFilter) {
   );
 
   // Mutation for updating a game
-  const updateGame = useApiMutation<Game, { id: number, data: Partial<Game> }>(
+  const updateGame = useApiMutation<Game, { id: string, data: Partial<Game> }>(
     ({ id, data }) => gameApi.update(id, data),
     {
       onSuccess: (updatedGame) => {
@@ -52,7 +52,7 @@ export function useGames(filters?: GameFilter) {
   );
 
   // Mutation for deleting a game
-  const deleteGame = useApiMutation<void, number>(
+  const deleteGame = useApiMutation<void, string>(
     (id) => gameApi.remove(id),
     {
       onSuccess: (_data, id) => {
@@ -64,7 +64,7 @@ export function useGames(filters?: GameFilter) {
   );
 
   // Mutation for toggling game status
-  const toggleGameStatus = useApiMutation<Game, { id: number; isActive: boolean }>(
+  const toggleGameStatus = useApiMutation<Game, { id: string; isActive: boolean }>(
     ({ id, isActive }) => gameApi.updateStatus(id, isActive),
     {
       onSuccess: (updatedGame) => {
@@ -115,14 +115,12 @@ export function useGames(filters?: GameFilter) {
 /**
  * Custom hook for fetching a single game by ID
  */
-export function useGame(id?: number | string) {
-  const numericId = id ? parseInt(id.toString(), 10) : undefined;
-
+export function useGame(id?: string) {
   const query = useApiQuery<Game>(
-    [CACHE_KEYS.GAME, numericId],
-    () => gameApi.getById(numericId as number),
+    [CACHE_KEYS.GAME, id],
+    () => gameApi.getById(id as string),
     {
-      enabled: !!numericId,
+      enabled: !!id,
       staleTime: STALE_TIMES.STANDARD,
     }
   );
@@ -159,7 +157,7 @@ export function useCreateGame() {
 export function useUpdateGame() {
   const queryClient = useQueryClient();
 
-  return useApiMutation<Game, { id: number, data: Partial<Game> }>(
+  return useApiMutation<Game, { id: string, data: Partial<Game> }>(
     ({ id, data }) => gameApi.update(id, data),
     {
       onSuccess: (updatedGame) => {
@@ -177,7 +175,7 @@ export function useUpdateGame() {
 export function useDeleteGame() {
   const queryClient = useQueryClient();
 
-  return useApiMutation<void, number>(
+  return useApiMutation<void, string>(
     (id) => gameApi.remove(id),
     {
       onSuccess: (_data, id) => {

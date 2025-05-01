@@ -36,7 +36,7 @@ export const gameApi = {
   /**
    * Update game status (active/inactive)
    */
-  updateStatus: (id: number, isActive: boolean) =>
+  updateStatus: (id: string, isActive: boolean) =>
     createApiHelpers.patch<Game>('games')(`${id}/status`, { isActive })
 };
 

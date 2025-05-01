@@ -1,17 +1,22 @@
 export interface Game {
-  id: number;
+  id: string;
   title: string;
   description: string;
+  provider: string;
+  category: string;
+  type: string;
+  genre: string;
+  isFeatured: boolean;
+  rtp: number;
+  minBet: number;
+  maxBet: number;
   releaseDate: string;
   thumbnailUrl: string;
-  category: string;
-  provider: string;
+  gameUrl: string;
   isActive: boolean;
   popularity: number;
-  rtp?: number; // Return to Player percentage
-  volatility?: 'low' | 'medium' | 'high';
-  minBet?: number;
-  maxBet?: number;
+  volatility?: string;
+  compatibleDevices?: string[];
   features?: string[];
 }
 

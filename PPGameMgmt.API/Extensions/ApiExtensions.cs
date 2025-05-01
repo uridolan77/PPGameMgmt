@@ -96,7 +96,7 @@ namespace PPGameMgmt.API.Extensions
                 // Add schema filter for ApiErrorResponse
                 c.SchemaFilter<ApiErrorResponseSchemaFilter>();
                 c.SchemaFilter<BonusSchemaFilter>();
-                
+
                 // Add document filter to ensure ApiErrorResponse is included in components schemas
                 c.DocumentFilter<ApiErrorResponseDocumentFilter>();
 
@@ -179,7 +179,8 @@ namespace PPGameMgmt.API.Extensions
                     policy.WithOrigins(allowedOrigins)
                           .AllowAnyMethod()
                           .AllowAnyHeader()
-                          .AllowCredentials(); // Required for SignalR
+                          .AllowCredentials() // Required for SignalR and cookies
+                          .SetIsOriginAllowedToAllowWildcardSubdomains(); // Allow subdomains
                 });
             });
 

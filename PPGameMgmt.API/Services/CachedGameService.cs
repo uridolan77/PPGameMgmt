@@ -156,5 +156,33 @@ namespace PPGameMgmt.API.Services
             // Search results are not cached as they are dynamic and depend on user input
             return await _gameService.SearchGamesAsync(searchTerm);
         }
+
+        public async Task<Game> UpdateGameAsync(Game game)
+        {
+            try
+            {
+                // Update the game through the service
+                var updatedGame = await _gameService.UpdateGameAsync(game);
+
+                // Invalidate cache for this game
+                var cacheKey = string.Format(GAME_CACHE_KEY, game.Id);
+                await _cacheService.RemoveAsync(cacheKey);
+
+                // Invalidate related cache keys
+                await _cacheService.RemoveAsync(GAMES_ALL_CACHE_KEY);
+                await _cacheService.RemoveAsync(string.Format(GAMES_BY_TYPE_CACHE_KEY, game.Type));
+                await _cacheService.RemoveAsync(string.Format(GAMES_BY_CATEGORY_CACHE_KEY, game.Category));
+                await _cacheService.RemoveAsync(GAMES_POPULAR_CACHE_KEY);
+                await _cacheService.RemoveAsync(GAMES_NEW_CACHE_KEY);
+
+                return updatedGame;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache service failed for UpdateGameAsync, falling back to direct service call");
+                // Fallback to direct service call if cache fails
+                return await _gameService.UpdateGameAsync(game);
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using PPGameMgmt.API.Models;
 using PPGameMgmt.Core.Entities;
 using PPGameMgmt.Core.Interfaces;
 
@@ -24,14 +25,14 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Game>>> GetAllGames(
+        public async Task<ActionResult<IEnumerable<GameDto>>> GetAllGames(
             [FromQuery] GameType? type = null,
             [FromQuery] GameCategory? category = null)
         {
             try
             {
                 IEnumerable<Game> games;
-                
+
                 if (type.HasValue)
                 {
                     _logger.LogInformation($"Getting games by type: {type}");
@@ -47,8 +48,10 @@ namespace PPGameMgmt.API.Controllers
                     _logger.LogInformation("Getting all games");
                     games = await _gameService.GetAllGamesAsync();
                 }
-                
-                return Ok(games);
+
+                // Convert to DTOs before returning
+                var gameDtos = GameDto.FromEntities(games);
+                return Ok(gameDtos);
             }
             catch (Exception ex)
             {
@@ -60,18 +63,20 @@ namespace PPGameMgmt.API.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Game>> GetGame(string id)
+        public async Task<ActionResult<GameDto>> GetGame(string id)
         {
             try
             {
                 var game = await _gameService.GetGameAsync(id);
-                
+
                 if (game == null)
                 {
                     return NotFound();
                 }
-                
-                return Ok(game);
+
+                // Convert to DTO before returning
+                var gameDto = GameDto.FromEntity(game);
+                return Ok(gameDto);
             }
             catch (Exception ex)
             {
@@ -82,12 +87,14 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet("popular")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Game>>> GetPopularGames([FromQuery] int count = 10)
+        public async Task<ActionResult<IEnumerable<GameDto>>> GetPopularGames([FromQuery] int count = 10)
         {
             try
             {
                 var games = await _gameService.GetPopularGamesAsync(count);
-                return Ok(games);
+                // Convert to DTOs before returning
+                var gameDtos = GameDto.FromEntities(games);
+                return Ok(gameDtos);
             }
             catch (Exception ex)
             {
@@ -98,12 +105,14 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet("new")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Game>>> GetNewReleases([FromQuery] int count = 10)
+        public async Task<ActionResult<IEnumerable<GameDto>>> GetNewReleases([FromQuery] int count = 10)
         {
             try
             {
                 var games = await _gameService.GetNewReleasesAsync(count);
-                return Ok(games);
+                // Convert to DTOs before returning
+                var gameDtos = GameDto.FromEntities(games);
+                return Ok(gameDtos);
             }
             catch (Exception ex)
             {
@@ -114,22 +123,55 @@ namespace PPGameMgmt.API.Controllers
 
         [HttpGet("search")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Game>>> SearchGames([FromQuery] string term)
+        public async Task<ActionResult<IEnumerable<GameDto>>> SearchGames([FromQuery] string term)
         {
             if (string.IsNullOrWhiteSpace(term))
             {
                 return BadRequest("Search term cannot be empty");
             }
-            
+
             try
             {
                 var games = await _gameService.SearchGamesAsync(term);
-                return Ok(games);
+                // Convert to DTOs before returning
+                var gameDtos = GameDto.FromEntities(games);
+                return Ok(gameDtos);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error searching for games with term: {term}");
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error searching for games");
+            }
+        }
+
+        [HttpPatch("{id}/status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<GameDto>> UpdateGameStatus(string id, [FromBody] UpdateGameStatusRequest request)
+        {
+            try
+            {
+                var game = await _gameService.GetGameAsync(id);
+
+                if (game == null)
+                {
+                    return NotFound($"Game with ID {id} not found");
+                }
+
+                // Update the game status
+                game.IsActive = request.IsActive;
+
+                // Save the changes
+                await _gameService.UpdateGameAsync(game);
+
+                // Convert to DTO before returning
+                var gameDto = GameDto.FromEntity(game);
+                return Ok(gameDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating status for game {id}");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating game status");
             }
         }
     }

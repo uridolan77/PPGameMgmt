@@ -1,13 +1,14 @@
 /**
  * Centralized configuration module for PPGameMgmt Web
- * 
+ *
  * This module combines all environment variables and application settings
  * into a single, type-safe configuration object that can be imported throughout the app.
  */
 
 export const config = {
   api: {
-    baseUrl: import.meta.env.VITE_API_URL || '/api',
+    // Ensure the baseUrl includes the /api suffix
+    baseUrl: (import.meta.env.VITE_API_URL || 'http://localhost:7210') + '/api',
     timeout: 30000,
   },
   app: {

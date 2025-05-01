@@ -11,6 +11,7 @@ import {
   Paper,
   CircularProgress,
   Typography,
+  Button,
   SxProps,
   Theme,
   useTheme
@@ -33,6 +34,7 @@ export interface DataTableProps<T> {
   errorMessage?: string;
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
+  onRetry?: () => void;
   getRowId?: (row: T) => string | number;
   pagination?: boolean;
   initialRowsPerPage?: number;
@@ -49,6 +51,7 @@ export function DataTable<T>({
   errorMessage = 'Error loading data',
   emptyMessage = 'No data found',
   onRowClick,
+  onRetry,
   getRowId = (row: any) => row.id,
   pagination = true,
   initialRowsPerPage = 10,
@@ -118,8 +121,18 @@ export function DataTable<T>({
 
   if (isError) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '300px', gap: 2 }}>
         <Typography color="error">{errorMessage}</Typography>
+        {onRetry && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={onRetry}
+            sx={{ mt: 2 }}
+          >
+            Retry
+          </Button>
+        )}
       </Box>
     );
   }

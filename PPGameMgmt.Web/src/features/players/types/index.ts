@@ -6,6 +6,13 @@ export interface Player {
   segment: string | null;
   lastLogin: string | null;
   isActive: boolean;
+  registrationDate?: string | null;
+  firstName?: string;
+  lastName?: string;
+  country?: string;
+  birthDate?: string | null;
+  notes?: string;
+  balance?: number;
 }
 
 export interface PlayerFeature {

@@ -31,14 +31,14 @@ export class ApiClient {
   private retryConfig: RetryConfig;
   private cacheConfig: CacheConfig;
   private cacheStore: Map<string, { data: any; timestamp: number }> = new Map();
-  
+
   constructor(config: ApiClientConfig) {
     this.baseUrl = config.baseUrl;
     this.defaultHeaders = config.defaultHeaders || {
       'Content-Type': 'application/json',
     };
     this.timeout = config.timeout || 30000; // Default 30s timeout
-    
+
     // Default retry configuration
     this.retryConfig = config.retryConfig || {
       maxRetries: 2,
@@ -53,11 +53,11 @@ export class ApiClient {
       excludePaths: [/\/auth\//] // Don't cache auth endpoints
     };
   }
-  
+
   // Authentication methods
   setAuthToken(token: string | null): void {
     this.authToken = token;
-    
+
     if (token) {
       this.defaultHeaders['Authorization'] = `Bearer ${token}`;
     } else {
@@ -84,14 +84,14 @@ export class ApiClient {
   private shouldCache(url: string, method: string): boolean {
     if (!this.cacheConfig.enabled) return false;
     if (method !== 'GET') return false;
-    
+
     // Check for excluded paths
     if (this.cacheConfig.excludePaths) {
       for (const pattern of this.cacheConfig.excludePaths) {
         if (pattern.test(url)) return false;
       }
     }
-    
+
     return true;
   }
 
@@ -105,15 +105,15 @@ export class ApiClient {
   private getCachedResponse<T>(url: string, params?: Record<string, any>): T | null {
     const key = this.getCacheKey(url, params);
     const cached = this.cacheStore.get(key);
-    
+
     if (!cached) return null;
-    
+
     // Check if cache is expired
     if (Date.now() - cached.timestamp > this.cacheConfig.maxAge) {
       this.cacheStore.delete(key);
       return null;
     }
-    
+
     return cached.data as T;
   }
 
@@ -137,7 +137,7 @@ export class ApiClient {
       throw error;
     }
   }
-  
+
   // Private request method
   private async request<T>(config: {
     method: string;
@@ -150,7 +150,7 @@ export class ApiClient {
     skipCache?: boolean; // Option to skip cache
   }): Promise<T> {
     const { method, url, data, params, headers = {}, signal, skipRetry = false, skipCache = false } = config;
-    
+
     // Check cache for GET requests
     if (!skipCache && method === 'GET' && this.shouldCache(url, method)) {
       const cachedResponse = this.getCachedResponse<T>(url, params);
@@ -158,10 +158,10 @@ export class ApiClient {
         return Promise.resolve(cachedResponse);
       }
     }
-    
+
     // Number of retries performed
     let retries = 0;
-    
+
     // Exponential backoff with jitter for retry delays
     const getRetryDelay = () => {
       const baseDelay = this.retryConfig.retryDelay;
@@ -170,13 +170,13 @@ export class ApiClient {
       const jitter = exponentialDelay * 0.2 * (Math.random() * 2 - 1);
       return Math.min(exponentialDelay + jitter, 10000); // Cap at 10s
     };
-    
+
     // Retry logic wrapper
     const executeWithRetry = async (): Promise<T> => {
       try {
         // Construct the full URL with parameters
         const fullUrl = new URL(url.startsWith('/') ? url.slice(1) : url, this.baseUrl);
-        
+
         // Add query parameters if they exist
         if (params) {
           Object.entries(params).forEach(([key, value]) => {
@@ -185,24 +185,25 @@ export class ApiClient {
             }
           });
         }
-        
+
         // Prepare headers with auth token if available
         const requestHeaders = {
           ...this.defaultHeaders,
           ...headers,
         };
-        
+
         // Request configuration
         const requestConfig: RequestInit = {
           method,
           headers: requestHeaders,
           body: data ? JSON.stringify(data) : undefined,
+          credentials: 'include', // Include credentials (cookies) in cross-origin requests
         };
-        
+
         // Use provided signal or create one for timeout
         let timeoutId: number | undefined;
         let controller: AbortController | undefined;
-        
+
         if (signal) {
           // Use the provided signal directly
           requestConfig.signal = signal;
@@ -212,15 +213,15 @@ export class ApiClient {
           timeoutId = window.setTimeout(() => controller.abort(), this.timeout);
           requestConfig.signal = controller.signal;
         }
-        
+
         // Make the request
         const response = await fetch(fullUrl.toString(), requestConfig);
-        
+
         // Clean up timeout if we created one
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
-        
+
         // Handle error responses
         if (!response.ok) {
           let errorData;
@@ -229,74 +230,74 @@ export class ApiClient {
           } catch {
             errorData = null;
           }
-          
+
           // Check if we should retry based on status code
           if (
-            !skipRetry && 
-            retries < this.retryConfig.maxRetries && 
+            !skipRetry &&
+            retries < this.retryConfig.maxRetries &&
             this.retryConfig.retryStatusCodes.includes(response.status)
           ) {
             retries++;
             const delay = getRetryDelay();
-            
+
             console.info(`Request to ${url} failed with status ${response.status}. Retrying (${retries}/${this.retryConfig.maxRetries}) after ${delay}ms`);
-            
+
             // Wait before retrying
             await new Promise(resolve => setTimeout(resolve, delay));
             return executeWithRetry();
           }
-          
+
           throw new ApiError(
             errorData?.message || response.statusText,
             response.status,
             errorData
           );
         }
-        
+
         // Parse successful response
         let responseData: T;
         const contentType = response.headers.get('content-type');
-        
+
         if (contentType?.includes('application/json')) {
           responseData = await response.json();
         } else {
           responseData = await response.text() as unknown as T;
         }
-        
+
         // Store in cache if applicable
         if (!skipCache && method === 'GET' && this.shouldCache(url, method)) {
           this.setCachedResponse(url, params, responseData);
         }
-        
+
         return responseData;
-        
+
       } catch (error) {
         // Check for abort/timeout
         if (error.name === 'AbortError') {
           throw new ApiError('Request timeout or aborted', 408);
         }
-        
+
         // Check if we should retry network errors
         if (
-          !skipRetry && 
-          retries < this.retryConfig.maxRetries && 
+          !skipRetry &&
+          retries < this.retryConfig.maxRetries &&
           !(error instanceof ApiError) // Only retry non-API errors (network issues)
         ) {
           retries++;
           const delay = getRetryDelay();
-          
+
           console.info(`Request to ${url} failed with error: ${error.message}. Retrying (${retries}/${this.retryConfig.maxRetries}) after ${delay}ms`);
-          
+
           // Wait before retrying
           await new Promise(resolve => setTimeout(resolve, delay));
           return executeWithRetry();
         }
-        
+
         // Re-throw API errors
         if (error instanceof ApiError) {
           throw error;
         }
-        
+
         // Handle other errors
         throw new ApiError(
           error.message || 'Network Error',
@@ -305,56 +306,56 @@ export class ApiClient {
         );
       }
     };
-    
+
     // Start the request process with retry support
     return executeWithRetry();
   }
-  
+
   // HTTP methods with proper typing and AbortSignal support
   async get<T>(url: string, params?: Record<string, any>, options?: { signal?: AbortSignal; skipRetry?: boolean; skipCache?: boolean }): Promise<T> {
-    return this.request<T>({ 
-      method: 'GET', 
-      url, 
+    return this.request<T>({
+      method: 'GET',
+      url,
       params,
       signal: options?.signal,
       skipRetry: options?.skipRetry,
       skipCache: options?.skipCache
     });
   }
-  
+
   async post<T>(url: string, data?: any, options?: { signal?: AbortSignal; skipRetry?: boolean }): Promise<T> {
-    return this.request<T>({ 
-      method: 'POST', 
-      url, 
+    return this.request<T>({
+      method: 'POST',
+      url,
       data,
       signal: options?.signal,
       skipRetry: options?.skipRetry
     });
   }
-  
+
   async put<T>(url: string, data?: any, options?: { signal?: AbortSignal; skipRetry?: boolean }): Promise<T> {
-    return this.request<T>({ 
-      method: 'PUT', 
-      url, 
+    return this.request<T>({
+      method: 'PUT',
+      url,
       data,
       signal: options?.signal,
       skipRetry: options?.skipRetry
     });
   }
-  
+
   async delete<T>(url: string, options?: { signal?: AbortSignal; skipRetry?: boolean }): Promise<T> {
-    return this.request<T>({ 
-      method: 'DELETE', 
+    return this.request<T>({
+      method: 'DELETE',
       url,
       signal: options?.signal,
       skipRetry: options?.skipRetry
     });
   }
-  
+
   async patch<T>(url: string, data?: any, options?: { signal?: AbortSignal; skipRetry?: boolean }): Promise<T> {
-    return this.request<T>({ 
-      method: 'PATCH', 
-      url, 
+    return this.request<T>({
+      method: 'PATCH',
+      url,
       data,
       signal: options?.signal,
       skipRetry: options?.skipRetry
@@ -363,8 +364,8 @@ export class ApiClient {
 }
 
 // Create and export a default instance with environment variables
-export const apiClient = new ApiClient({ 
-  baseUrl: import.meta.env.VITE_API_URL || '/api',
+export const apiClient = new ApiClient({
+  baseUrl: (import.meta.env.VITE_API_URL || 'http://localhost:7210') + '/api',
   cacheConfig: {
     enabled: true,
     maxAge: 2 * 60 * 1000, // 2 minutes

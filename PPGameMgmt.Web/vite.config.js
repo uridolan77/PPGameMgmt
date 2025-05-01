@@ -211,10 +211,11 @@ export default defineConfig(({ mode }) => {
       // Add proxy for API requests in development
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:7210',
+          target: 'http://localhost:7210',
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path.replace(/^\/api/, '')
+          // Don't rewrite the path, keep the /api prefix
+          // rewrite: (path) => path.replace(/^\/api/, '')
         },
       },
     },

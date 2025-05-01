@@ -29,6 +29,7 @@ namespace PPGameMgmt.Core.Interfaces
         Task<IEnumerable<Game>> GetPopularGamesAsync(int count);
         Task<IEnumerable<Game>> GetNewReleasesAsync(int count);
         Task<IEnumerable<Game>> SearchGamesAsync(string searchTerm);
+        Task<Game> UpdateGameAsync(Game game);
     }
 
 

@@ -88,5 +88,24 @@ namespace PPGameMgmt.Core.Services
                 (g.Description?.ToLower().Contains(searchTerm) == true))
                 .ToList();
         }
+
+        public async Task<Game> UpdateGameAsync(Game game)
+        {
+            if (game == null)
+            {
+                throw new ArgumentNullException(nameof(game));
+            }
+
+            if (string.IsNullOrEmpty(game.Id))
+            {
+                throw new ArgumentException("Game ID cannot be empty", nameof(game));
+            }
+
+            // Update the game in the repository
+            await _gameRepository.UpdateAsync(game);
+
+            // Return the updated game
+            return await _gameRepository.GetByIdAsync(game.Id);
+        }
     }
 }
